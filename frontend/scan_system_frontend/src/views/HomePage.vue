@@ -1,8 +1,8 @@
 <template>
   <div class="home-page">
     <div class="home-header">
-      <h1>被动代理漏洞扫描系统</h1>
-      <p>一个基于Python、Vue、Django的被动代理漏洞扫描系统</p>
+      <h1>半自动化漏洞扫描系统</h1>
+      <p>一个基于Python、Vue、Django的半自动化漏洞扫描系统</p>
     </div>
 
     <div class="dashboard">

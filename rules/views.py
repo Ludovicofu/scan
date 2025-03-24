@@ -55,17 +55,21 @@ class InfoCollectionRuleList(generics.ListCreateAPIView):
         rule = serializer.save()
 
         # 通知规则更新
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'create',
-                'rule_type': 'info_collection',
-                'rule_id': rule.id,
-                'data': InfoCollectionRuleSerializer(rule).data
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'create',
+                    'rule_type': 'info_collection',
+                    'rule_id': rule.id,
+                    'data': InfoCollectionRuleSerializer(rule).data
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则更新失败: {str(e)}")
 
 
 class InfoCollectionRuleDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -76,34 +80,42 @@ class InfoCollectionRuleDetail(generics.RetrieveUpdateDestroyAPIView):
         rule = serializer.save()
 
         # 通知规则更新
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'update',
-                'rule_type': 'info_collection',
-                'rule_id': rule.id,
-                'data': InfoCollectionRuleSerializer(rule).data
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'update',
+                    'rule_type': 'info_collection',
+                    'rule_id': rule.id,
+                    'data': InfoCollectionRuleSerializer(rule).data
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则更新失败: {str(e)}")
 
     def perform_destroy(self, instance):
         rule_id = instance.id
         instance.delete()
 
         # 通知规则删除
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'delete',
-                'rule_type': 'info_collection',
-                'rule_id': rule_id,
-                'data': None
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'delete',
+                    'rule_type': 'info_collection',
+                    'rule_id': rule_id,
+                    'data': None
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则删除失败: {str(e)}")
 
 
 class InfoCollectionRuleByModule(generics.ListAPIView):
@@ -114,7 +126,15 @@ class InfoCollectionRuleByModule(generics.ListAPIView):
 
     def get_queryset(self):
         module = self.kwargs['module']
-        return InfoCollectionRule.objects.filter(module=module)
+        queryset = InfoCollectionRule.objects.filter(module=module)
+        print(f"获取模块'{module}'的规则, 找到{queryset.count()}条")
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        print(f"返回规则数据: {serializer.data}")
+        return Response(serializer.data)
 
 
 class InfoCollectionRuleByModuleAndType(generics.ListAPIView):
@@ -141,17 +161,21 @@ class VulnScanRuleList(generics.ListCreateAPIView):
         rule = serializer.save()
 
         # 通知规则更新
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'create',
-                'rule_type': 'vuln_scan',
-                'rule_id': rule.id,
-                'data': VulnScanRuleSerializer(rule).data
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'create',
+                    'rule_type': 'vuln_scan',
+                    'rule_id': rule.id,
+                    'data': VulnScanRuleSerializer(rule).data
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则更新失败: {str(e)}")
 
 
 class VulnScanRuleDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -162,34 +186,42 @@ class VulnScanRuleDetail(generics.RetrieveUpdateDestroyAPIView):
         rule = serializer.save()
 
         # 通知规则更新
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'update',
-                'rule_type': 'vuln_scan',
-                'rule_id': rule.id,
-                'data': VulnScanRuleSerializer(rule).data
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'update',
+                    'rule_type': 'vuln_scan',
+                    'rule_id': rule.id,
+                    'data': VulnScanRuleSerializer(rule).data
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则更新失败: {str(e)}")
 
     def perform_destroy(self, instance):
         rule_id = instance.id
         instance.delete()
 
         # 通知规则删除
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'rule_updates',
-            {
-                'type': 'rule_update',
-                'action': 'delete',
-                'rule_type': 'vuln_scan',
-                'rule_id': rule_id,
-                'data': None
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'rule_updates',
+                {
+                    'type': 'rule_update',
+                    'action': 'delete',
+                    'rule_type': 'vuln_scan',
+                    'rule_id': rule_id,
+                    'data': None
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知规则删除失败: {str(e)}")
 
 
 class VulnScanRuleByType(generics.ListAPIView):

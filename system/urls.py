@@ -7,5 +7,5 @@ urlpatterns = [
     path('data_collection/', include('data_collection.urls')),
     path('rules/', include('rules.urls')),
     path('vuln_scan/', include('vuln_scan.urls')),
-    path('proxy/', proxy_view, name='proxy'),
+    path('proxy/', proxy_view, name='proxy'),  # 添加代理数据接收端点
 ]

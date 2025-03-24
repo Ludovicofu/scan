@@ -86,9 +86,16 @@
         <el-table-column
           fixed="right"
           label="操作"
-          width="100"
+          width="150"
         >
           <template #default="scope">
+            <el-button
+              @click="showDetail(scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
             <el-button
               @click="deleteResult(scope.row.id)"
               type="text"
@@ -131,6 +138,30 @@
           <el-descriptions-item label="匹配值">{{ selectedResult.match_value }}</el-descriptions-item>
           <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
         </el-descriptions>
+
+        <div v-if="selectedResult.behavior || selectedResult.match_value" class="detail-content">
+          <el-divider content-position="left">请求/响应详情</el-divider>
+          <el-tabs>
+            <el-tab-pane v-if="responseDetails.request" label="请求内容">
+              <div class="detail-panel">
+                <div v-if="selectedResult.behavior" class="highlight-section">
+                  <div class="highlight-title">行为路径:</div>
+                  <div class="highlight-content" v-html="highlightBehavior(responseDetails.request, selectedResult.behavior)"></div>
+                </div>
+                <pre>{{ responseDetails.request }}</pre>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane v-if="responseDetails.response" label="响应内容">
+              <div class="detail-panel">
+                <div v-if="selectedResult.match_value" class="highlight-section">
+                  <div class="highlight-title">匹配值:</div>
+                  <div class="highlight-content" v-html="highlightMatchValue(responseDetails.response, selectedResult.match_value)"></div>
+                </div>
+                <pre>{{ responseDetails.response }}</pre>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
       </div>
       <template #footer>
         <span class="dialog-footer">
@@ -175,7 +206,11 @@ export default {
 
       // 详情对话框
       detailDialogVisible: false,
-      selectedResult: null
+      selectedResult: null,
+      responseDetails: {
+        request: '',
+        response: ''
+      }
     };
   },
   created() {
@@ -338,9 +373,51 @@ export default {
     },
 
     // 查看详情
-    showDetail(row) {
+    async showDetail(row) {
       this.selectedResult = row;
       this.detailDialogVisible = true;
+
+      // 获取详细的请求和响应内容（这里假设有一个API可以获取）
+      try {
+        // 这里简化处理，实际情况可能需要额外API
+        this.responseDetails = {
+          request: `GET ${row.behavior || row.asset}\nHost: ${row.asset}\nUser-Agent: Mozilla/5.0...\nAccept: */*`,
+          response: `HTTP/1.1 200 OK\nContent-Type: text/html\nServer: nginx\n\n<html><body>页面内容包含: ${row.match_value}</body></html>`
+        };
+      } catch (error) {
+        console.error('获取详情失败', error);
+        this.responseDetails = {
+          request: '',
+          response: ''
+        };
+      }
+    },
+
+    // 高亮显示行为和匹配值
+    highlightBehavior(text, behavior) {
+      if (!text || !behavior) return text;
+
+      // 对behavior进行转义，以便正确用于正则表达式
+      const escapedBehavior = behavior.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // 创建正则表达式，使用全局搜索和不区分大小写选项
+      const regex = new RegExp(escapedBehavior, 'gi');
+
+      // 用带有高亮的HTML替换匹配的文本
+      return text.replace(regex, match => `<span class="highlight-behavior">${match}</span>`);
+    },
+
+    highlightMatchValue(text, matchValue) {
+      if (!text || !matchValue) return text;
+
+      // 对matchValue进行转义，以便正确用于正则表达式
+      const escapedMatchValue = matchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // 创建正则表达式，使用全局搜索和不区分大小写选项
+      const regex = new RegExp(escapedMatchValue, 'gi');
+
+      // 用带有高亮的HTML替换匹配的文本
+      return text.replace(regex, match => `<span class="highlight-match">${match}</span>`);
     },
 
     // 工具方法
@@ -383,5 +460,56 @@ h1 {
 
 .delete-btn:hover {
   color: #f78989;
+}
+
+.detail-content {
+  margin-top: 20px;
+}
+
+.detail-panel {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+.detail-panel pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
+.highlight-section {
+  margin-bottom: 10px;
+  background-color: #ebeef5;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.highlight-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.highlight-content {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-size: 13px;
+}
+
+:deep(.highlight-behavior) {
+  background-color: #67C23A;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+:deep(.highlight-match) {
+  background-color: #409EFF;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 </style>

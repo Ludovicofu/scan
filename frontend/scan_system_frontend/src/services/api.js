@@ -18,14 +18,24 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器
+// 响应拦截器增强版
 api.interceptors.response.use(
   (response) => {
     // 处理响应数据
+    console.log("API响应成功:", response.config.url, response.data);
     return response.data;
   },
   (error) => {
-    // 处理响应错误
+    // 增强错误日志
+    console.error('API请求错误:', error);
+    if (error.response) {
+      console.error('错误状态码:', error.response.status);
+      console.error('错误数据:', error.response.data);
+    } else if (error.request) {
+      console.error('未收到响应，请求信息:', error.request);
+    } else {
+      console.error('请求配置出错:', error.message);
+    }
     return Promise.reject(error);
   }
 );
@@ -90,26 +100,31 @@ const vulnScanAPI = {
 const rulesAPI = {
   // 获取所有信息收集规则
   getInfoCollectionRules(params) {
+    console.log("调用 getInfoCollectionRules");
     return api.get('rules/info-collection/', { params });
   },
 
   // 按模块获取信息收集规则
   getInfoCollectionRulesByModule(module, params) {
+    console.log("调用 getInfoCollectionRulesByModule, 模块:", module);
     return api.get(`rules/info-collection/module/${module}/`, { params });
   },
 
   // 按模块和扫描类型获取信息收集规则
   getInfoCollectionRulesByModuleAndType(module, scanType, params) {
+    console.log("调用 getInfoCollectionRulesByModuleAndType, 模块:", module, "类型:", scanType);
     return api.get(`rules/info-collection/module/${module}/scan-type/${scanType}/`, { params });
   },
 
   // 创建信息收集规则
   createInfoCollectionRule(data) {
+    console.log("创建规则数据:", data);
     return api.post('rules/info-collection/', data);
   },
 
   // 更新信息收集规则
   updateInfoCollectionRule(id, data) {
+    console.log("更新规则, ID:", id, "数据:", data);
     return api.put(`rules/info-collection/${id}/`, data);
   },
 

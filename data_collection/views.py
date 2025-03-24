@@ -99,14 +99,18 @@ class SystemSettingsView(views.APIView):
             serializer.save()
 
             # 通知mitmproxy脚本更新设置
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                'settings_update',
-                {
-                    'type': 'settings_update',
-                    'data': serializer.data
-                }
-            )
+            try:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'settings_update',
+                    {
+                        'type': 'settings_update',
+                        'data': serializer.data
+                    }
+                )
+            except Exception as e:
+                # 如果通知失败，记录错误但不影响API响应
+                print(f"通知设置更新失败: {str(e)}")
 
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -117,19 +121,29 @@ class SkipTargetList(generics.ListCreateAPIView):
     queryset = SkipTarget.objects.all()
     serializer_class = SkipTargetSerializer
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        print(f"返回跳过目标数据: {serializer.data}")
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
         target = serializer.save()
 
         # 通知WebSocket客户端更新跳过目标列表
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'settings_update',
-            {
-                'type': 'skip_target_update',
-                'action': 'add',
-                'target': target.target
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'settings_update',
+                {
+                    'type': 'skip_target_update',
+                    'action': 'add',
+                    'target': target.target
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知跳过目标添加失败: {str(e)}")
 
 
 class SkipTargetDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -141,12 +155,16 @@ class SkipTargetDetail(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
         # 通知WebSocket客户端更新跳过目标列表
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'settings_update',
-            {
-                'type': 'skip_target_update',
-                'action': 'remove',
-                'target': target
-            }
-        )
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'settings_update',
+                {
+                    'type': 'skip_target_update',
+                    'action': 'remove',
+                    'target': target
+                }
+            )
+        except Exception as e:
+            # 如果通知失败，记录错误但不影响API响应
+            print(f"通知跳过目标删除失败: {str(e)}")

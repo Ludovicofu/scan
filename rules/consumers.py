@@ -4,7 +4,7 @@ from channels.db import database_sync_to_async
 from .models import InfoCollectionRule, VulnScanRule
 
 
-class RuleConsumer(AsyncWebsocketConsumer):
+class RulesConsumer(AsyncWebsocketConsumer):
     """
     WebSocket消费者：处理规则的WebSocket连接
     """

@@ -39,15 +39,16 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="扫描类型">
+        <el-form-item label="规则类型">
           <el-select
-            v-model="filterForm.scan_type"
-            placeholder="选择扫描类型"
+            v-model="filterForm.rule_type"
+            placeholder="选择规则类型"
             clearable
             @change="handleFilterChange"
           >
-            <el-option label="被动扫描" value="passive"></el-option>
-            <el-option label="主动扫描" value="active"></el-option>
+            <el-option label="状态码判断" value="status_code"></el-option>
+            <el-option label="响应内容匹配" value="response_content"></el-option>
+            <el-option label="HTTP 头匹配" value="header"></el-option>
           </el-select>
         </el-form-item>
       </template>
@@ -83,19 +84,19 @@
             <el-option label="信息" value="info"></el-option>
           </el-select>
         </el-form-item>
-
-        <el-form-item label="扫描类型">
-          <el-select
-            v-model="filterForm.scan_type"
-            placeholder="选择扫描类型"
-            clearable
-            @change="handleFilterChange"
-          >
-            <el-option label="被动扫描" value="passive"></el-option>
-            <el-option label="主动扫描" value="active"></el-option>
-          </el-select>
-        </el-form-item>
       </template>
+
+      <el-form-item label="扫描类型">
+        <el-select
+          v-model="filterForm.scan_type"
+          placeholder="选择扫描类型"
+          clearable
+          @change="handleFilterChange"
+        >
+          <el-option label="被动扫描" value="passive"></el-option>
+          <el-option label="主动扫描" value="active"></el-option>
+        </el-select>
+      </el-form-item>
 
       <!-- 搜索框和按钮 -->
       <el-form-item>
@@ -141,6 +142,7 @@ export default {
         date_to: '',
         // 信息收集相关过滤条件
         module: '',
+        rule_type: '',
         // 漏洞扫描相关过滤条件
         vuln_type: '',
         severity: '',
@@ -173,6 +175,7 @@ export default {
         date_from: '',
         date_to: '',
         module: '',
+        rule_type: '',
         vuln_type: '',
         severity: '',
         scan_type: ''

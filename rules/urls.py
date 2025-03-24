@@ -5,10 +5,8 @@ urlpatterns = [
     # 信息收集规则API
     path('info-collection/', views.InfoCollectionRuleList.as_view(), name='info-collection-rule-list'),
     path('info-collection/<int:pk>/', views.InfoCollectionRuleDetail.as_view(), name='info-collection-rule-detail'),
-    path('info-collection/module/<str:module>/', views.InfoCollectionRuleByModule.as_view(),
-         name='info-collection-rule-by-module'),
-    path('info-collection/module/<str:module>/scan-type/<str:scan_type>/',
-         views.InfoCollectionRuleByModuleAndType.as_view(), name='info-collection-rule-by-module-and-type'),
+    path('info-collection/module/<str:module>/', views.InfoCollectionRuleByModule.as_view(),name='info-collection-rule-by-module'),
+    path('info-collection/module/<str:module>/scan-type/<str:scan_type>/',views.InfoCollectionRuleByModuleAndType.as_view(), name='info-collection-rule-by-module-and-type'),
 
     # 漏洞检测规则API
     path('vuln-scan/', views.VulnScanRuleList.as_view(), name='vuln-scan-rule-list'),

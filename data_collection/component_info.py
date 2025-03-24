@@ -59,6 +59,22 @@ class ComponentInfoScanner:
             {'type': 'header', 'name': 'X-Framework', 'value': 'Django'},
             {'type': 'content', 'value': 'csrfmiddlewaretoken'},
         ],
+        'WebLogic': [
+            {'type': 'path', 'value': '/console/login/LoginForm.jsp'},
+            {'type': 'path', 'value': '/wls-wsat/CoordinatorPortType'},
+            {'type': 'content', 'value': 'WebLogic Server'},
+            {'type': 'content', 'value': 'Error 404--Not Found'},
+        ],
+        'Tomcat': [
+            {'type': 'path', 'value': '/manager/html'},
+            {'type': 'path', 'value': '/host-manager/html'},
+            {'type': 'content', 'value': 'Apache Tomcat'},
+        ],
+        'JBoss': [
+            {'type': 'path', 'value': '/jmx-console/'},
+            {'type': 'path', 'value': '/web-console/'},
+            {'type': 'content', 'value': 'JBoss Application Server'},
+        ],
     }
 
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):

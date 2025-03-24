@@ -79,7 +79,7 @@ class OSInfoScanner:
                         # HTTP头匹配
                         for match_value in match_values:
                             header_name, header_value = match_value.split(':', 1) if ':' in match_value else (
-                            match_value, '')
+                                match_value, '')
                             header_name = header_name.strip()
                             header_value = header_value.strip()
 
@@ -98,6 +98,8 @@ class OSInfoScanner:
     async def detect_os_by_case_sensitivity(self, url, use_proxy=False, proxy_address=None):
         """
         通过路径大小写敏感性检测操作系统类型
+
+        Linux/Unix系统通常大小写敏感，Windows通常大小写不敏感
 
         参数:
             url: 目标URL

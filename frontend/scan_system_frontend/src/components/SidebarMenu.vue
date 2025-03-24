@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-header">
-      <h2>被动代理漏洞扫描系统</h2>
+      <h2>半自动化漏洞扫描系统</h2>
     </div>
     <div class="sidebar-menu">
       <router-link to="/" class="menu-item" active-class="active">
