@@ -54,8 +54,15 @@ class Proxy:
             if flow.response.content:
                 try:
                     resp_content = flow.response.content.decode('utf-8')
+                    # 如果内容太大，截断它
+                    if len(resp_content) > 100000:
+                        resp_content = resp_content[:100000] + "... [内容已截断]"
                 except UnicodeDecodeError:
-                    resp_content = base64.b64encode(flow.response.content).decode('utf-8')
+                    # 二进制内容，使用base64编码
+                    try:
+                        resp_content = base64.b64encode(flow.response.content[:10000]).decode('utf-8') + "... [二进制内容已截断]"
+                    except Exception as e:
+                        resp_content = f"[无法处理的二进制内容: {str(e)}]"
 
             # 准备要发送的数据
             data = {
@@ -70,6 +77,7 @@ class Proxy:
             }
 
             # 使用非阻塞方式发送数据到后端
+            ctx.log.info(f"发送数据到后端: {data['url']}, 状态码: {data['status_code']}")
             self._send_to_backend_nonblocking(data)
         except Exception as e:
             ctx.log.warn(f"处理响应数据时出错: {str(e)}")
@@ -86,7 +94,6 @@ class Proxy:
                 }
 
             # 发送请求，设置超时
-            ctx.log.info(f"发送数据到后端: {data['url']}, 状态码: {data['status_code']}")
             response = requests.post(
                 self.backend_url,
                 json=data,

@@ -222,10 +222,14 @@ export default {
   },
   methods: {
     // WebSocket相关方法
+// 修改WebSocket连接初始化方法
+    // WebSocket相关方法
     initWebSocket() {
       // 连接WebSocket
+      console.log("正在连接WebSocket...");
       dataCollectionWS.connect('ws://localhost:8000/ws/data_collection/')
         .then(() => {
+          console.log("WebSocket连接成功!");
           // 添加事件监听器
           dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
           dataCollectionWS.addListener('scan_result', this.handleScanResult);
@@ -249,13 +253,24 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
+    // 修改扫描结果处理方法
     handleScanResult(data) {
       // 处理扫描结果
+      console.log("收到扫描结果:", data);
       if (data.data.scan_type === this.currentScanType) {
         // 如果是当前显示的扫描类型，则添加到结果列表
         if (this.results.length < this.pageSize) {
           this.results.unshift(data.data);
           this.totalResults++;
+          console.log("添加结果到列表");
+
+          // 显示通知
+          ElNotification({
+            title: '发现新结果',
+            message: `${data.data.module_display}: ${data.data.description}`,
+            type: 'success',
+            duration: 5000
+          });
         } else {
           // 通知用户有新结果
           ElNotification({
@@ -264,6 +279,7 @@ export default {
             type: 'success',
             duration: 3000
           });
+          console.log("发送通知");
         }
       }
     },
@@ -305,8 +321,9 @@ export default {
       });
     },
 
-    // 数据操作方法
+        // 数据操作方法
     async fetchResults() {
+      console.log("获取扫描结果, 类型:", this.currentScanType);
       this.loading = true;
       try {
         let response;
@@ -316,14 +333,20 @@ export default {
           page_size: this.pageSize
         };
 
+        console.log("查询参数:", params);
+
         if (this.currentScanType === 'passive') {
           response = await infoCollectionAPI.getPassiveScanResults(params);
         } else {
           response = await infoCollectionAPI.getActiveScanResults(params);
         }
 
+        console.log("API响应:", response);
+
         this.results = response.results || [];
         this.totalResults = response.count || 0;
+
+        console.log("结果数量:", this.results.length);
       } catch (error) {
         console.error('获取扫描结果失败', error);
         ElMessage.error('获取扫描结果失败');

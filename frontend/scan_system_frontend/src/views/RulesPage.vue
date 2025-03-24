@@ -547,8 +547,8 @@ export default {
         }
       });
     },
+    // 修改提交规则方法
     async submitInfoRule() {
-      // 表单验证
       try {
         await this.$refs.infoRuleForm.validate();
 
@@ -559,16 +559,21 @@ export default {
           description: this.infoRuleForm.description,
           rule_type: this.infoRuleForm.rule_type,
           match_values: this.infoRuleForm.match_values,
-          behaviors: this.infoRuleForm.scan_type === 'active' ? this.infoRuleForm.behaviors : null
+          behaviors: this.infoRuleForm.scan_type === 'active' ? this.infoRuleForm.behaviors : null,
+          is_enabled: true  // 确保规则是启用的
         };
+
+        console.log("提交规则数据:", formData);
 
         if (this.isEditMode) {
           // 更新规则
           await rulesAPI.updateInfoCollectionRule(this.infoRuleForm.id, formData);
+          console.log("规则更新成功");
           ElMessage.success('规则更新成功');
         } else {
           // 创建规则
-          await rulesAPI.createInfoCollectionRule(formData);
+          const response = await rulesAPI.createInfoCollectionRule(formData);
+          console.log("规则创建成功:", response);
           ElMessage.success('规则创建成功');
         }
 

@@ -66,6 +66,8 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [('127.0.0.1', 6379)],
+            # 增加容量限制
+            "capacity": 1000,  # 增加到更大的值
         },
     },
 }

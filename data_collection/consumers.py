@@ -94,6 +94,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                 'message': '无效的JSON数据'
             }))
         except Exception as e:
+            print(f"接收WebSocket消息时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': str(e)
@@ -247,7 +250,6 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
 
     async def process_proxy_data(self, data):
         """处理代理数据"""
-        # 调用扫描器处理数据
         try:
             # 解析URL获取主机名
             url = data.get('url', '')
@@ -258,45 +260,75 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             resp_headers = data.get('resp_headers', {})
             resp_content = data.get('resp_content', '')
 
+            print(f"收到代理数据: URL={url}, 方法={method}, 状态码={status_code}")
+
+            # 检查URL是否有效
+            if not url:
+                print("URL为空，跳过处理")
+                return
+
             # 创建或更新资产
             asset = await self.update_asset(url)
 
-            # 启动扫描任务
-            asyncio.create_task(self.scanner.scan_data(
-                self.channel_layer,
-                asset.id,
-                url,
-                method,
-                status_code,
-                req_headers,
-                req_content,
-                resp_headers,
-                resp_content
-            ))
+            if asset:
+                print(f"准备扫描资产: {asset.host}, ID={asset.id}")
+
+                # 启动扫描任务
+                task = asyncio.create_task(
+                    self.scanner.scan_data(
+                        self.channel_layer,
+                        asset.id,
+                        url,
+                        method,
+                        status_code,
+                        req_headers,
+                        req_content,
+                        resp_headers,
+                        resp_content
+                    )
+                )
+                print(f"扫描任务已创建: {url}")
+            else:
+                print("资产创建/更新失败，无法启动扫描")
 
         except Exception as e:
             print(f"处理代理数据时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     @database_sync_to_async
     def update_asset(self, url):
         """更新资产"""
         from urllib.parse import urlparse
-        # 从URL解析主机名
-        parsed_url = urlparse(url)
-        host = parsed_url.netloc
+        try:
+            # 从URL解析主机名
+            parsed_url = urlparse(url)
+            host = parsed_url.netloc
 
-        # 创建或更新资产
-        asset, created = Asset.objects.get_or_create(
-            host=host,
-            defaults={'first_seen': timezone.now()}
-        )
+            if not host:
+                print(f"无法从URL解析主机名: {url}")
+                return None
 
-        # 更新最后发现时间
-        if not created:
-            asset.last_seen = timezone.now()
-            asset.save()
+            # 创建或更新资产
+            asset, created = Asset.objects.get_or_create(
+                host=host,
+                defaults={'first_seen': timezone.now()}
+            )
 
-        return asset
+            # 更新最后发现时间
+            if not created:
+                asset.last_seen = timezone.now()
+                asset.save()
+                print(f"更新资产: {host}, ID={asset.id}")
+            else:
+                print(f"创建新资产: {host}, ID={asset.id}")
+
+            return asset
+        except Exception as e:
+            print(f"更新资产失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     async def update_scanner_settings(self, settings):
         """更新扫描器设置"""

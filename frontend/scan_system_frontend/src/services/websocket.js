@@ -1,4 +1,4 @@
-// 首先定义WebSocketService类
+// websocket.js - WebSocket服务
 class WebSocketService {
   constructor() {
     this.socket = null;
@@ -42,7 +42,9 @@ class WebSocketService {
 
         this.socket.onerror = (error) => {
           console.error('WebSocket错误', error);
-          reject(error);
+          if (!this.isConnected) {
+            reject(error);
+          }
         };
       } catch (error) {
         console.error('创建WebSocket连接时出错', error);
@@ -75,6 +77,7 @@ class WebSocketService {
   send(data) {
     if (this.socket && this.isConnected) {
       try {
+        console.log('发送WebSocket消息:', data);
         this.socket.send(JSON.stringify(data));
       } catch (error) {
         console.error('发送WebSocket消息时出错', error);
@@ -116,6 +119,7 @@ class WebSocketService {
    */
   _handleMessage(event) {
     try {
+      console.log('收到WebSocket消息:', event.data.substr(0, 100) + (event.data.length > 100 ? '...' : ''));
       const message = JSON.parse(event.data);
       const type = message.type;
 
@@ -157,12 +161,12 @@ class WebSocketService {
   }
 }
 
-// 然后创建实例
+// 创建实例
 const dataCollectionWS = new WebSocketService();
 const vulnScanWS = new WebSocketService();
 const rulesWS = new WebSocketService();
 
-// 最后导出实例
+// 导出实例
 export {
   dataCollectionWS,
   vulnScanWS,
