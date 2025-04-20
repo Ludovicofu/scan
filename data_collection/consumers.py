@@ -301,9 +301,13 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         """更新资产"""
         from urllib.parse import urlparse
         try:
-            # 从URL解析主机名
+            # 从URL解析主机名，处理带端口号的情况
             parsed_url = urlparse(url)
             host = parsed_url.netloc
+
+            # 修正: 如果netloc包含端口号，只取域名部分
+            if ':' in host:
+                host = host.split(':')[0]
 
             if not host:
                 print(f"无法从URL解析主机名: {url}")

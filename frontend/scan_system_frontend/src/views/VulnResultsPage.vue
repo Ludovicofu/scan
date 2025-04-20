@@ -216,22 +216,56 @@ export default {
 
       // 详情对话框
       detailDialogVisible: false,
-      selectedResult: null
+      selectedResult: null,
+
+      // 添加一个Map来跟踪已经显示的结果
+      displayedResults: new Map(),
+      // 添加一个Set来跟踪已经通知的结果
+      notifiedResults: new Set()
     };
   },
   created() {
     this.initWebSocket();
     this.fetchResults();
+
+    // 从localStorage恢复去重数据
+    this.loadDeduplicationData();
   },
   beforeUnmount() {
     this.closeWebSocket();
+
+    // 保存去重数据到localStorage
+    this.saveDeduplicationData();
   },
   methods: {
+    // 保存和加载去重数据
+    saveDeduplicationData() {
+      try {
+        // 将通知过的结果保存到localStorage
+        localStorage.setItem('vulnResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
+      } catch (e) {
+        console.error('保存去重数据失败', e);
+      }
+    },
+    loadDeduplicationData() {
+      try {
+        // 从localStorage加载通知过的结果
+        const notifiedData = localStorage.getItem('vulnResultNotified');
+        if (notifiedData) {
+          this.notifiedResults = new Set(JSON.parse(notifiedData));
+        }
+      } catch (e) {
+        console.error('加载去重数据失败', e);
+      }
+    },
+
     // WebSocket相关方法
     initWebSocket() {
       // 连接WebSocket
+      console.log("正在连接WebSocket...");
       vulnScanWS.connect('ws://localhost:8000/ws/vuln_scan/')
         .then(() => {
+          console.log("WebSocket连接成功!");
           // 添加事件监听器
           vulnScanWS.addListener('scan_progress', this.handleScanProgress);
           vulnScanWS.addListener('scan_result', this.handleScanResult);
@@ -255,19 +289,43 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
+    // 修改扫描结果处理方法，添加去重逻辑
     handleScanResult(data) {
-      // 处理扫描结果
+      // 创建唯一标识符
+      const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
+
+      // 检查是否已经通知过这个结果
+      if (this.notifiedResults.has(resultKey)) {
+        console.log("忽略重复漏洞结果:", resultKey);
+        return;
+      }
+
+      // 添加到已通知集合
+      this.notifiedResults.add(resultKey);
+      // 定期保存去重数据
+      this.saveDeduplicationData();
+
+      console.log("收到新的漏洞扫描结果:", data);
       if (data.data.scan_type === this.currentScanType) {
-        // 如果是当前显示的扫描类型，则添加到结果列表
-        if (this.results.length < this.pageSize) {
-          this.results.unshift(data.data);
-          this.totalResults++;
-        } else {
-          // 通知用户有新结果
+        // 检查是否已在显示列表中
+        if (!this.displayedResults.has(resultKey)) {
+          // 保存到显示集合
+          this.displayedResults.set(resultKey, data.data);
+
+          // 添加到显示列表
+          if (this.results.length < this.pageSize) {
+            // 将新结果添加到列表头部
+            this.results.unshift(data.data);
+            this.totalResults++;
+            console.log("添加漏洞到列表");
+          }
+
+          // 显示通知，根据严重程度调整通知类型
+          const notificationType = this.getSeverityNotificationType(data.data.severity);
           ElNotification({
             title: '漏洞发现',
-            message: `发现新的漏洞: ${data.data.name}`,
-            type: 'warning',
+            message: `发现新漏洞: ${data.data.name} (${data.data.severity_display})`,
+            type: notificationType,
             duration: 5000
           });
         }
@@ -322,17 +380,30 @@ export default {
           page_size: this.pageSize
         };
 
+        console.log("查询漏洞参数:", params);
+
         if (this.currentScanType === 'passive') {
           response = await vulnScanAPI.getPassiveScanResults(params);
         } else {
           response = await vulnScanAPI.getActiveScanResults(params);
         }
 
+        console.log("API响应:", response);
+
         this.results = response.results || [];
         this.totalResults = response.count || 0;
+
+        // 更新已显示结果的集合
+        this.displayedResults.clear();
+        this.results.forEach(result => {
+          const resultKey = `${result.vuln_type}-${result.name}-${result.url}`;
+          this.displayedResults.set(resultKey, result);
+        });
+
+        console.log("漏洞结果数量:", this.results.length);
       } catch (error) {
-        console.error('获取扫描结果失败', error);
-        ElMessage.error('获取扫描结果失败');
+        console.error('获取漏洞扫描结果失败', error);
+        ElMessage.error('获取漏洞扫描结果失败');
       } finally {
         this.loading = false;
       }
@@ -348,6 +419,13 @@ export default {
 
         await vulnScanAPI.deleteScanResult(id);
         ElMessage.success('删除成功');
+
+        // 找到并从displayedResults中移除
+        const resultToRemove = this.results.find(r => r.id === id);
+        if (resultToRemove) {
+          const key = `${resultToRemove.vuln_type}-${resultToRemove.name}-${resultToRemove.url}`;
+          this.displayedResults.delete(key);
+        }
 
         // 刷新结果列表
         this.fetchResults();
@@ -385,11 +463,6 @@ export default {
     },
 
     // 工具方法
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-    },
     getSeverityType(severity) {
       const severityMap = {
         'high': 'danger',
@@ -398,6 +471,22 @@ export default {
         'info': 'success'
       };
       return severityMap[severity] || 'info';
+    },
+
+    getSeverityNotificationType(severity) {
+      const notificationMap = {
+        'high': 'error',
+        'medium': 'warning',
+        'low': 'info',
+        'info': 'success'
+      };
+      return notificationMap[severity] || 'info';
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     }
   }
 };

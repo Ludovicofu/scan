@@ -67,8 +67,8 @@ CHANNEL_LAYERS = {
         'CONFIG': {
             "hosts": [('127.0.0.1', 6379)],
             # 增加容量限制
-            "capacity": 1000,  # 增加到更大的值
-            "expiry": 60,  # 消息60秒后过期
+            "capacity": 3000,  # 增加到更大的值
+            "expiry": 180,  # 消息180秒后过期(增加超时时间)
         },
     },
 }
@@ -82,6 +82,11 @@ DATABASES = {
         'PASSWORD': 'root',
         'HOST': '127.0.0.1',
         'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            'connect_timeout': 10,
+        },
     }
 }
 

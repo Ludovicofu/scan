@@ -12,10 +12,11 @@ class Proxy:
 
     def __init__(self):
         self.backend_url = "http://localhost:8000/proxy/"
-        self.timeout = 5  # 发送数据到后端的超时时间，单位为秒
+        self.timeout = 10  # 增加超时时间，单位为秒
         self.use_proxy = False
         self.proxy_url = "http://localhost:7890"
         self.skip_targets = set()  # 要跳过的目标列表
+        self.max_content_size = 50000  # 最大内容大小，超过则截断
 
     def load(self, loader):
         """初始化加载"""
@@ -29,6 +30,12 @@ class Proxy:
     def response(self, flow: http.HTTPFlow) -> None:
         """捕获响应并将数据发送到后端"""
         try:
+            # 处理CONNECT请求
+            if flow.request.method == "CONNECT":
+                # 对于CONNECT请求，我们只记录不处理
+                ctx.log.info(f"CONNECT请求: {flow.request.host}")
+                return
+
             # 如果目标在跳过列表中，则不处理
             host = flow.request.host
             if host in self.skip_targets:
@@ -45,24 +52,26 @@ class Proxy:
             req_content = ""
             if flow.request.content:
                 try:
-                    req_content = flow.request.content.decode('utf-8')
+                    if len(flow.request.content) > self.max_content_size:
+                        req_content = flow.request.content[:self.max_content_size].decode('utf-8',
+                                                                                          errors='ignore') + "... [内容已截断]"
+                    else:
+                        req_content = flow.request.content.decode('utf-8', errors='ignore')
                 except UnicodeDecodeError:
-                    req_content = base64.b64encode(flow.request.content).decode('utf-8')
+                    req_content = "[二进制内容]"
 
             # 获取响应内容，可能是二进制数据
             resp_content = ""
             if flow.response.content:
                 try:
-                    resp_content = flow.response.content.decode('utf-8')
-                    # 如果内容太大，截断它
-                    if len(resp_content) > 100000:
-                        resp_content = resp_content[:100000] + "... [内容已截断]"
+                    if len(flow.response.content) > self.max_content_size:
+                        resp_content = flow.response.content[:self.max_content_size].decode('utf-8',
+                                                                                            errors='ignore') + "... [内容已截断]"
+                    else:
+                        resp_content = flow.response.content.decode('utf-8', errors='ignore')
                 except UnicodeDecodeError:
-                    # 二进制内容，使用base64编码
-                    try:
-                        resp_content = base64.b64encode(flow.response.content[:10000]).decode('utf-8') + "... [二进制内容已截断]"
-                    except Exception as e:
-                        resp_content = f"[无法处理的二进制内容: {str(e)}]"
+                    # 二进制内容，使用简略描述
+                    resp_content = "[二进制内容，长度：" + str(len(flow.response.content)) + "字节]"
 
             # 准备要发送的数据
             data = {

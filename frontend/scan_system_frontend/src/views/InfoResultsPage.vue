@@ -210,19 +210,49 @@ export default {
       responseDetails: {
         request: '',
         response: ''
-      }
+      },
+
+      // 添加一个Map来跟踪已经显示的结果
+      displayedResults: new Map(),
+      // 添加一个Set来跟踪已经通知的结果
+      notifiedResults: new Set()
     };
   },
   created() {
     this.initWebSocket();
     this.fetchResults();
+
+    // 从localStorage恢复去重数据
+    this.loadDeduplicationData();
   },
   beforeUnmount() {
     this.closeWebSocket();
+
+    // 保存去重数据到localStorage
+    this.saveDeduplicationData();
   },
   methods: {
-    // WebSocket相关方法
-// 修改WebSocket连接初始化方法
+    // 保存和加载去重数据
+    saveDeduplicationData() {
+      try {
+        // 将通知过的结果保存到localStorage
+        localStorage.setItem('infoResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
+      } catch (e) {
+        console.error('保存去重数据失败', e);
+      }
+    },
+    loadDeduplicationData() {
+      try {
+        // 从localStorage加载通知过的结果
+        const notifiedData = localStorage.getItem('infoResultNotified');
+        if (notifiedData) {
+          this.notifiedResults = new Set(JSON.parse(notifiedData));
+        }
+      } catch (e) {
+        console.error('加载去重数据失败', e);
+      }
+    },
+
     // WebSocket相关方法
     initWebSocket() {
       // 连接WebSocket
@@ -253,33 +283,44 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改扫描结果处理方法
+    // 修改扫描结果处理方法，添加去重逻辑
     handleScanResult(data) {
-      // 处理扫描结果
-      console.log("收到扫描结果:", data);
-      if (data.data.scan_type === this.currentScanType) {
-        // 如果是当前显示的扫描类型，则添加到结果列表
-        if (this.results.length < this.pageSize) {
-          this.results.unshift(data.data);
-          this.totalResults++;
-          console.log("添加结果到列表");
+      // 创建唯一标识符
+      const resultKey = `${data.data.module}-${data.data.description}-${data.data.match_value}`;
 
-          // 显示通知
+      // 检查是否已经通知过这个结果
+      if (this.notifiedResults.has(resultKey)) {
+        console.log("忽略重复结果:", resultKey);
+        return;
+      }
+
+      // 添加到已通知集合
+      this.notifiedResults.add(resultKey);
+      // 定期保存去重数据
+      this.saveDeduplicationData();
+
+      console.log("收到新的扫描结果:", data);
+      if (data.data.scan_type === this.currentScanType) {
+        // 检查是否已在显示列表中
+        if (!this.displayedResults.has(resultKey)) {
+          // 保存到显示集合
+          this.displayedResults.set(resultKey, data.data);
+
+          // 添加到显示列表
+          if (this.results.length < this.pageSize) {
+            // 将新结果添加到列表头部
+            this.results.unshift(data.data);
+            this.totalResults++;
+            console.log("添加结果到列表");
+          }
+
+          // 无论如何都显示通知
           ElNotification({
             title: '发现新结果',
             message: `${data.data.module_display}: ${data.data.description}`,
             type: 'success',
             duration: 5000
           });
-        } else {
-          // 通知用户有新结果
-          ElNotification({
-            title: '新发现',
-            message: `发现新的${data.data.module_display}: ${data.data.description}`,
-            type: 'success',
-            duration: 3000
-          });
-          console.log("发送通知");
         }
       }
     },
@@ -321,7 +362,7 @@ export default {
       });
     },
 
-        // 数据操作方法
+    // 数据操作方法
     async fetchResults() {
       console.log("获取扫描结果, 类型:", this.currentScanType);
       this.loading = true;
@@ -346,6 +387,13 @@ export default {
         this.results = response.results || [];
         this.totalResults = response.count || 0;
 
+        // 更新已显示结果的集合
+        this.displayedResults.clear();
+        this.results.forEach(result => {
+          const resultKey = `${result.module}-${result.description}-${result.match_value}`;
+          this.displayedResults.set(resultKey, result);
+        });
+
         console.log("结果数量:", this.results.length);
       } catch (error) {
         console.error('获取扫描结果失败', error);
@@ -365,6 +413,13 @@ export default {
 
         await infoCollectionAPI.deleteScanResult(id);
         ElMessage.success('删除成功');
+
+        // 找到并从displayedResults中移除
+        const resultToRemove = this.results.find(r => r.id === id);
+        if (resultToRemove) {
+          const key = `${resultToRemove.module}-${resultToRemove.description}-${resultToRemove.match_value}`;
+          this.displayedResults.delete(key);
+        }
 
         // 刷新结果列表
         this.fetchResults();
