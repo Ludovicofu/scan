@@ -15,7 +15,7 @@ class NetworkInfoScanner:
         参数:
             url: 目标URL
             behavior: 扫描行为（访问路径）
-            rule_type: 规则类型 (status_code, response_content, header)
+            rule_type: 规则类型 (status_code, response_content, header, port)
             match_values: 匹配值列表
             use_proxy: 是否使用代理
             proxy_address: 代理地址
@@ -23,6 +23,36 @@ class NetworkInfoScanner:
         返回:
             匹配结果字典，如果没有匹配则返回None
         """
+        # 特殊处理端口扫描规则
+        if rule_type == 'port':
+            # 从URL解析主机名
+            parsed_url = urlparse(url)
+            host = parsed_url.netloc
+
+            # 处理带端口号的主机名
+            if ':' in host:
+                host = host.split(':')[0]
+
+            # 将匹配值解析为端口列表
+            ports = []
+            for port_str in match_values:
+                try:
+                    # 尝试将端口值转换为整数
+                    port = int(port_str.strip())
+                    ports.append(port)
+                except ValueError:
+                    # 如果不是有效的端口号，跳过
+                    continue
+
+            # 执行端口扫描
+            open_ports = await self.scan_ports(host, ports)
+
+            # 如果有开放端口，返回匹配结果
+            if open_ports:
+                return {'match_value': ', '.join(map(str, open_ports))}
+            else:
+                return None
+
         # 解析原始URL，获取基本域名和协议
         parsed_url = urlparse(url)
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
@@ -79,7 +109,7 @@ class NetworkInfoScanner:
                         # HTTP头匹配
                         for match_value in match_values:
                             header_name, header_value = match_value.split(':', 1) if ':' in match_value else (
-                            match_value, '')
+                                match_value, '')
                             header_name = header_name.strip()
                             header_value = header_value.strip()
 

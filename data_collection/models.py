@@ -41,6 +41,9 @@ class ScanResult(models.Model):
     rule_type = models.CharField(max_length=50, verbose_name='规则类型')
     match_value = models.TextField(verbose_name='匹配值')  # 使用TextField而不是CharField，允许更长的内容
     behavior = models.TextField(blank=True, null=True, verbose_name='行为')
+    # 添加请求和响应数据字段
+    request_data = models.TextField(blank=True, null=True, verbose_name='请求数据')
+    response_data = models.TextField(blank=True, null=True, verbose_name='响应数据')
     scan_date = models.DateTimeField(default=timezone.now, verbose_name='扫描日期')
 
     def __str__(self):

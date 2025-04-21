@@ -126,7 +126,7 @@
     <el-dialog
       title="扫描结果详情"
       v-model="detailDialogVisible"
-      width="60%"
+      width="80%"
     >
       <div v-if="selectedResult">
         <el-descriptions :column="1" border>
@@ -139,25 +139,27 @@
           <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
         </el-descriptions>
 
-        <div v-if="selectedResult.behavior || selectedResult.match_value" class="detail-content">
+        <div class="detail-content">
           <el-divider content-position="left">请求/响应详情</el-divider>
           <el-tabs>
-            <el-tab-pane v-if="responseDetails.request" label="请求内容">
+            <el-tab-pane label="请求内容">
               <div class="detail-panel">
+                <!-- 使用selectedResult中的实际请求数据 -->
                 <div v-if="selectedResult.behavior" class="highlight-section">
                   <div class="highlight-title">行为路径:</div>
-                  <div class="highlight-content" v-html="highlightBehavior(responseDetails.request, selectedResult.behavior)"></div>
+                  <div class="highlight-content" v-html="highlightBehavior(selectedResult.request_data, selectedResult.behavior)"></div>
                 </div>
-                <pre>{{ responseDetails.request }}</pre>
+                <pre>{{ selectedResult.request_data || '无请求数据' }}</pre>
               </div>
             </el-tab-pane>
-            <el-tab-pane v-if="responseDetails.response" label="响应内容">
+            <el-tab-pane label="响应内容">
               <div class="detail-panel">
+                <!-- 使用selectedResult中的实际响应数据 -->
                 <div v-if="selectedResult.match_value" class="highlight-section">
                   <div class="highlight-title">匹配值:</div>
-                  <div class="highlight-content" v-html="highlightMatchValue(responseDetails.response, selectedResult.match_value)"></div>
+                  <div class="highlight-content" v-html="highlightMatchValue(selectedResult.response_data, selectedResult.match_value)"></div>
                 </div>
-                <pre>{{ responseDetails.response }}</pre>
+                <pre>{{ selectedResult.response_data || '无响应数据' }}</pre>
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -207,10 +209,6 @@ export default {
       // 详情对话框
       detailDialogVisible: false,
       selectedResult: null,
-      responseDetails: {
-        request: '',
-        response: ''
-      },
 
       // 添加一个Map来跟踪已经显示的结果
       displayedResults: new Map(),
@@ -283,7 +281,7 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改扫描结果处理方法，添加去重逻辑
+    // 修改扫描结果处理方法，添加处理请求和响应数据
     handleScanResult(data) {
       // 创建唯一标识符
       const resultKey = `${data.data.module}-${data.data.description}-${data.data.match_value}`;
@@ -303,8 +301,12 @@ export default {
       if (data.data.scan_type === this.currentScanType) {
         // 检查是否已在显示列表中
         if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合
-          this.displayedResults.set(resultKey, data.data);
+          // 保存到显示集合，确保包含请求和响应数据
+          this.displayedResults.set(resultKey, {
+            ...data.data,
+            request_data: data.data.request_data || '',
+            response_data: data.data.response_data || ''
+          });
 
           // 添加到显示列表
           if (this.results.length < this.pageSize) {
@@ -451,24 +453,9 @@ export default {
     },
 
     // 查看详情
-    async showDetail(row) {
+    showDetail(row) {
       this.selectedResult = row;
       this.detailDialogVisible = true;
-
-      // 获取详细的请求和响应内容（这里假设有一个API可以获取）
-      try {
-        // 这里简化处理，实际情况可能需要额外API
-        this.responseDetails = {
-          request: `GET ${row.behavior || row.asset}\nHost: ${row.asset}\nUser-Agent: Mozilla/5.0...\nAccept: */*`,
-          response: `HTTP/1.1 200 OK\nContent-Type: text/html\nServer: nginx\n\n<html><body>页面内容包含: ${row.match_value}</body></html>`
-        };
-      } catch (error) {
-        console.error('获取详情失败', error);
-        this.responseDetails = {
-          request: '',
-          response: ''
-        };
-      }
     },
 
     // 高亮显示行为和匹配值
@@ -558,6 +545,8 @@ h1 {
   font-size: 13px;
   line-height: 1.5;
   margin-top: 10px;
+  overflow-x: auto;
+  max-height: 500px;
 }
 
 .highlight-section {

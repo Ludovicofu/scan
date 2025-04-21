@@ -138,7 +138,7 @@
     <el-dialog
       title="漏洞详情"
       v-model="detailDialogVisible"
-      width="70%"
+      width="80%"
     >
       <div v-if="selectedResult">
         <el-descriptions :column="1" border>
@@ -163,14 +163,33 @@
 
         <el-divider content-position="left">请求详情</el-divider>
         <div class="http-details">
-          <el-collapse>
-            <el-collapse-item title="HTTP请求" name="request">
-              <pre>{{ selectedResult.request }}</pre>
-            </el-collapse-item>
-            <el-collapse-item title="HTTP响应" name="response">
-              <pre>{{ selectedResult.response }}</pre>
-            </el-collapse-item>
-          </el-collapse>
+          <el-tabs>
+            <el-tab-pane label="HTTP请求">
+              <div class="detail-panel">
+                <!-- 使用实际的请求数据 -->
+                <pre>{{ selectedResult.request_data || '无请求数据' }}</pre>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="HTTP响应">
+              <div class="detail-panel">
+                <!-- 使用实际的响应数据 -->
+                <pre>{{ selectedResult.response_data || '无响应数据' }}</pre>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="漏洞详情" v-if="selectedResult.proof">
+              <div class="detail-panel">
+                <div class="highlight-section">
+                  <div class="highlight-title">漏洞证明:</div>
+                  <div class="highlight-content">{{ selectedResult.proof }}</div>
+                </div>
+                <!-- 高亮显示匹配的漏洞内容 -->
+                <div v-if="selectedResult.proof && selectedResult.response_data" class="highlight-section">
+                  <div class="highlight-title">响应中的漏洞点:</div>
+                  <div class="highlight-content" v-html="highlightVulnerability(selectedResult.response_data, selectedResult.proof)"></div>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
         </div>
       </div>
       <template #footer>
@@ -289,7 +308,7 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改扫描结果处理方法，添加去重逻辑
+    // 修改扫描结果处理方法，添加请求和响应数据处理
     handleScanResult(data) {
       // 创建唯一标识符
       const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
@@ -309,8 +328,12 @@ export default {
       if (data.data.scan_type === this.currentScanType) {
         // 检查是否已在显示列表中
         if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合
-          this.displayedResults.set(resultKey, data.data);
+          // 保存到显示集合，确保包含请求和响应数据
+          this.displayedResults.set(resultKey, {
+            ...data.data,
+            request_data: data.data.request_data || '',
+            response_data: data.data.response_data || ''
+          });
 
           // 添加到显示列表
           if (this.results.length < this.pageSize) {
@@ -462,6 +485,38 @@ export default {
       this.detailDialogVisible = true;
     },
 
+    // 高亮显示漏洞点
+    highlightVulnerability(text, vulnerabilityProof) {
+      if (!text || !vulnerabilityProof) return text;
+
+      // 对vulnerabilityProof进行处理，获取关键词
+      let keywords = vulnerabilityProof;
+
+      // 如果是复杂的描述，尝试提取关键词
+      if (vulnerabilityProof.length > 30) {
+        // 简单处理：提取引号内的内容，或者提取特定的关键字
+        const quoteMatch = vulnerabilityProof.match(/'([^']+)'|"([^"]+)"/);
+        if (quoteMatch) {
+          keywords = quoteMatch[1] || quoteMatch[2];
+        } else {
+          // 尝试提取关键字（SQL注入、XSS等）
+          const keywordMatch = vulnerabilityProof.match(/SQL|XSS|注入|脚本|命令|漏洞|error|syntax|\/bin\/bash|alert\(|<script>|select\s+.*from/i);
+          if (keywordMatch) {
+            keywords = keywordMatch[0];
+          }
+        }
+      }
+
+      // 对关键词进行转义，以便正确用于正则表达式
+      const escapedKeywords = keywords.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // 创建正则表达式，使用全局搜索和不区分大小写选项
+      const regex = new RegExp(escapedKeywords, 'gi');
+
+      // 用带有高亮的HTML替换匹配的文本
+      return text.replace(regex, match => `<span class="highlight-vulnerability">${match}</span>`);
+    },
+
     // 工具方法
     getSeverityType(severity) {
       const severityMap = {
@@ -532,7 +587,14 @@ h1 {
   margin-top: 15px;
 }
 
-.http-details pre {
+.detail-panel {
+  background-color: #f5f7fa;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+.detail-panel pre {
   white-space: pre-wrap;
   word-wrap: break-word;
   background-color: #f5f7fa;
@@ -540,7 +602,32 @@ h1 {
   font-family: monospace;
   font-size: 13px;
   border-radius: 4px;
-  max-height: 300px;
+  max-height: 500px;
+  overflow-x: auto;
   overflow-y: auto;
+}
+
+.highlight-section {
+  margin-bottom: 10px;
+  background-color: #ebeef5;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.highlight-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.highlight-content {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-size: 13px;
+}
+
+:deep(.highlight-vulnerability) {
+  background-color: #F56C6C;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 </style>

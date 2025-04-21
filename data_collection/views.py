@@ -26,6 +26,9 @@ class ScanResultSerializer(serializers.ModelSerializer):
         ret = super().to_representation(instance)
         ret['module_display'] = instance.get_module_display()
         ret['scan_type_display'] = instance.get_scan_type_display()
+        # 确保请求和响应数据字段被包含在序列化结果中
+        ret['request_data'] = instance.request_data
+        ret['response_data'] = instance.response_data
         return ret
 
 

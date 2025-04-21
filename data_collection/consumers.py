@@ -211,6 +211,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                 'rule_type': result.rule_type,
                 'match_value': result.match_value,
                 'behavior': result.behavior,
+                # 添加请求和响应数据
+                'request_data': result.request_data,
+                'response_data': result.response_data,
                 'scan_date': result.scan_date.isoformat()
             })
 

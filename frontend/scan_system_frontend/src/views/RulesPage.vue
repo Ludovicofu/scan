@@ -14,6 +14,15 @@
 
         <!-- 信息收集规则内容 -->
         <div class="rules-content">
+          <!-- 网络信息模块特殊处理 -->
+          <template v-if="activeInfoTab === 'network'">
+            <!-- 网络信息规则组件，用于配置端口扫描 -->
+            <NetworkRulesComponent />
+
+            <!-- 分隔线 -->
+            <el-divider content-position="left">其他网络信息规则</el-divider>
+          </template>
+
           <!-- 搜索和筛选 -->
           <div class="rules-search">
             <el-input
@@ -155,21 +164,24 @@
                 width="150"
               >
                 <template #default="scope">
-                  <el-button
-                    @click="editInfoRule(scope.row)"
-                    type="text"
-                    size="small"
-                  >
-                    修改
-                  </el-button>
-                  <el-button
-                    @click="deleteInfoRule(scope.row.id)"
-                    type="text"
-                    size="small"
-                    class="delete-btn"
-                  >
-                    删除
-                  </el-button>
+                  <!-- 不显示端口规则的编辑和删除按钮，由专用组件管理 -->
+                  <template v-if="scope.row.rule_type !== 'port'">
+                    <el-button
+                      @click="editInfoRule(scope.row)"
+                      type="text"
+                      size="small"
+                    >
+                      修改
+                    </el-button>
+                    <el-button
+                      @click="deleteInfoRule(scope.row.id)"
+                      type="text"
+                      size="small"
+                      class="delete-btn"
+                    >
+                      删除
+                    </el-button>
+                  </template>
                 </template>
               </el-table-column>
             </el-table>
@@ -229,6 +241,7 @@
             <el-option label="状态码判断" value="status_code"></el-option>
             <el-option label="响应内容匹配" value="response_content"></el-option>
             <el-option label="HTTP 头匹配" value="header"></el-option>
+            <!-- 不在普通表单中提供端口扫描选项，由专用组件管理 -->
           </el-select>
         </el-form-item>
 
@@ -261,9 +274,13 @@
 import { rulesAPI } from '@/services/api';
 import { Search } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import NetworkRulesComponent from '@/components/NetworkRulesComponent.vue';
 
 export default {
   name: 'RulesPage',
+  components: {
+    NetworkRulesComponent
+  },
   data() {
     return {
       // 导航标签
@@ -347,6 +364,11 @@ export default {
           return false;
         }
 
+        // 不在表格中显示端口扫描规则，由专用组件管理
+        if (rule.rule_type === 'port') {
+          return false;
+        }
+
         return rule.scan_type === 'active' &&
           (query === '' ||
            (rule.description && rule.description.toLowerCase().includes(query)) ||
@@ -356,57 +378,9 @@ export default {
     }
   },
   created() {
-    // 不再初始化WebSocket，仅使用REST API
-    // this.initWebSocket();
     this.fetchInfoRules();
   },
-  beforeUnmount() {
-    // 不再关闭WebSocket
-    // this.closeWebSocket();
-  },
   methods: {
-    // WebSocket相关方法 - 已注释掉，不使用WebSocket
-    /*
-    initWebSocket() {
-      // 连接WebSocket
-      rulesWS.connect('ws://localhost:8000/ws/rules/')
-        .then(() => {
-          // 添加事件监听器
-          rulesWS.addListener('rule_update', this.handleRuleUpdate);
-        })
-        .catch(error => {
-          console.error('连接WebSocket失败', error);
-          ElMessage.error('连接服务器失败，规则实时更新将不可用');
-        });
-    },
-    closeWebSocket() {
-      // 移除事件监听器
-      rulesWS.removeListener('rule_update', this.handleRuleUpdate);
-    },
-    handleRuleUpdate(data) {
-      // 处理规则更新事件
-      if (data.rule_type === 'info_collection') {
-        if (data.action === 'create' || data.action === 'update') {
-          // 更新或创建规则
-          const index = this.infoRules.findIndex(r => r.id === data.rule_id);
-          if (index >= 0) {
-            // 更新已有规则
-            this.infoRules.splice(index, 1, data.data);
-          } else {
-            // 添加新规则
-            this.infoRules.push(data.data);
-          }
-        } else if (data.action === 'delete') {
-          // 删除规则
-          const index = this.infoRules.findIndex(r => r.id === data.rule_id);
-          if (index >= 0) {
-            this.infoRules.splice(index, 1);
-          }
-        }
-      }
-    },
-    */
-
     // 标签切换处理
     handleMainTabClick() {
       if (this.activeMainTab === 'info_collection') {

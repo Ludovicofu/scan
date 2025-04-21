@@ -21,6 +21,7 @@ class InfoCollectionRule(models.Model):
         ('status_code', '状态码判断'),
         ('response_content', '响应内容匹配'),
         ('header', 'HTTP 头匹配'),
+        ('port', '端口扫描'),  # 新增端口扫描类型
     )
 
     module = models.CharField(max_length=20, choices=MODULE_CHOICES, verbose_name='模块')
