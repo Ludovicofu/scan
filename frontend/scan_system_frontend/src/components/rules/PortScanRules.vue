@@ -57,17 +57,16 @@
 
 <script>
 import { rulesAPI } from '@/services/api';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 
 export default {
-  name: 'NetworkRulesComponent',
+  name: 'PortScanRules',
   data() {
     return {
       isEditing: false,
       portList: [],
       portText: '',
-      portRule: null, // 存储端口规则对象
-      loading: false
+      portRule: null // 存储端口规则对象
     };
   },
   created() {
@@ -75,7 +74,6 @@ export default {
   },
   methods: {
     async fetchPortRules() {
-      this.loading = true;
       try {
         console.log("获取端口扫描规则");
         // 获取网络模块的主动扫描规则
@@ -104,8 +102,6 @@ export default {
         // 如果出错，给一些测试数据，方便开发调试
         this.portList = ['80', '443', '8080', '8081', '3306', '22'];
         this.portText = this.portList.join('\n');
-      } finally {
-        this.loading = false;
       }
     },
 

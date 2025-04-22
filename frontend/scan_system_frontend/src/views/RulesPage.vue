@@ -16,8 +16,8 @@
         <div class="rules-content">
           <!-- 网络信息模块特殊处理 -->
           <template v-if="activeInfoTab === 'network'">
-            <!-- 网络信息规则组件，用于配置端口扫描 -->
-            <NetworkRulesComponent />
+            <!-- 端口扫描规则部分 -->
+            <PortScanRules />
 
             <!-- 分隔线 -->
             <el-divider content-position="left">其他网络信息规则</el-divider>
@@ -38,154 +38,20 @@
           </div>
 
           <!-- 被动扫描规则 -->
-          <div class="rule-section">
-            <h3>被动扫描规则</h3>
-            <el-table
-              v-loading="infoRulesLoading"
-              :data="filteredPassiveRules"
-              border
-              style="width: 100%"
-            >
-              <el-table-column
-                type="index"
-                label="序号"
-                width="60"
-              ></el-table-column>
-
-              <el-table-column
-                prop="updated_at"
-                label="更新时间"
-                width="180"
-                sortable
-              >
-                <template #default="scope">
-                  {{ formatDate(scope.row.updated_at) }}
-                </template>
-              </el-table-column>
-
-              <el-table-column
-                prop="description"
-                label="描述"
-                width="180"
-              ></el-table-column>
-
-              <el-table-column
-                prop="rule_type_display"
-                label="规则类型"
-                width="150"
-              ></el-table-column>
-
-              <el-table-column
-                prop="match_values"
-                label="匹配值"
-                show-overflow-tooltip
-              ></el-table-column>
-
-              <el-table-column
-                fixed="right"
-                label="操作"
-                width="150"
-              >
-                <template #default="scope">
-                  <el-button
-                    @click="editInfoRule(scope.row)"
-                    type="text"
-                    size="small"
-                  >
-                    修改
-                  </el-button>
-                  <el-button
-                    @click="deleteInfoRule(scope.row.id)"
-                    type="text"
-                    size="small"
-                    class="delete-btn"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+          <PassiveScanRules
+            :rules="filteredPassiveRules"
+            :loading="infoRulesLoading"
+            @edit-rule="editInfoRule"
+            @delete-rule="deleteInfoRule"
+          />
 
           <!-- 主动扫描规则 -->
-          <div class="rule-section">
-            <h3>主动扫描规则</h3>
-            <el-table
-              v-loading="infoRulesLoading"
-              :data="filteredActiveRules"
-              border
-              style="width: 100%"
-            >
-              <el-table-column
-                type="index"
-                label="序号"
-                width="60"
-              ></el-table-column>
-
-              <el-table-column
-                prop="updated_at"
-                label="更新时间"
-                width="180"
-                sortable
-              >
-                <template #default="scope">
-                  {{ formatDate(scope.row.updated_at) }}
-                </template>
-              </el-table-column>
-
-              <el-table-column
-                prop="description"
-                label="描述"
-                width="180"
-              ></el-table-column>
-
-              <el-table-column
-                prop="behaviors"
-                label="行为"
-                width="250"
-                show-overflow-tooltip
-              ></el-table-column>
-
-              <el-table-column
-                prop="rule_type_display"
-                label="规则类型"
-                width="150"
-              ></el-table-column>
-
-              <el-table-column
-                prop="match_values"
-                label="匹配值"
-                show-overflow-tooltip
-              ></el-table-column>
-
-              <el-table-column
-                fixed="right"
-                label="操作"
-                width="150"
-              >
-                <template #default="scope">
-                  <!-- 不显示端口规则的编辑和删除按钮，由专用组件管理 -->
-                  <template v-if="scope.row.rule_type !== 'port'">
-                    <el-button
-                      @click="editInfoRule(scope.row)"
-                      type="text"
-                      size="small"
-                    >
-                      修改
-                    </el-button>
-                    <el-button
-                      @click="deleteInfoRule(scope.row.id)"
-                      type="text"
-                      size="small"
-                      class="delete-btn"
-                    >
-                      删除
-                    </el-button>
-                  </template>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+          <ActiveScanRules
+            :rules="filteredActiveRules"
+            :loading="infoRulesLoading"
+            @edit-rule="editInfoRule"
+            @delete-rule="deleteInfoRule"
+          />
         </div>
       </el-tab-pane>
 
@@ -209,77 +75,33 @@
     </el-tabs>
 
     <!-- 信息收集规则编辑对话框 -->
-    <el-dialog
-      :title="isEditMode ? '修改规则' : '新增规则'"
-      v-model="infoRuleDialogVisible"
-      width="60%"
-    >
-      <el-form :model="infoRuleForm" :rules="infoRuleRules" ref="infoRuleForm" label-width="100px">
-        <el-form-item label="扫描类型" prop="scan_type">
-          <el-radio-group v-model="infoRuleForm.scan_type">
-            <el-radio label="passive">被动扫描规则</el-radio>
-            <el-radio label="active">主动扫描规则</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="infoRuleForm.description" placeholder="请输入规则描述"></el-input>
-        </el-form-item>
-
-        <el-form-item v-if="infoRuleForm.scan_type === 'active'" label="行为" prop="behaviors">
-          <el-input
-            type="textarea"
-            v-model="infoRuleForm.behaviors"
-            placeholder="请输入行为（访问路径），多个行为按行分割"
-            :rows="5"
-          ></el-input>
-          <div class="form-tip">例如: /console/login/LoginForm.jsp</div>
-        </el-form-item>
-
-        <el-form-item label="规则类型" prop="rule_type">
-          <el-select v-model="infoRuleForm.rule_type" placeholder="请选择规则类型">
-            <el-option label="状态码判断" value="status_code"></el-option>
-            <el-option label="响应内容匹配" value="response_content"></el-option>
-            <el-option label="HTTP 头匹配" value="header"></el-option>
-            <!-- 不在普通表单中提供端口扫描选项，由专用组件管理 -->
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="匹配值" prop="match_values">
-          <el-input
-            type="textarea"
-            v-model="infoRuleForm.match_values"
-            placeholder="请输入匹配值，多个匹配值按行分割"
-            :rows="5"
-          ></el-input>
-          <div class="form-tip">
-            <span v-if="infoRuleForm.rule_type === 'status_code'">例如: 200, 403, 500</span>
-            <span v-if="infoRuleForm.rule_type === 'response_content'">例如: WebLogic Server, Apache</span>
-            <span v-if="infoRuleForm.rule_type === 'header'">例如: Server: nginx, X-Powered-By: PHP</span>
-          </div>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="infoRuleDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitInfoRule">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <InfoRuleEditDialog
+      :visible="infoRuleDialogVisible"
+      :is-edit="isEditMode"
+      :rule-form="infoRuleForm"
+      :active-tab="activeInfoTab"
+      @close="infoRuleDialogVisible = false"
+      @submit="submitInfoRule"
+    />
   </div>
 </template>
 
 <script>
 import { rulesAPI } from '@/services/api';
 import { Search } from '@element-plus/icons-vue';
+import PortScanRules from '@/components/rules/PortScanRules.vue';
+import PassiveScanRules from '@/components/rules/PassiveScanRules.vue';
+import ActiveScanRules from '@/components/rules/ActiveScanRules.vue';
+import InfoRuleEditDialog from '@/components/rules/InfoRuleEditDialog.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import NetworkRulesComponent from '@/components/NetworkRulesComponent.vue';
 
 export default {
   name: 'RulesPage',
   components: {
-    NetworkRulesComponent
+    PortScanRules,
+    PassiveScanRules,
+    ActiveScanRules,
+    InfoRuleEditDialog
   },
   data() {
     return {
@@ -309,20 +131,6 @@ export default {
         rule_type: 'response_content',
         match_values: '',
         behaviors: ''
-      },
-      infoRuleRules: {
-        description: [
-          { required: true, message: '请输入规则描述', trigger: 'blur' }
-        ],
-        rule_type: [
-          { required: true, message: '请选择规则类型', trigger: 'change' }
-        ],
-        match_values: [
-          { required: true, message: '请输入匹配值', trigger: 'blur' }
-        ],
-        behaviors: [
-          { required: true, message: '请输入行为', trigger: 'blur' }
-        ]
       }
     };
   },
@@ -448,9 +256,6 @@ export default {
         }
       } catch (error) {
         console.error('获取规则失败', error);
-        // 不显示错误消息，只在控制台输出错误
-        // ElMessage.error('获取规则失败');
-
         // 添加一些测试数据以便UI测试
         console.log("发生错误，添加测试数据以验证UI");
         this.infoRules = [
@@ -493,14 +298,8 @@ export default {
         behaviors: ''
       };
       this.infoRuleDialogVisible = true;
-
-      // 重置表单验证
-      this.$nextTick(() => {
-        if (this.$refs.infoRuleForm) {
-          this.$refs.infoRuleForm.clearValidate();
-        }
-      });
     },
+
     editInfoRule(rule) {
       this.isEditMode = true;
       this.infoRuleForm = {
@@ -513,30 +312,11 @@ export default {
         behaviors: rule.behaviors || ''
       };
       this.infoRuleDialogVisible = true;
-
-      // 重置表单验证
-      this.$nextTick(() => {
-        if (this.$refs.infoRuleForm) {
-          this.$refs.infoRuleForm.clearValidate();
-        }
-      });
     },
+
     // 修改提交规则方法
-    async submitInfoRule() {
+    async submitInfoRule(formData) {
       try {
-        await this.$refs.infoRuleForm.validate();
-
-        // 准备提交数据
-        const formData = {
-          module: this.activeInfoTab,
-          scan_type: this.infoRuleForm.scan_type,
-          description: this.infoRuleForm.description,
-          rule_type: this.infoRuleForm.rule_type,
-          match_values: this.infoRuleForm.match_values,
-          behaviors: this.infoRuleForm.scan_type === 'active' ? this.infoRuleForm.behaviors : null,
-          is_enabled: true  // 确保规则是启用的
-        };
-
         console.log("提交规则数据:", formData);
 
         if (this.isEditMode) {
@@ -557,15 +337,11 @@ export default {
         // 重新获取规则
         this.fetchInfoRules();
       } catch (error) {
-        if (error === false) {
-          // 表单验证失败
-          ElMessage.error('请检查表单填写');
-        } else {
-          console.error('保存规则失败', error);
-          ElMessage.error('保存规则失败');
-        }
+        console.error('保存规则失败', error);
+        ElMessage.error('保存规则失败');
       }
     },
+
     async deleteInfoRule(id) {
       try {
         await ElMessageBox.confirm('确认删除该规则?', '提示', {
@@ -585,13 +361,6 @@ export default {
           ElMessage.error('删除规则失败');
         }
       }
-    },
-
-    // 工具方法
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     }
   }
 };
@@ -615,31 +384,5 @@ h1 {
 .rules-search {
   display: flex;
   margin-bottom: 20px;
-}
-
-.rule-section {
-  margin-bottom: 30px;
-}
-
-.rule-section h3 {
-  margin-bottom: 15px;
-  font-size: 18px;
-  color: #303133;
-  padding-left: 10px;
-  border-left: 4px solid #409EFF;
-}
-
-.delete-btn {
-  color: #F56C6C;
-}
-
-.delete-btn:hover {
-  color: #f78989;
-}
-
-.form-tip {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 5px;
 }
 </style>
