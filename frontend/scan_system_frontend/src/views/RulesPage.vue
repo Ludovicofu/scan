@@ -1,3 +1,4 @@
+// frontend/scan_system_frontend/src/views/RulesPage.vue
 <template>
   <div class="rules-page">
     <h1>规则管理</h1>
@@ -14,44 +15,43 @@
 
         <!-- 信息收集规则内容 -->
         <div class="rules-content">
-          <!-- 网络信息模块特殊处理 -->
+          <!-- 网络信息模块显示简化的端口扫描规则 -->
           <template v-if="activeInfoTab === 'network'">
-            <!-- 端口扫描规则部分 -->
             <PortScanRules />
-
-            <!-- 分隔线 -->
-            <el-divider content-position="left">其他网络信息规则</el-divider>
           </template>
 
-          <!-- 搜索和筛选 -->
-          <div class="rules-search">
-            <el-input
-              v-model="searchQuery"
-              placeholder="搜索规则"
-              :prefix-icon="Search"
-              clearable
-              @input="handleSearch"
-              style="width: 300px; margin-right: 10px;"
-            ></el-input>
+          <!-- 操作系统信息和组件服务信息模块保持原样 -->
+          <template v-else>
+            <!-- 搜索和筛选 -->
+            <div class="rules-search">
+              <el-input
+                v-model="searchQuery"
+                placeholder="搜索规则"
+                :prefix-icon="Search"
+                clearable
+                @input="handleSearch"
+                style="width: 300px; margin-right: 10px;"
+              ></el-input>
 
-            <el-button type="primary" @click="handleAddInfoRule">新增规则</el-button>
-          </div>
+              <el-button type="primary" @click="handleAddInfoRule">新增规则</el-button>
+            </div>
 
-          <!-- 被动扫描规则 -->
-          <PassiveScanRules
-            :rules="filteredPassiveRules"
-            :loading="infoRulesLoading"
-            @edit-rule="editInfoRule"
-            @delete-rule="deleteInfoRule"
-          />
+            <!-- 被动扫描规则 -->
+            <PassiveScanRules
+              :rules="filteredPassiveRules"
+              :loading="infoRulesLoading"
+              @edit-rule="editInfoRule"
+              @delete-rule="deleteInfoRule"
+            />
 
-          <!-- 主动扫描规则 -->
-          <ActiveScanRules
-            :rules="filteredActiveRules"
-            :loading="infoRulesLoading"
-            @edit-rule="editInfoRule"
-            @delete-rule="deleteInfoRule"
-          />
+            <!-- 主动扫描规则 -->
+            <ActiveScanRules
+              :rules="filteredActiveRules"
+              :loading="infoRulesLoading"
+              @edit-rule="editInfoRule"
+              @delete-rule="deleteInfoRule"
+            />
+          </template>
         </div>
       </el-tab-pane>
 
@@ -186,19 +186,25 @@ export default {
     }
   },
   created() {
-    this.fetchInfoRules();
+    // 只有非网络信息模块才需要加载规则列表
+    if (this.activeInfoTab !== 'network') {
+      this.fetchInfoRules();
+    }
   },
   methods: {
     // 标签切换处理
     handleMainTabClick() {
-      if (this.activeMainTab === 'info_collection') {
+      if (this.activeMainTab === 'info_collection' && this.activeInfoTab !== 'network') {
         this.fetchInfoRules();
       } else if (this.activeMainTab === 'vuln_scan') {
         // 暂不实现
       }
     },
     handleInfoTabClick() {
-      this.fetchInfoRules();
+      // 只有非网络信息模块才需要加载规则列表
+      if (this.activeInfoTab !== 'network') {
+        this.fetchInfoRules();
+      }
     },
     handleVulnTabClick() {
       // 暂不实现
@@ -206,11 +212,14 @@ export default {
 
     // 数据操作方法
     async fetchInfoRules() {
+      // 如果是网络信息模块，不需要获取规则列表
+      if (this.activeInfoTab === 'network') {
+        return;
+      }
+
       this.infoRulesLoading = true;
       try {
-        console.log("开始获取规则，模块:", this.activeInfoTab);
         const response = await rulesAPI.getInfoCollectionRulesByModule(this.activeInfoTab);
-        console.log("获取规则响应:", response);
 
         // 检查response是否有预期的格式
         if (response && Array.isArray(response.results)) {
@@ -225,56 +234,15 @@ export default {
           this.infoRules = Array.isArray(response) ? response : [];
         }
 
-        console.log("处理后的规则数据:", this.infoRules);
-
         // 如果infoRules为空或不是数组，重置为空数组
         if (!this.infoRules || !Array.isArray(this.infoRules)) {
           console.warn("规则数据不是数组，重置为空数组");
           this.infoRules = [];
         }
-
-        // 如果没有获取到数据，尝试添加一些测试数据（调试用）
-        if (this.infoRules.length === 0) {
-          console.log("没有获取到规则数据，添加测试数据以验证UI");
-          this.infoRules = [
-            {
-              id: 1,
-              module: 'network',
-              module_display: '网络信息',
-              scan_type: 'passive',
-              scan_type_display: '被动扫描',
-              description: '测试规则',
-              rule_type: 'response_content',
-              rule_type_display: '响应内容匹配',
-              match_values: 'test value',
-              behaviors: null,
-              is_enabled: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ];
-        }
       } catch (error) {
         console.error('获取规则失败', error);
-        // 添加一些测试数据以便UI测试
-        console.log("发生错误，添加测试数据以验证UI");
-        this.infoRules = [
-          {
-            id: 1,
-            module: 'network',
-            module_display: '网络信息',
-            scan_type: 'passive',
-            scan_type_display: '被动扫描',
-            description: '测试规则(错误恢复)',
-            rule_type: 'response_content',
-            rule_type_display: '响应内容匹配',
-            match_values: 'error recovery',
-            behaviors: null,
-            is_enabled: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
+        // 初始化为空数组
+        this.infoRules = [];
       } finally {
         this.infoRulesLoading = false;
       }
@@ -285,8 +253,13 @@ export default {
       // 搜索在计算属性中实现
     },
 
-    // 规则编辑相关
+    // 规则编辑相关 - 仅适用于非网络信息模块
     handleAddInfoRule() {
+      if (this.activeInfoTab === 'network') {
+        ElMessage.info('网络信息模块使用简化的端口扫描规则管理，请直接修改端口列表');
+        return;
+      }
+
       this.isEditMode = false;
       this.infoRuleForm = {
         id: null,
@@ -301,6 +274,10 @@ export default {
     },
 
     editInfoRule(rule) {
+      if (this.activeInfoTab === 'network') {
+        return;
+      }
+
       this.isEditMode = true;
       this.infoRuleForm = {
         id: rule.id,
@@ -314,20 +291,19 @@ export default {
       this.infoRuleDialogVisible = true;
     },
 
-    // 修改提交规则方法
     async submitInfoRule(formData) {
-      try {
-        console.log("提交规则数据:", formData);
+      if (this.activeInfoTab === 'network') {
+        return;
+      }
 
+      try {
         if (this.isEditMode) {
           // 更新规则
           await rulesAPI.updateInfoCollectionRule(this.infoRuleForm.id, formData);
-          console.log("规则更新成功");
           ElMessage.success('规则更新成功');
         } else {
           // 创建规则
-          const response = await rulesAPI.createInfoCollectionRule(formData);
-          console.log("规则创建成功:", response);
+          await rulesAPI.createInfoCollectionRule(formData);
           ElMessage.success('规则创建成功');
         }
 
@@ -343,6 +319,10 @@ export default {
     },
 
     async deleteInfoRule(id) {
+      if (this.activeInfoTab === 'network') {
+        return;
+      }
+
       try {
         await ElMessageBox.confirm('确认删除该规则?', '提示', {
           confirmButtonText: '确定',

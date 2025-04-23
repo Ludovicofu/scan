@@ -1,11 +1,12 @@
+// frontend/scan_system_frontend/src/components/rules/PortScanRules.vue
 <template>
-  <div class="network-rules">
-    <h3>端口扫描规则</h3>
-    <div class="port-rules-section">
+  <div class="port-scan-rules">
+    <h3>端口扫描设置</h3>
+    <div class="port-rules-container">
       <div class="rules-header">
         <div class="rule-info">
-          <span class="rule-title">端口列表</span>
-          <span class="rule-desc">添加需要扫描的端口，每行一个</span>
+          <span class="rule-title">要扫描的端口列表</span>
+          <span class="rule-desc">添加需要扫描的目标端口</span>
         </div>
         <div class="rule-actions">
           <el-button
@@ -38,17 +39,17 @@
             {{ port }}
           </div>
           <div v-if="portList.length === 0" class="no-port">
-            没有配置端口
+            没有配置端口，点击"修改"添加扫描端口
           </div>
         </div>
         <div v-else class="port-edit">
           <el-input
             type="textarea"
             v-model="portText"
-            :rows="10"
+            :rows="8"
             placeholder="请输入要扫描的端口，每行一个端口号"
           ></el-input>
-          <div class="hint">例如：80, 8080, 8081, 443, 3306 等</div>
+          <div class="hint">常用端口示例：21(FTP), 22(SSH), 80(HTTP), 443(HTTPS), 3306(MySQL), 8080(HTTP代理)</div>
         </div>
       </div>
     </div>
@@ -75,7 +76,6 @@ export default {
   methods: {
     async fetchPortRules() {
       try {
-        console.log("获取端口扫描规则");
         // 获取网络模块的主动扫描规则
         const response = await rulesAPI.getInfoCollectionRulesByModuleAndType('network', 'active');
 
@@ -93,14 +93,12 @@ export default {
           this.portList = [];
           this.portText = '';
         }
-
-        console.log("端口列表:", this.portList);
       } catch (error) {
         console.error('获取端口扫描规则失败', error);
         ElMessage.error('获取端口扫描规则失败');
 
-        // 如果出错，给一些测试数据，方便开发调试
-        this.portList = ['80', '443', '8080', '8081', '3306', '22'];
+        // 默认常用端口
+        this.portList = ['80', '443', '8080', '3306', '22', '21'];
         this.portText = this.portList.join('\n');
       }
     },
@@ -110,8 +108,7 @@ export default {
       if (!matchValues) return [];
 
       // 解析文本中的端口号
-      const ports = matchValues.split(/[\n,]/).map(port => port.trim()).filter(port => port);
-      return ports;
+      return matchValues.split(/[\n,]/).map(port => port.trim()).filter(port => port);
     },
 
     editPortRules() {
@@ -146,12 +143,10 @@ export default {
 
         if (this.portRule) {
           // 如果已有规则，则更新
-          console.log("更新端口规则:", ruleData);
           await rulesAPI.updateInfoCollectionRule(this.portRule.id, ruleData);
           ElMessage.success('端口规则更新成功');
         } else {
           // 如果没有规则，则创建
-          console.log("创建端口规则:", ruleData);
           const response = await rulesAPI.createInfoCollectionRule(ruleData);
           this.portRule = response;
           ElMessage.success('端口规则创建成功');
@@ -176,15 +171,23 @@ export default {
 </script>
 
 <style scoped>
-.network-rules {
-  margin-bottom: 20px;
+.port-scan-rules {
+  margin-bottom: 30px;
 }
 
-.port-rules-section {
+.port-scan-rules h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #303133;
+  padding-left: 10px;
+  border-left: 4px solid #409EFF;
+}
+
+.port-rules-container {
   background-color: #f5f7fa;
   border-radius: 4px;
   padding: 16px;
-  margin-top: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .rules-header {
@@ -209,6 +212,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-height: 50px;
 }
 
 .port-item {
