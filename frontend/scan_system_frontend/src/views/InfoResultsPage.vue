@@ -135,9 +135,22 @@
           <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
           <el-descriptions-item v-if="selectedResult.behavior" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
           <el-descriptions-item label="规则类型">{{ selectedResult.rule_type }}</el-descriptions-item>
-          <el-descriptions-item label="匹配值">{{ selectedResult.match_value }}</el-descriptions-item>
           <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
         </el-descriptions>
+
+        <!-- 端口扫描结果特殊显示 -->
+        <div v-if="selectedResult.rule_type === 'port'" class="port-scan-results">
+          <el-divider content-position="left">端口扫描结果</el-divider>
+          <el-table :data="parsedPortResults" border stripe>
+            <el-table-column prop="port" label="端口" width="100" />
+            <el-table-column prop="banner" label="端口信息" />
+          </el-table>
+        </div>
+        <!-- 其他类型结果显示 -->
+        <div v-else>
+          <el-divider content-position="left">匹配值</el-divider>
+          <div class="match-value">{{ selectedResult.match_value }}</div>
+        </div>
 
         <div class="detail-content">
           <el-divider content-position="left">请求/响应详情</el-divider>
@@ -155,7 +168,7 @@
             <el-tab-pane label="响应内容">
               <div class="detail-panel">
                 <!-- 使用selectedResult中的实际响应数据 -->
-                <div v-if="selectedResult.match_value" class="highlight-section">
+                <div v-if="selectedResult.match_value && selectedResult.rule_type !== 'port'" class="highlight-section">
                   <div class="highlight-title">匹配值:</div>
                   <div class="highlight-content" v-html="highlightMatchValue(selectedResult.response_data, selectedResult.match_value)"></div>
                 </div>
@@ -215,6 +228,23 @@ export default {
       // 添加一个Set来跟踪已经通知的结果
       notifiedResults: new Set()
     };
+  },
+  computed: {
+    // 解析端口扫描结果为表格数据
+    parsedPortResults() {
+      if (!this.selectedResult || this.selectedResult.rule_type !== 'port' || !this.selectedResult.match_value) {
+        return [];
+      }
+
+      const portLines = this.selectedResult.match_value.split('\n');
+      return portLines.map(line => {
+        const [port, ...bannerParts] = line.split(':');
+        return {
+          port: port,
+          banner: bannerParts.join(':') // 重新组合banner部分，以防banner中包含冒号
+        };
+      });
+    }
   },
   created() {
     this.initWebSocket();
@@ -578,5 +608,20 @@ h1 {
   color: white;
   padding: 2px 4px;
   border-radius: 3px;
+}
+
+/* 新增样式 */
+.port-scan-results {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.match-value {
+  background-color: #f5f7fa;
+  padding: 12px;
+  border-radius: 4px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

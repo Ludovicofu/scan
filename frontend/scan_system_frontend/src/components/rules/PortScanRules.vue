@@ -33,7 +33,20 @@
         </div>
       </div>
 
-      <div class="port-rules-content">
+      <div v-if="isLoading" class="loading-state">
+        <el-skeleton :rows="3" animated />
+      </div>
+      <div v-else-if="loadError" class="error-state">
+        <el-alert
+          title="加载端口规则失败"
+          type="error"
+          description="使用默认端口配置"
+          :closable="false"
+          show-icon
+        />
+      </div>
+
+      <div v-else class="port-rules-content">
         <div v-if="!isEditing" class="port-list">
           <div v-for="(port, index) in portList" :key="index" class="port-item">
             {{ port }}
@@ -49,7 +62,9 @@
             :rows="8"
             placeholder="请输入要扫描的端口，每行一个端口号"
           ></el-input>
-          <div class="hint">常用端口示例：21(FTP), 22(SSH), 80(HTTP), 443(HTTPS), 3306(MySQL), 8080(HTTP代理)</div>
+          <div class="hint">
+            常用端口示例：21(FTP), 22(SSH), 80(HTTP), 443(HTTPS), 3306(MySQL), 8080(HTTP代理)
+          </div>
         </div>
       </div>
     </div>
@@ -65,6 +80,8 @@ export default {
   data() {
     return {
       isEditing: false,
+      isLoading: false,
+      loadError: false,
       portList: [],
       portText: '',
       portRule: null // 存储端口规则对象
@@ -75,31 +92,105 @@ export default {
   },
   methods: {
     async fetchPortRules() {
-      try {
-        // 获取网络模块的主动扫描规则
-        const response = await rulesAPI.getInfoCollectionRulesByModuleAndType('network', 'active');
+      this.isLoading = true;
+      this.loadError = false;
 
-        // 找到规则类型为'port'的规则
-        const portRules = response.filter(rule => rule.rule_type === 'port');
+      try {
+        console.log("开始获取端口扫描规则");
+
+        // 获取所有信息收集规则
+        const response = await rulesAPI.getInfoCollectionRules();
+        console.log("获取规则API响应:", response);
+
+        // 检查响应格式
+        if (!response) {
+          console.error("API 返回空响应");
+          throw new Error("API 返回空响应");
+        }
+
+        // 从结果中过滤出网络模块的端口扫描规则
+        let rules = [];
+        if (Array.isArray(response)) {
+          rules = response;
+        } else if (response && Array.isArray(response.results)) {
+          rules = response.results;
+        } else {
+          console.warn("意外的响应格式:", response);
+          rules = [];
+        }
+
+        console.log("过滤前的规则数:", rules.length);
+
+        // 找到网络模块的端口扫描规则
+        const portRules = rules.filter(rule => {
+          const isPortRule = rule &&
+                           rule.module === 'network' &&
+                           rule.rule_type === 'port' &&
+                           rule.scan_type === 'active';
+          console.log(`检查规则 ${rule ? rule.id : 'undefined'}: ${isPortRule ? '匹配' : '不匹配'}`);
+          return isPortRule;
+        });
+
+        console.log("过滤后的端口扫描规则:", portRules);
 
         if (portRules.length > 0) {
           this.portRule = portRules[0]; // 使用第一个端口扫描规则
+          console.log("找到端口规则:", this.portRule);
 
           // 解析端口列表
           this.portList = this.parsePortsFromRule(this.portRule.match_values);
           this.portText = this.portList.join('\n'); // 转换为每行一个的文本
+          console.log("解析的端口列表:", this.portList);
         } else {
-          // 如果没有找到端口规则，初始化为空
-          this.portList = [];
-          this.portText = '';
+          console.log("未找到端口规则，使用默认值");
+          // 如果没有找到端口规则，使用默认值
+          this.portList = ['80', '443', '8080', '3306', '22', '21'];
+          this.portText = this.portList.join('\n');
+          this.portRule = null;
+
+          // 尝试创建默认规则
+          await this.createDefaultPortRule();
         }
       } catch (error) {
         console.error('获取端口扫描规则失败', error);
-        ElMessage.error('获取端口扫描规则失败');
+        this.loadError = true;
 
-        // 默认常用端口
+        // 使用默认常用端口
         this.portList = ['80', '443', '8080', '3306', '22', '21'];
         this.portText = this.portList.join('\n');
+
+        ElMessage.error('获取端口扫描规则失败，使用默认配置');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async createDefaultPortRule() {
+      try {
+        console.log("创建默认端口扫描规则");
+
+        // 准备规则数据
+        const ruleData = {
+          module: 'network',
+          scan_type: 'active',
+          description: '端口扫描',
+          rule_type: 'port',
+          match_values: '80\n443\n8080\n3306\n22\n21',
+          behaviors: '',
+          is_enabled: true
+        };
+
+        // 创建规则
+        const response = await rulesAPI.createInfoCollectionRule(ruleData);
+        console.log("默认规则创建成功:", response);
+        this.portRule = response;
+
+        ElMessage.success('已创建默认端口扫描规则');
+
+        return response;
+      } catch (error) {
+        console.error('创建默认端口规则失败', error);
+        return null;
       }
     },
 
@@ -108,7 +199,7 @@ export default {
       if (!matchValues) return [];
 
       // 解析文本中的端口号
-      return matchValues.split(/[\n,]/).map(port => port.trim()).filter(port => port);
+      return matchValues.split(/[\n,\s]/).map(port => port.trim()).filter(port => port);
     },
 
     editPortRules() {
@@ -119,18 +210,16 @@ export default {
     async savePortRules() {
       try {
         // 将文本框中的内容解析为端口列表
-        const ports = this.portText.split('\n').map(port => port.trim()).filter(port => {
-          // 验证是否为有效的端口号（1-65535）
-          const portNum = parseInt(port);
-          return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
-        });
+        const ports = this.portText.split('\n')
+          .map(port => port.trim())
+          .filter(port => {
+            if (!port) return false;
+            // 验证是否为有效的端口号（1-65535）
+            const portNum = parseInt(port);
+            return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
+          });
 
-        if (ports.length === 0) {
-          ElMessage.warning('请输入至少一个有效的端口号');
-          return;
-        }
-
-        // 准备规则数据
+        // 准备规则数据 - 允许为空
         const ruleData = {
           module: 'network',
           scan_type: 'active',
@@ -141,15 +230,19 @@ export default {
           is_enabled: true
         };
 
-        if (this.portRule) {
+        console.log("准备保存端口规则数据:", ruleData);
+
+        if (this.portRule && this.portRule.id) {
           // 如果已有规则，则更新
+          console.log("更新规则ID:", this.portRule.id);
           await rulesAPI.updateInfoCollectionRule(this.portRule.id, ruleData);
-          ElMessage.success('端口规则更新成功');
+          ElMessage.success(ports.length > 0 ? '端口规则更新成功' : '已清空所有端口');
         } else {
           // 如果没有规则，则创建
+          console.log("创建新规则");
           const response = await rulesAPI.createInfoCollectionRule(ruleData);
           this.portRule = response;
-          ElMessage.success('端口规则创建成功');
+          ElMessage.success(ports.length > 0 ? '端口规则创建成功' : '已创建空端口规则');
         }
 
         // 更新端口列表
@@ -157,7 +250,7 @@ export default {
         this.isEditing = false;
       } catch (error) {
         console.error('保存端口规则失败', error);
-        ElMessage.error('保存端口规则失败');
+        ElMessage.error('保存端口规则失败: ' + error.message);
       }
     },
 
@@ -236,5 +329,13 @@ export default {
   margin-top: 5px;
   font-size: 12px;
   color: #909399;
+}
+
+.loading-state {
+  padding: 20px 0;
+}
+
+.error-state {
+  margin: 20px 0;
 }
 </style>

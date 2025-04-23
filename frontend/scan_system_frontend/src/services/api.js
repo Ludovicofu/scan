@@ -100,37 +100,85 @@ const vulnScanAPI = {
 const rulesAPI = {
   // 获取所有信息收集规则
   getInfoCollectionRules(params) {
-    console.log("调用 getInfoCollectionRules");
-    return api.get('rules/info-collection/', { params });
+    console.log("调用 getInfoCollectionRules, 参数:", params);
+    return api.get('rules/info-collection/', { params })
+      .then(response => {
+        console.log("获取所有规则成功:", response);
+        return response;
+      })
+      .catch(error => {
+        console.error("获取所有规则失败:", error);
+        throw error;
+      });
   },
 
   // 按模块获取信息收集规则
   getInfoCollectionRulesByModule(module, params) {
-    console.log("调用 getInfoCollectionRulesByModule, 模块:", module);
-    return api.get(`rules/info-collection/module/${module}/`, { params });
+    console.log("调用 getInfoCollectionRulesByModule, 模块:", module, "参数:", params);
+    return api.get(`rules/info-collection/module/${module}/`, { params })
+      .then(response => {
+        console.log("获取模块规则成功:", response);
+        return response;
+      })
+      .catch(error => {
+        console.error(`获取模块[${module}]规则失败:`, error);
+        throw error;
+      });
   },
 
   // 按模块和扫描类型获取信息收集规则
   getInfoCollectionRulesByModuleAndType(module, scanType, params) {
-    console.log("调用 getInfoCollectionRulesByModuleAndType, 模块:", module, "类型:", scanType);
-    return api.get(`rules/info-collection/module/${module}/scan-type/${scanType}/`, { params });
+    console.log("调用 getInfoCollectionRulesByModuleAndType, 模块:", module, "类型:", scanType, "参数:", params);
+    return api.get(`rules/info-collection/module/${module}/scan-type/${scanType}/`, { params })
+      .then(response => {
+        console.log("获取模块和类型规则成功:", response);
+        return response;
+      })
+      .catch(error => {
+        console.error(`获取模块[${module}]类型[${scanType}]规则失败:`, error);
+        throw error;
+      });
   },
 
   // 创建信息收集规则
   createInfoCollectionRule(data) {
     console.log("创建规则数据:", data);
-    return api.post('rules/info-collection/', data);
+    return api.post('rules/info-collection/', data)
+      .then(response => {
+        console.log("创建规则成功:", response);
+        return response;
+      })
+      .catch(error => {
+        console.error("创建规则失败:", error);
+        throw error;
+      });
   },
 
   // 更新信息收集规则
   updateInfoCollectionRule(id, data) {
     console.log("更新规则, ID:", id, "数据:", data);
-    return api.put(`rules/info-collection/${id}/`, data);
+    return api.put(`rules/info-collection/${id}/`, data)
+      .then(response => {
+        console.log("更新规则成功:", response);
+        return response;
+      })
+      .catch(error => {
+        console.error(`更新规则[${id}]失败:`, error);
+        throw error;
+      });
   },
 
   // 删除信息收集规则
   deleteInfoCollectionRule(id) {
-    return api.delete(`rules/info-collection/${id}/`);
+    return api.delete(`rules/info-collection/${id}/`)
+      .then(response => {
+        console.log(`删除规则[${id}]成功:`, response);
+        return response;
+      })
+      .catch(error => {
+        console.error(`删除规则[${id}]失败:`, error);
+        throw error;
+      });
   },
 
   // 获取所有漏洞扫描规则

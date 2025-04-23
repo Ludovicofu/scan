@@ -1,4 +1,5 @@
 import asyncio
+import socket
 import aiohttp
 from urllib.parse import urlparse, urljoin
 
@@ -45,11 +46,16 @@ class NetworkInfoScanner:
                     continue
 
             # 执行端口扫描
-            open_ports = await self.scan_ports(host, ports)
+            open_ports_info = await self.scan_ports_with_banner(host, ports)
 
             # 如果有开放端口，返回匹配结果
-            if open_ports:
-                return {'match_value': ', '.join(map(str, open_ports))}
+            if open_ports_info:
+                # 将端口和banner信息格式化为字符串
+                result_value = []
+                for port, banner in open_ports_info.items():
+                    result_value.append(f"{port}:{banner}")
+
+                return {'match_value': '\n'.join(result_value)}
             else:
                 return None
 
@@ -134,36 +140,117 @@ class NetworkInfoScanner:
             print(f"网络信息扫描出错: {str(e)}")
             return None
 
-    async def scan_ports(self, host, ports):
+    async def scan_ports_with_banner(self, host, ports, timeout=2):
         """
-        扫描主机开放端口
+        扫描主机开放端口并获取Banner信息
 
         参数:
             host: 目标主机名或IP
             ports: 端口列表
+            timeout: 超时时间（秒）
 
         返回:
-            开放端口列表
+            开放端口及其Banner信息的字典 {端口号: banner内容}
         """
-        # 使用外部工具（如nmap）或纯Python实现端口扫描
-        # 这里为了简单，仅通过尝试连接来检测端口是否开放
-        open_ports = []
+        open_ports_info = {}
+        tasks = []
 
         for port in ports:
+            task = asyncio.create_task(self.get_port_banner(host, port, timeout))
+            tasks.append((port, task))
+
+        # 等待所有任务完成
+        for port, task in tasks:
             try:
-                # 创建TCP连接
-                future = asyncio.open_connection(host, port)
-                reader, writer = await asyncio.wait_for(future, timeout=2)
+                banner = await task
+                if banner is not None:  # 端口开放
+                    open_ports_info[port] = banner
+            except Exception as e:
+                print(f"端口 {port} 扫描出错: {str(e)}")
 
-                # 连接成功，端口开放
-                open_ports.append(port)
+        return open_ports_info
 
-                # 关闭连接
+    async def get_port_banner(self, host, port, timeout=2):
+        """
+        检查端口并获取Banner信息
+
+        参数:
+            host: 目标主机
+            port: 目标端口
+            timeout: 超时时间（秒）
+
+        返回:
+            如果端口开放，返回banner内容（字符串）；否则返回None
+        """
+        try:
+            # 创建socket并设置超时
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port),
+                timeout=timeout
+            )
+
+            try:
+                # 等待接收banner（一些服务会直接发送banner）
+                banner_data = await asyncio.wait_for(
+                    reader.read(1024),
+                    timeout=1
+                )
+
+                # 如果没有收到数据，尝试发送一些通用的请求
+                if not banner_data:
+                    # 尝试HTTP请求
+                    if port in [80, 443, 8080, 8443]:
+                        writer.write(b"GET / HTTP/1.0\r\nHost: " + host.encode() + b"\r\n\r\n")
+                        await writer.drain()
+                    # 尝试SMTP
+                    elif port in [25, 465]:
+                        writer.write(b"EHLO example.com\r\n")
+                        await writer.drain()
+                    # 尝试FTP
+                    elif port == 21:
+                        writer.write(b"USER anonymous\r\n")
+                        await writer.drain()
+                    # 尝试POP3
+                    elif port in [110, 995]:
+                        writer.write(b"CAPA\r\n")
+                        await writer.drain()
+                    # 尝试通用的查询命令
+                    else:
+                        writer.write(b"HELP\r\n")
+                        await writer.drain()
+
+                    # 再次尝试读取数据
+                    banner_data = await asyncio.wait_for(
+                        reader.read(1024),
+                        timeout=1
+                    )
+
+                # 转换为字符串并清理
+                banner = banner_data.decode('utf-8', errors='ignore').strip()
+
+                # 截断过长的banner
+                if len(banner) > 100:
+                    banner = banner[:100] + "..."
+
+                # 如果banner为空，至少返回端口开放信息
+                if not banner:
+                    banner = "端口开放，无banner信息"
+
+            except asyncio.TimeoutError:
+                # 读取超时，但端口是开放的
+                banner = "端口开放，无banner信息"
+            finally:
                 writer.close()
-                await writer.wait_closed()
+                try:
+                    await writer.wait_closed()
+                except:
+                    pass
 
-            except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
-                # 连接超时或被拒绝，端口关闭
-                pass
+            return banner
 
-        return open_ports
+        except (asyncio.TimeoutError, ConnectionRefusedError, socket.error):
+            # 连接失败，端口关闭
+            return None
+        except Exception as e:
+            print(f"尝试连接端口 {port} 时出错: {str(e)}")
+            return None

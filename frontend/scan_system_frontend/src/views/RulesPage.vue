@@ -186,42 +186,51 @@ export default {
     }
   },
   created() {
-    // 只有非网络信息模块才需要加载规则列表
-    if (this.activeInfoTab !== 'network') {
-      this.fetchInfoRules();
-    }
+    // 加载当前标签页所需规则
+    this.loadCurrentTabRules();
   },
   methods: {
     // 标签切换处理
     handleMainTabClick() {
-      if (this.activeMainTab === 'info_collection' && this.activeInfoTab !== 'network') {
-        this.fetchInfoRules();
-      } else if (this.activeMainTab === 'vuln_scan') {
-        // 暂不实现
-      }
+      this.loadCurrentTabRules();
     },
+
     handleInfoTabClick() {
-      // 只有非网络信息模块才需要加载规则列表
-      if (this.activeInfoTab !== 'network') {
-        this.fetchInfoRules();
-      }
+      this.loadCurrentTabRules();
     },
+
     handleVulnTabClick() {
       // 暂不实现
     },
 
+    // 加载当前标签页所需规则
+    loadCurrentTabRules() {
+      if (this.activeMainTab === 'info_collection') {
+        if (this.activeInfoTab !== 'network') {
+          // 对于非网络信息模块，加载常规规则
+          this.fetchInfoRules();
+        }
+        // 网络信息模块的端口扫描规则由PortScanRules组件自行加载
+      } else if (this.activeMainTab === 'vuln_scan') {
+        // 漏洞检测规则暂不实现
+      }
+    },
+
     // 数据操作方法
     async fetchInfoRules() {
-      // 如果是网络信息模块，不需要获取规则列表
+      // 如果是网络信息模块，不需要在这里获取规则列表
       if (this.activeInfoTab === 'network') {
         return;
       }
 
+      console.log(`开始获取 ${this.activeInfoTab} 模块规则`);
       this.infoRulesLoading = true;
       try {
+        // 使用模块API获取规则
         const response = await rulesAPI.getInfoCollectionRulesByModule(this.activeInfoTab);
+        console.log(`获取 ${this.activeInfoTab} 模块规则响应:`, response);
 
-        // 检查response是否有预期的格式
+        // 处理不同的响应格式
         if (response && Array.isArray(response.results)) {
           // 如果返回的是带有results字段的对象（分页格式）
           this.infoRules = response.results;
@@ -234,15 +243,21 @@ export default {
           this.infoRules = Array.isArray(response) ? response : [];
         }
 
-        // 如果infoRules为空或不是数组，重置为空数组
+        // 确保infoRules始终是一个数组
         if (!this.infoRules || !Array.isArray(this.infoRules)) {
           console.warn("规则数据不是数组，重置为空数组");
           this.infoRules = [];
         }
+
+        console.log(`获取到 ${this.infoRules.length} 条规则数据`);
       } catch (error) {
-        console.error('获取规则失败', error);
+        console.error(`获取 ${this.activeInfoTab} 模块规则失败:`, error);
+
         // 初始化为空数组
         this.infoRules = [];
+
+        // 提示用户
+        ElMessage.error(`获取 ${this.activeInfoTab} 模块规则失败`);
       } finally {
         this.infoRulesLoading = false;
       }
