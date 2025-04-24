@@ -61,10 +61,9 @@ class ScanResult(models.Model):
         verbose_name = '扫描结果'
         verbose_name_plural = '扫描结果列表'
         ordering = ['-scan_date']
-        # 确保相同资产的相同结果不会重复添加
-        # 注意：这里修改了unique_together的定义，允许同一资产下相同的描述和规则类型有不同的匹配值
-        # 如果需要避免重复，应该在代码逻辑中检查而不是依赖数据库约束
-        unique_together = ['asset', 'module', 'description', 'rule_type', 'match_value']
+        # 修改唯一约束：端口扫描按资产+描述+规则类型为唯一键
+        # 注意：这里移除了match_value，因为每个端口的banner可能会变化
+        unique_together = ['asset', 'module', 'description', 'rule_type']
 
 
 class SystemSettings(models.Model):

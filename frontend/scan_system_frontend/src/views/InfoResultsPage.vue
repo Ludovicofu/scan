@@ -141,10 +141,35 @@
         <!-- 端口扫描结果特殊显示 -->
         <div v-if="selectedResult.rule_type === 'port'" class="port-scan-results">
           <el-divider content-position="left">端口扫描结果</el-divider>
-          <el-table :data="parsedPortResults" border stripe>
-            <el-table-column prop="port" label="端口" width="100" />
-            <el-table-column prop="banner" label="端口信息" />
-          </el-table>
+
+          <div class="port-scan-wrapper">
+            <!-- 端口信息表格 -->
+            <el-table
+              :data="parsedPortResults"
+              border
+              stripe
+              class="port-scan-table"
+            >
+              <el-table-column prop="port" label="端口" width="100" />
+              <el-table-column prop="banner" label="Banner信息">
+                <template #default="scope">
+                  <div class="banner-content">
+                    <el-tooltip
+                      v-if="isBinaryData(scope.row.banner)"
+                      content="点击查看十六进制数据"
+                      placement="top"
+                      effect="light"
+                    >
+                      <div class="binary-data" @click="scope.row.showHex = !scope.row.showHex">
+                        {{ scope.row.showHex ? scope.row.hexData : scope.row.banner }}
+                      </div>
+                    </el-tooltip>
+                    <span v-else>{{ scope.row.banner }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
         <!-- 其他类型结果显示 -->
         <div v-else>
@@ -215,6 +240,9 @@ export default {
       currentPage: 1,
       pageSize: 10,
 
+      // 添加一个Set专门用于追踪已显示的端口号
+      displayedPorts: new Set(),
+
       // 过滤条件
       filters: {},
       currentScanType: 'passive',
@@ -226,7 +254,13 @@ export default {
       // 添加一个Map来跟踪已经显示的结果
       displayedResults: new Map(),
       // 添加一个Set来跟踪已经通知的结果
-      notifiedResults: new Set()
+      notifiedResults: new Set(),
+
+      // 添加一个Map用于防止短时间内重复显示相同的通知
+      recentNotifications: new Map(),
+
+      // 添加通知节流时间 (毫秒)
+      notificationThrottle: 2000
     };
   },
   computed: {
@@ -236,14 +270,36 @@ export default {
         return [];
       }
 
-      const portLines = this.selectedResult.match_value.split('\n');
-      return portLines.map(line => {
+      let result = [];
+      const matchValue = this.selectedResult.match_value || '';
+
+      // 处理单行和多行情况
+      const lines = matchValue.includes('\n') ? matchValue.split('\n') : [matchValue];
+
+      lines.forEach(line => {
+        if (!line || !line.includes(':')) return;
+
         const [port, ...bannerParts] = line.split(':');
-        return {
-          port: port,
-          banner: bannerParts.join(':') // 重新组合banner部分，以防banner中包含冒号
-        };
+        const banner = bannerParts.join(':').trim();
+
+        // 提取十六进制数据（如果存在）
+        let hexData = '';
+        if (this.isBinaryData(banner)) {
+          const hexMatch = banner.match(/前\d+字节: ([0-9a-f]+)/i);
+          if (hexMatch && hexMatch[1]) {
+            hexData = this.formatHexData(hexMatch[1]);
+          }
+        }
+
+        result.push({
+          port: port.trim(),
+          banner: banner || '无Banner信息',
+          hexData,
+          showHex: false
+        });
       });
+
+      return result;
     }
   },
   created() {
@@ -311,51 +367,107 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改扫描结果处理方法，添加处理请求和响应数据
+    // 修改handleScanResult方法
     handleScanResult(data) {
-      // 创建唯一标识符
-      const resultKey = `${data.data.module}-${data.data.description}-${data.data.match_value}`;
+      console.log("收到扫描结果:", data);
 
-      // 检查是否已经通知过这个结果
-      if (this.notifiedResults.has(resultKey)) {
-        console.log("忽略重复结果:", resultKey);
+      // 检查消息格式
+      if (!data || !data.data) {
+        console.error("无效的扫描结果数据");
         return;
       }
 
-      // 添加到已通知集合
-      this.notifiedResults.add(resultKey);
-      // 定期保存去重数据
-      this.saveDeduplicationData();
+      // 检查是否是端口扫描结果
+      const isPortScan = data.data.rule_type === 'port';
+      let portNumber = null;
 
-      console.log("收到新的扫描结果:", data);
-      if (data.data.scan_type === this.currentScanType) {
-        // 检查是否已在显示列表中
-        if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合，确保包含请求和响应数据
-          this.displayedResults.set(resultKey, {
-            ...data.data,
-            request_data: data.data.request_data || '',
-            response_data: data.data.response_data || ''
-          });
+      // 提取端口号(如果是端口扫描结果)
+      if (isPortScan && data.data.match_value && data.data.match_value.includes(':')) {
+        portNumber = data.data.match_value.split(':', 1)[0];
 
-          // 添加到显示列表
-          if (this.results.length < this.pageSize) {
-            // 将新结果添加到列表头部
-            this.results.unshift(data.data);
-            this.totalResults++;
-            console.log("添加结果到列表");
-          }
-
-          // 无论如何都显示通知
-          ElNotification({
-            title: '发现新结果',
-            message: `${data.data.module_display}: ${data.data.description}`,
-            type: 'success',
-            duration: 5000
-          });
+        // 检查此端口是否已经显示过
+        if (this.displayedPorts.has(portNumber)) {
+          console.log(`忽略重复端口扫描结果: ${portNumber}`);
+          return;
         }
+
+        // 将端口号添加到已显示集合
+        this.displayedPorts.add(portNumber);
+      } else {
+        // 非端口扫描结果 - 使用常规检查
+        const resultKey = `${data.data.module}-${data.data.description}-${data.data.match_value}`;
+        if (this.notifiedResults.has(resultKey)) {
+          console.log(`忽略重复结果: ${resultKey}`);
+          return;
+        }
+
+        // 添加到已通知结果集合
+        this.notifiedResults.add(resultKey);
       }
+
+      // 更新结果列表 - 无论是否是端口扫描结果
+      if (data.data.scan_type === this.currentScanType) {
+        // 直接添加到列表头部，为当前页显示
+        this.results.unshift(data.data);
+        this.totalResults++;
+        console.log("结果已添加到列表:", data.data.description || data.data.rule_type);
+      }
+
+      // 显示通知 - 所有类型的结果都要显示
+      const message = isPortScan && portNumber
+        ? `发现开放端口: ${portNumber}`
+        : data.data.description;
+
+      ElNotification({
+        title: '发现新结果',
+        message: `${data.data.module_display}: ${message}`,
+        type: 'success',
+        duration: 3000
+      });
     },
+
+
+    // 新增方法: 更新结果列表
+    // 修改updateResultsList方法
+updateResultsList(data, isPortScan = false, portNumber = null) {
+  // 检查是否是当前显示的扫描类型
+  if (data.scan_type !== this.currentScanType) {
+    return false;
+  }
+
+  // 检查是否重复
+  let isDuplicate = false;
+
+  if (isPortScan && portNumber) {
+    // 端口扫描结果 - 检查是否已有相同端口的结果
+    isDuplicate = this.results.some(item =>
+      item.rule_type === 'port' &&
+      item.match_value &&
+      item.match_value.includes(':') &&
+      item.match_value.split(':', 1)[0] === portNumber
+    );
+  } else {
+    // 其他结果 - 检查是否有完全相同的结果
+    isDuplicate = this.results.some(item =>
+      item.module === data.module &&
+      item.description === data.description &&
+      item.match_value === data.match_value
+    );
+  }
+
+  // 如果不是重复，则添加到列表
+  if (!isDuplicate) {
+    // 将新结果添加到列表头部
+    this.results.unshift(data);
+    this.totalResults++;
+    console.log(`添加结果到列表: ${isPortScan ? '端口 ' + portNumber : data.description}`);
+    return true;
+  } else {
+    console.log(`结果已在列表中，跳过添加: ${isPortScan ? '端口 ' + portNumber : data.description}`);
+    return false;
+  }
+},
+
     handleScanStatus(data) {
       // 处理扫描状态更新
       if (data.status === 'started') {
@@ -515,6 +627,33 @@ export default {
       return text.replace(regex, match => `<span class="highlight-match">${match}</span>`);
     },
 
+    /**
+     * 检查Banner是否是二进制数据描述
+     * @param {string} banner Banner文本
+     * @returns {boolean} 是否为二进制数据
+     */
+    isBinaryData(banner) {
+      return banner && (
+        banner.includes('二进制数据') ||
+        banner.includes('前20字节:') ||
+        banner.includes('前32字节:') ||
+        banner.includes('前16字节:')
+      );
+    },
+
+    /**
+     * 格式化十六进制数据，每2个字符加一个空格
+     * @param {string} hex 十六进制字符串
+     * @returns {string} 格式化后的十六进制字符串
+     */
+    formatHexData(hex) {
+      let result = '';
+      for (let i = 0; i < hex.length; i += 2) {
+        result += hex.substr(i, 2) + ' ';
+      }
+      return result.trim();
+    },
+
     // 工具方法
     formatDate(dateString) {
       if (!dateString) return '';
@@ -610,12 +749,39 @@ h1 {
   border-radius: 3px;
 }
 
-/* 新增样式 */
+/* 新增端口扫描结果样式 */
 .port-scan-results {
-  margin-top: 20px;
+  margin: 20px 0;
+}
+
+.port-scan-wrapper {
+  margin-top: 15px;
+}
+
+.port-scan-table {
+  width: 100%;
   margin-bottom: 20px;
 }
 
+.banner-content {
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.binary-data {
+  cursor: pointer;
+  padding: 2px 4px;
+  background-color: #f5f7fa;
+  border-radius: 3px;
+  color: #303133;
+  transition: background-color 0.2s;
+}
+
+.binary-data:hover {
+  background-color: #e6ebf5;
+}
+
+/* 其他类型结果显示 */
 .match-value {
   background-color: #f5f7fa;
   padding: 12px;
