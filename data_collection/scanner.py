@@ -30,6 +30,16 @@ class DataCollectionScanner:
         self.os_scanner = OSInfoScanner()
         self.component_scanner = ComponentInfoScanner()
 
+        # 添加已扫描资产跟踪
+        self.scanned_assets = set()  # 记录已扫描资产ID
+
+    # 添加重置扫描状态的方法
+    def reset_scan_state(self):
+        """重置扫描状态，清除缓存"""
+        self.scanned_assets.clear()  # 清除资产记录
+        self.network_scanner.clear_cache() if hasattr(self.network_scanner, 'clear_cache') else None
+        print("扫描状态已重置")
+
     def get_status_text(self, status_code):
         """获取HTTP状态码对应的文本描述"""
         status_dict = {
@@ -82,6 +92,15 @@ class DataCollectionScanner:
 
         # 获取资产
         asset = await self.get_asset(asset_id)
+
+        # 检查是否已经处理过该资产的端口扫描
+        asset_key = f"{asset_id}-port-scan"
+        if asset_key in self.scanned_assets:
+            # 如果已处理过，只进行非端口扫描的检查
+            print(f"跳过资产{asset_id}的重复端口扫描")
+        else:
+            # 标记该资产已处理端口扫描
+            self.scanned_assets.add(asset_key)
 
         # 使用信号量控制并发扫描数量
         async with self.semaphore:

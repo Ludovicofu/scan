@@ -36,6 +36,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         # 初始化扫描器
         self.scanner = DataCollectionScanner()
 
+        # 重置扫描状态 - 每次建立新的WebSocket连接时清除缓存
+        self.scanner.reset_scan_state()
+
         # 发送当前系统设置
         settings = await self.get_system_settings()
         await self.send(text_data=json.dumps({
@@ -231,6 +234,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         skip_targets = await self.get_skip_targets()
         for target in skip_targets:
             await self.add_scanner_skip_target(target['target'])
+
+        # 重置扫描状态 - 在开始新的扫描任务前清除缓存
+        self.scanner.reset_scan_state()
 
         # 发送扫描开始通知
         await self.send(text_data=json.dumps({

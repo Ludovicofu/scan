@@ -10,6 +10,11 @@ class NetworkInfoScanner:
     网络信息扫描模块：负责扫描网络相关信息
     """
 
+    def __init__(self):
+        """初始化扫描器"""
+        # 添加缓存来记录已扫描过的资产和端口组合
+        self.port_scan_cache = set()  # 缓存格式：(host, port1,port2,...)
+
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
         """
         根据规则扫描网络信息
@@ -45,6 +50,18 @@ class NetworkInfoScanner:
                 except ValueError:
                     # 如果不是有效的端口号，跳过
                     continue
+
+            # 创建用于缓存检查的键
+            ports_tuple = tuple(sorted(ports))  # 排序确保相同端口集合生成相同的键
+            cache_key = (host, ports_tuple)
+
+            # 检查是否已经扫描过此主机和端口组合
+            if cache_key in self.port_scan_cache:
+                print(f"跳过重复的端口扫描: 主机={host}, 端口={ports}")
+                return None  # 返回None表示不需要再次扫描
+
+            # 添加到缓存中标记为已扫描
+            self.port_scan_cache.add(cache_key)
 
             # 执行端口扫描
             open_ports_info = await self.scan_ports_with_banner(host, ports)
@@ -343,3 +360,12 @@ class NetworkInfoScanner:
         result = re.sub(r'\s+', ' ', result)
 
         return result
+
+    def clear_cache(self):
+        """清除扫描缓存"""
+        self.port_scan_cache.clear()
+        print("已清除端口扫描缓存")
+
+    def get_cache_size(self):
+        """获取当前缓存大小"""
+        return len(self.port_scan_cache)
