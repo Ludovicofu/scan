@@ -399,9 +399,7 @@ import { Search } from '@element-plus/icons-vue';
 
 export default {
   name: 'AssetPage',
-  components: {
-    Search
-  },
+  components: {},
   data() {
     return {
       // 资产列表数据
@@ -442,7 +440,10 @@ export default {
       newNoteContent: '',
 
       // 可用标签（排除已经添加的）
-      availableTags: []
+      availableTags: [],
+
+      // 添加Search图标
+      Search
     };
   },
   created() {
@@ -861,3 +862,4 @@ h1 {
 .tag-item {
   margin-right: 5px;
 }
+</style>

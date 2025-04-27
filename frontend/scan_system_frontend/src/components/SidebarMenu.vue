@@ -8,6 +8,10 @@
         <el-icon><HomeFilled /></el-icon>
         <span>首页</span>
       </router-link>
+      <router-link to="/assets" class="menu-item" active-class="active">
+        <el-icon><Monitor /></el-icon>
+        <span>资产管理</span>
+      </router-link>
       <router-link to="/info-results" class="menu-item" active-class="active">
         <el-icon><Document /></el-icon>
         <span>信息收集</span>
@@ -32,7 +36,7 @@
 </template>
 
 <script>
-import { HomeFilled, Document, Warning, Setting, Tools } from '@element-plus/icons-vue';
+import { HomeFilled, Document, Warning, Setting, Tools, Monitor } from '@element-plus/icons-vue';
 
 export default {
   name: 'SidebarMenu',
@@ -41,7 +45,8 @@ export default {
     Document,
     Warning,
     Setting,
-    Tools
+    Tools,
+    Monitor  // 添加Monitor图标组件
   }
 };
 </script>
