@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'data_collection',
     'rules',
     'vuln_scan',
+    'asset_management',  # 添加资产管理应用
 ]
 
 MIDDLEWARE = [
