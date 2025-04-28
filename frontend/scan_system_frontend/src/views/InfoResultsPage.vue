@@ -1,3 +1,4 @@
+<!-- 修复 frontend/scan_system_frontend/src/views/InfoResultsPage.vue 中重复通知和结果显示问题 -->
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
@@ -248,9 +249,6 @@ export default {
       currentPage: 1,
       pageSize: 10,
 
-      // 添加一个Set专门用于追踪已显示的端口号
-      displayedPorts: new Set(),
-
       // 过滤条件
       filters: {},
       currentScanType: 'passive',
@@ -259,20 +257,14 @@ export default {
       detailDialogVisible: false,
       selectedResult: null,
 
-      // 添加一个Map来跟踪已经显示的结果
-      displayedResults: new Map(),
+      // 去重相关
+      resultCache: new Map(), // 用于跟踪已经显示的结果，键为 ID
+      notificationCache: new Map(), // 用于跟踪已经通知的结果，键为 asset-module-description-rule_type
+      resultIdSet: new Set(), // 用于跟踪已显示的结果ID
 
-      // 添加一个Set来跟踪已经通知的结果
-      notifiedResults: new Set(),
-
-      // 添加一个Set来跟踪已经处理过的结果ID
-      processedResultIds: new Set(),
-
-      // 添加通知节流时间
-      notificationThrottle: 2000,
-
-      // 添加一个Map用于防止短时间内重复显示相同的通知
-      recentNotifications: new Map()
+      // 通知节流控制
+      notificationThrottleTime: 2000, // 相同类型通知的最小间隔(ms)
+      lastNotificationTime: {} // 记录每种类型通知的最后时间
     };
   },
   computed: {
@@ -318,34 +310,48 @@ export default {
     this.initWebSocket();
     this.fetchResults();
 
-    // 从localStorage恢复去重数据
-    this.loadDeduplicationData();
+    // 从 localStorage 恢复缓存数据
+    this.loadCacheFromStorage();
   },
   beforeUnmount() {
     this.closeWebSocket();
 
-    // 保存去重数据到localStorage
-    this.saveDeduplicationData();
+    // 保存缓存数据到 localStorage
+    this.saveCacheToStorage();
   },
   methods: {
-    // 保存和加载去重数据
-    saveDeduplicationData() {
+    // 缓存持久化处理
+    loadCacheFromStorage() {
       try {
-        // 将通知过的结果保存到localStorage
-        localStorage.setItem('infoResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
-      } catch (e) {
-        console.error('保存去重数据失败', e);
+        // 恢复结果ID集合
+        const cachedIds = localStorage.getItem('infoResultIdSet');
+        if (cachedIds) {
+          this.resultIdSet = new Set(JSON.parse(cachedIds));
+          console.log(`已从存储恢复 ${this.resultIdSet.size} 个结果ID`);
+        }
+
+        // 恢复通知缓存
+        const cachedNotifications = localStorage.getItem('infoNotificationCache');
+        if (cachedNotifications) {
+          this.notificationCache = new Map(JSON.parse(cachedNotifications));
+          console.log(`已从存储恢复 ${this.notificationCache.size} 个通知记录`);
+        }
+      } catch (error) {
+        console.error('从存储恢复缓存失败', error);
       }
     },
-    loadDeduplicationData() {
+
+    saveCacheToStorage() {
       try {
-        // 从localStorage加载通知过的结果
-        const notifiedData = localStorage.getItem('infoResultNotified');
-        if (notifiedData) {
-          this.notifiedResults = new Set(JSON.parse(notifiedData));
-        }
-      } catch (e) {
-        console.error('加载去重数据失败', e);
+        // 保存结果ID集合
+        localStorage.setItem('infoResultIdSet', JSON.stringify([...this.resultIdSet]));
+
+        // 保存通知缓存
+        localStorage.setItem('infoNotificationCache', JSON.stringify([...this.notificationCache]));
+
+        console.log('缓存数据已保存到存储');
+      } catch (error) {
+        console.error('保存缓存到存储失败', error);
       }
     },
 
@@ -356,6 +362,13 @@ export default {
       dataCollectionWS.connect('ws://localhost:8000/ws/data_collection/')
         .then(() => {
           console.log("WebSocket连接成功!");
+
+          // 重置服务端的缓存，确保不会遗漏结果
+          dataCollectionWS.send({
+            type: 'reset_cache',
+            reset_global: false // 不清除全局缓存，只清除本次连接的缓存
+          });
+
           // 添加事件监听器
           dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
           dataCollectionWS.addListener('scan_result', this.handleScanResult);
@@ -382,8 +395,6 @@ export default {
 
     // 修改后的处理扫描结果方法
     handleScanResult(data) {
-      console.log("收到扫描结果:", data);
-
       // 检查消息格式
       if (!data || !data.data) {
         console.error("无效的扫描结果数据");
@@ -392,61 +403,99 @@ export default {
 
       const resultData = data.data;
 
-      // 如果结果有ID且已处理过，则跳过
-      if (resultData.id && this.processedResultIds.has(resultData.id)) {
-        console.log(`跳过已处理的结果: ID=${resultData.id}`);
-        return;
-      }
-
-      // 如果有ID，记录为已处理
-      if (resultData.id) {
-        this.processedResultIds.add(resultData.id);
-      }
-
       // 检查是否是当前显示的扫描类型
       if (resultData.scan_type !== this.currentScanType) {
         console.log(`跳过不匹配当前扫描类型的结果: ${resultData.scan_type} != ${this.currentScanType}`);
         return;
       }
 
-      // 直接添加到列表头部，为当前页显示
-      this.results.unshift(resultData);
-      this.totalResults++;
-      console.log("结果已添加到列表:", resultData.description || resultData.rule_type);
+      // 构建结果唯一标识
+      const resultId = resultData.id;
+      const resultKey = `${resultData.asset}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
 
-      // 构建通知消息
-      let notificationMessage = '';
-      let notificationType = 'success';
-
-      // 根据结果类型构造不同的通知消息
-      if (resultData.rule_type === 'port') {
-        // 端口扫描结果
-        notificationMessage = `发现开放端口: ${resultData.port_display || resultData.match_value.split("\n")[0]}`;
-        notificationType = 'warning';
-      } else if (resultData.module === 'network') {
-        // 网络信息结果
-        notificationMessage = `发现网络信息: ${resultData.description}`;
-        notificationType = 'info';
-      } else if (resultData.module === 'os') {
-        // 操作系统信息结果
-        notificationMessage = `发现操作系统信息: ${resultData.description}`;
-        notificationType = 'info';
-      } else if (resultData.module === 'component') {
-        // 组件与服务信息结果
-        notificationMessage = `发现组件信息: ${resultData.description}`;
-        notificationType = 'info';
-      } else {
-        // 其他结果
-        notificationMessage = `发现新结果: ${resultData.description || resultData.rule_type}`;
+      // 检查结果ID是否已存在（如果有ID）
+      if (resultId && this.resultIdSet.has(resultId)) {
+        console.log(`跳过已处理的结果ID: ${resultId}`);
+        return;
       }
 
-      // 显示通知
-      ElNotification({
-        title: `${resultData.module_display}扫描结果`,
-        message: notificationMessage,
-        type: notificationType,
-        duration: 3000
-      });
+      // 检查结果唯一标识是否已存在于缓存中
+      if (this.notificationCache.has(resultKey)) {
+        console.log(`跳过重复结果通知: ${resultKey}`);
+        return;
+      }
+
+      // 添加到缓存中
+      if (resultId) {
+        this.resultIdSet.add(resultId);
+      }
+      this.notificationCache.set(resultKey, true);
+
+      // 将结果添加到结果列表的头部，最多添加到当前页长度
+      if (this.results.length >= this.pageSize) {
+        // 如果已达到页大小，移除末尾项
+        this.results.pop();
+      }
+      this.results.unshift(resultData);
+      this.totalResults++;
+
+      // 构建通知消息并显示
+      this.showResultNotification(resultData);
+    },
+
+    // 添加一个专门的通知显示方法
+    showResultNotification(resultData) {
+      // 获取当前时间戳
+      const now = Date.now();
+
+      // 确定通知类型
+      let notificationType = 'info';
+      let notificationTitle = '';
+      let notificationMessage = '';
+
+      // 根据结果类型设置通知内容
+      if (resultData.rule_type === 'port') {
+        // 端口扫描结果
+        notificationType = 'warning';
+        notificationTitle = '端口扫描结果';
+        notificationMessage = `发现开放端口: ${resultData.port_display || resultData.match_value.split("\n")[0]}`;
+      } else {
+        // 根据模块设置不同的通知
+        switch(resultData.module) {
+          case 'network':
+            notificationTitle = '网络信息';
+            notificationMessage = `发现网络信息: ${resultData.description}`;
+            break;
+          case 'os':
+            notificationTitle = '操作系统信息';
+            notificationMessage = `发现操作系统信息: ${resultData.description}`;
+            break;
+          case 'component':
+            notificationTitle = '组件与服务信息';
+            notificationMessage = `发现组件信息: ${resultData.description}`;
+            break;
+          default:
+            notificationTitle = '扫描结果';
+            notificationMessage = `发现新结果: ${resultData.description}`;
+        }
+      }
+
+      // 节流通知显示
+      const lastTime = this.lastNotificationTime[resultData.module] || 0;
+      if (now - lastTime > this.notificationThrottleTime) {
+        // 更新最后通知时间
+        this.lastNotificationTime[resultData.module] = now;
+
+        // 显示通知
+        ElNotification({
+          title: notificationTitle,
+          message: notificationMessage,
+          type: notificationType,
+          duration: 3000
+        });
+      } else {
+        console.log(`通知频率限制: ${resultData.module}, 跳过显示`);
+      }
     },
 
     handleScanStatus(data) {
@@ -511,19 +560,21 @@ export default {
           response = await infoCollectionAPI.getActiveScanResults(params);
         }
 
-        console.log("API响应:", response);
-
+        // 处理API响应
         this.results = response.results || [];
         this.totalResults = response.count || 0;
 
         // 更新已处理的结果IDs
         this.results.forEach(result => {
           if (result.id) {
-            this.processedResultIds.add(result.id);
+            this.resultIdSet.add(result.id);
           }
+          // 更新通知缓存
+          const resultKey = `${result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          this.notificationCache.set(resultKey, true);
         });
 
-        console.log("结果数量:", this.results.length);
+        console.log(`加载了 ${this.results.length} 条结果`);
       } catch (error) {
         console.error('获取扫描结果失败', error);
         ElMessage.error('获取扫描结果失败');
@@ -543,10 +594,26 @@ export default {
         await infoCollectionAPI.deleteScanResult(id);
         ElMessage.success('删除成功');
 
-        // 从已处理ID集合中移除
-        this.processedResultIds.delete(id);
+        // 从结果ID集合中移除
+        this.resultIdSet.delete(id);
+
+        // 从当前结果列表中移除
+        const index = this.results.findIndex(item => item.id === id);
+        if (index !== -1) {
+          // 移除对应的缓存项
+          const result = this.results[index];
+          const resultKey = `${result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          this.notificationCache.delete(resultKey);
+
+          // 从列表移除
+          this.results.splice(index, 1);
+          this.totalResults--;
+        }
 
         // 刷新结果列表
+        if (this.results.length === 0 && this.currentPage > 1) {
+          this.currentPage--;
+        }
         this.fetchResults();
       } catch (error) {
         if (error !== 'cancel') {

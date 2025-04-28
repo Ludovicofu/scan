@@ -1,176 +1,4 @@
-"""
-组件信息扫描模块：负责扫描网站组件和服务相关信息
-"""
-import asyncio
-from urllib.parse import urlparse, urljoin
-from ..component_info import ComponentInfoScanner
-
-
-class ComponentScanner:
-    """组件信息扫描模块类"""
-
-    def __init__(self):
-        """初始化扫描器"""
-        self.component_info_scanner = ComponentInfoScanner()
-
-    async def scan(self, context):
-        """
-        扫描组件信息
-
-        参数:
-            context: 扫描上下文
-        """
-        # 获取上下文数据
-        asset = context['asset']
-        url = context['url']
-        method = context['method']
-        status_code = context['status_code']
-        req_headers = context['req_headers']
-        req_content = context['req_content']
-        resp_headers = context['resp_headers']
-        resp_content = context['resp_content']
-        channel_layer = context['channel_layer']
-        helpers = context['helpers']
-        use_proxy = context['use_proxy']
-        proxy_address = context['proxy_address']
-        scan_timeout = context['scan_timeout']
-
-        # 格式化请求和响应数据，用于保存
-        request_data = helpers.format_request_data(method, url, req_headers, req_content)
-        response_data = helpers.format_response_data(status_code, resp_headers, resp_content)
-
-        # 获取被动扫描规则
-        passive_rules = await helpers.get_rules('component', 'passive')
-        print(f"获取到 {len(passive_rules)} 条组件模块被动扫描规则")
-
-        # 进行被动扫描
-        await self._do_passive_scan(
-            passive_rules=passive_rules,
-            context=context,
-            request_data=request_data,
-            response_data=response_data,
-            helpers=helpers
-        )
-
-        # 使用组件信息扫描器进行主动扫描
-        active_rules = await helpers.get_rules('component', 'active')
-        print(f"获取到 {len(active_rules)} 条组件模块主动扫描规则")
-
-        # 打印规则详情用于调试
-        for rule in active_rules:
-            print(f"组件规则ID: {rule['id']}, 描述: {rule['description']}, 规则类型: {rule['rule_type']}")
-            print(f"组件行为列表: {rule['behaviors']}")
-            print(f"组件匹配值列表: {rule['match_values']}")
-            print("-" * 50)
-
-        # 进行主动扫描
-        await self._do_active_scan(
-            active_rules=active_rules,
-            context=context,
-            helpers=helpers
-        )
-
-    async def _do_passive_scan(self, passive_rules, context, request_data, response_data, helpers):
-        """执行被动扫描"""
-        asset = context['asset']
-        status_code = context['status_code']
-        req_headers = context['req_headers']
-        resp_headers = context['resp_headers']
-        resp_content = context['resp_content']
-        channel_layer = context['channel_layer']
-
-        for rule in passive_rules:
-            # 获取规则详情
-            rule_id = rule['id']
-            description = rule['description']
-            rule_type = rule['rule_type']
-            match_values = rule['match_values']
-
-            # 根据规则类型进行匹配
-            match_results = []
-            if rule_type == 'status_code':
-                # 状态码判断
-                if str(status_code) in match_values:
-                    match_results.append(str(status_code))
-
-            elif rule_type == 'response_content':
-                # 响应内容匹配
-                for match_value in match_values:
-                    if match_value.lower() in resp_content.lower():
-                        match_results.append(match_value)
-
-            elif rule_type == 'header':
-                # HTTP头匹配
-                for match_value in match_values:
-                    header_name, header_value = match_value.split(':', 1) if ':' in match_value else (match_value, '')
-                    header_name = header_name.strip()
-                    header_value = header_value.strip()
-
-                    # 检查请求头
-                    if header_name in req_headers:
-                        if not header_value or header_value.lower() in req_headers[header_name].lower():
-                            match_results.append(match_value)
-
-                    # 检查响应头
-                    if header_name in resp_headers:
-                        if not header_value or header_value.lower() in resp_headers[header_name].lower():
-                            match_results.append(match_value)
-
-            # 如果有匹配结果，保存扫描结果
-            if match_results:
-                # 只保存匹配到的值，避免保存所有匹配值
-                match_value = '\n'.join(match_results)
-
-                # 检查是否已存在相同的结果，避免重复添加
-                existing = await helpers.check_existing_result(
-                    asset=asset,
-                    module='component',
-                    description=description,
-                    rule_type=rule_type,
-                    match_value=match_value
-                )
-
-                if not existing:
-                    # 保存新的扫描结果
-                    await helpers.save_scan_result(
-                        asset=asset,
-                        module='component',
-                        scan_type='passive',
-                        description=description,
-                        rule_type=rule_type,
-                        match_value=match_value,
-                        behavior=None,
-                        request_data=request_data,
-                        response_data=response_data
-                    )
-
-                    print(f"保存组件被动扫描结果: 资产={asset.host}, 描述={description}")
-
-                    # 发送扫描结果事件
-                    await channel_layer.group_send(
-                        'data_collection_scanner',
-                        {
-                            'type': 'scan_result',
-                            'data': {
-                                'asset': asset.host,
-                                'module': 'component',
-                                'module_display': '组件与服务信息',
-                                'scan_type': 'passive',
-                                'scan_type_display': '被动扫描',
-                                'description': description,
-                                'rule_type': rule_type,
-                                'match_value': match_value,
-                                'behavior': None,
-                                'request_data': request_data,
-                                'response_data': response_data,
-                                'scan_date': None  # 由Django生成
-                            }
-                        }
-                    )
-                else:
-                    print(f"跳过重复的组件被动扫描结果: 资产={asset.host}, 描述={description}")
-
-    async def _do_active_scan(self, active_rules, context, helpers):
+async def _do_active_scan(self, active_rules, context, helpers, scanner=None):
         """执行主动扫描"""
         asset = context['asset']
         url = context['url']
@@ -187,6 +15,19 @@ class ComponentScanner:
             match_values = rule['match_values']
             behaviors = rule['behaviors']
 
+            # 创建规则缓存键
+            cache_key = (asset.id, 'component', rule_type, description)
+
+            # 检查全局缓存
+            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'component', description, rule_type, ''):
+                print(f"跳过全局缓存中已存在的组件主动扫描结果: {cache_key}")
+                continue
+
+            # 检查模块级缓存 - 基本规则检查
+            if cache_key in self.result_cache:
+                print(f"跳过模块缓存中已存在的组件主动扫描结果: {cache_key}")
+                continue
+
             if not behaviors:
                 print(f"组件规则 {rule_id} ({description}) 没有行为定义，跳过")
                 continue
@@ -197,6 +38,14 @@ class ComponentScanner:
             # 执行每个行为
             for behavior in behaviors:
                 try:
+                    # 创建行为特定的缓存键
+                    behavior_cache_key = (asset.id, 'component', rule_type, description, behavior)
+
+                    # 检查行为特定的缓存
+                    if behavior_cache_key in self.result_cache:
+                        print(f"跳过已缓存的组件行为: {behavior}")
+                        continue
+
                     print(f"执行组件主动扫描: 行为={behavior}")
 
                     # 设置超时
@@ -232,8 +81,16 @@ class ComponentScanner:
                             match_value=match_value
                         )
 
+                        # 添加到模块级缓存 - 同时缓存基本规则和行为
+                        self.result_cache.add(cache_key)
+                        self.result_cache.add(behavior_cache_key)
+
+                        # 添加到全局缓存
+                        if scanner and hasattr(scanner, 'add_result_to_cache'):
+                            scanner.add_result_to_cache(asset.id, 'component', description, rule_type, match_value)
+
                         if not existing:
-                            await helpers.save_scan_result(
+                            scan_result = await helpers.save_scan_result(
                                 asset=asset,
                                 module='component',
                                 scan_type='active',
@@ -253,6 +110,7 @@ class ComponentScanner:
                                 {
                                     'type': 'scan_result',
                                     'data': {
+                                        'id': scan_result.id if scan_result else None,
                                         'asset': asset.host,
                                         'module': 'component',
                                         'module_display': '组件与服务信息',

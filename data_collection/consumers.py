@@ -1,3 +1,7 @@
+"""
+修复 data_collection/consumers.py 中的结果重复问题
+该文件负责WebSocket通信和消息分发，是解决重复通知的关键
+"""
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -11,6 +15,8 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
     """
     WebSocket消费者：处理数据收集模块的WebSocket连接
     """
+    # 添加静态缓存用于跨连接去重
+    _global_result_cache = set()  # 格式: (asset_host, module, description, rule_type)
 
     async def connect(self):
         """处理WebSocket连接"""
@@ -36,8 +42,8 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         # 初始化扫描器
         self.scanner = DataCollectionScanner()
 
-        # 重置扫描状态 - 每次建立新的WebSocket连接时清除缓存
-        self.scanner.reset_scan_state()
+        # 添加实例级别的本地结果缓存
+        self.local_result_cache = set()
 
         # 发送当前系统设置
         settings = await self.get_system_settings()
@@ -67,6 +73,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
+        # 断开连接时清理本地缓存
+        self.local_result_cache.clear()
+
     async def receive(self, text_data):
         """处理从WebSocket接收到的消息"""
         try:
@@ -93,7 +102,7 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
 
             elif message_type == 'reset_cache':
                 # 重置缓存
-                self.scanner.reset_scan_state()
+                await self.reset_caches(data.get('reset_global', False))
                 await self.send(text_data=json.dumps({
                     'type': 'cache_reset',
                     'status': 'success',
@@ -164,12 +173,60 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         }))
 
     async def scan_result(self, event):
-        """处理扫描结果事件"""
+        """处理扫描结果事件，添加去重逻辑"""
+        # 获取数据
+        result_data = event['data']
+
+        # 如果没有关键字段，直接返回
+        if not result_data.get('asset') or not result_data.get('module') or not result_data.get('description'):
+            print("扫描结果数据不完整，跳过")
+            return
+
+        # 创建结果缓存键
+        cache_key = (
+            result_data.get('asset', ''),
+            result_data.get('module', ''),
+            result_data.get('description', ''),
+            result_data.get('rule_type', '')
+        )
+
+        # 检查全局缓存和本地缓存中是否存在
+        if cache_key in DataCollectionConsumer._global_result_cache or cache_key in self.local_result_cache:
+            print(f"跳过重复结果: {cache_key}")
+            return
+
+        # 添加到全局缓存和本地缓存
+        DataCollectionConsumer._global_result_cache.add(cache_key)
+        self.local_result_cache.add(cache_key)
+
+        # 添加结果ID如果存在
+        if 'id' in result_data:
+            result_id = result_data['id']
+            print(f"发送扫描结果 ID: {result_id}, 描述: {result_data.get('description')}")
+        else:
+            print(f"发送扫描结果: {result_data.get('description')}")
+
         # 发送扫描结果通知给客户端
         await self.send(text_data=json.dumps({
             'type': 'scan_result',
-            'data': event['data']
+            'data': result_data
         }))
+
+    # 添加重置缓存的方法
+    async def reset_caches(self, reset_global=False):
+        """重置结果缓存"""
+        # 清除本地缓存
+        self.local_result_cache.clear()
+
+        # 重置扫描器缓存
+        self.scanner.reset_scan_state()
+
+        # 如果需要，清除全局缓存
+        if reset_global:
+            DataCollectionConsumer._global_result_cache.clear()
+            print("已重置全局结果缓存")
+
+        print("已重置本地结果缓存和扫描器状态")
 
     # 以下是数据库操作方法
 
@@ -266,6 +323,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
 
         # 重置扫描状态 - 在开始新的扫描任务前清除缓存
         self.scanner.reset_scan_state()
+
+        # 清除本地结果缓存，但保留全局缓存
+        self.local_result_cache.clear()
 
         # 发送扫描开始通知
         await self.send(text_data=json.dumps({

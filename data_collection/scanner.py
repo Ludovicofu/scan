@@ -1,5 +1,6 @@
 """
 扫描器主模块：负责协调各个子模块进行扫描
+修复版本：增强了去重逻辑，防止重复结果
 """
 import asyncio
 from urllib.parse import urlparse
@@ -34,27 +35,70 @@ class DataCollectionScanner:
         self.component_scanner = ComponentScanner()
         self.helpers = ScanHelpers()
 
+        # 添加全局级别的结果缓存，防止同一次扫描中产生重复结果
+        self.global_result_cache = set()  # 格式: (asset_id, module, description, rule_type)
+
         # 添加已扫描资产跟踪
         self.scanned_assets = set()  # 记录已扫描资产ID
 
         # 添加结果缓存跟踪
         self.result_cache = set()  # 记录已发送的结果ID
 
-    # 添加重置扫描状态的方法
-    def reset_scan_state(self):
+    # 增强的重置扫描状态方法
+    def reset_scan_state(self, clear_global_cache=True):
         """重置扫描状态，清除缓存"""
         self.scanned_assets.clear()  # 清除资产记录
         self.result_cache.clear()  # 清除结果缓存
-        self.network_scanner.clear_cache() if hasattr(self.network_scanner, 'clear_cache') else None
 
-        # 重置其他扫描模块的缓存
+        if clear_global_cache:
+            self.global_result_cache.clear()  # 清除全局结果缓存
+            print("全局结果缓存已清除")
+
+        # 重置各个扫描模块的缓存
+        if hasattr(self.network_scanner, 'clear_cache'):
+            self.network_scanner.clear_cache()
+            print("网络扫描模块缓存已清除")
+
         if hasattr(self.os_scanner, 'clear_cache'):
             self.os_scanner.clear_cache()
+            print("操作系统扫描模块缓存已清除")
 
         if hasattr(self.component_scanner, 'clear_cache'):
             self.component_scanner.clear_cache()
+            print("组件扫描模块缓存已清除")
 
         print("扫描状态已重置")
+
+    # 检查结果是否已存在于全局缓存中
+    def is_result_in_cache(self, asset_id, module, description, rule_type, match_value):
+        """
+        检查结果是否已存在于全局缓存中
+
+        参数:
+            asset_id: 资产ID
+            module: 模块名称 (network, os, component)
+            description: 规则描述
+            rule_type: 规则类型
+            match_value: 匹配值
+
+        返回:
+            是否存在于缓存中
+        """
+        # 创建缓存键
+        cache_key = (asset_id, module, description, rule_type)
+
+        # 检查是否存在于全局缓存中
+        return cache_key in self.global_result_cache
+
+    # 添加结果到全局缓存
+    def add_result_to_cache(self, asset_id, module, description, rule_type, match_value):
+        """将结果添加到全局缓存"""
+        # 创建缓存键
+        cache_key = (asset_id, module, description, rule_type)
+
+        # 添加到全局缓存
+        self.global_result_cache.add(cache_key)
+        print(f"结果已添加到全局缓存: {cache_key}")
 
     async def scan_data(self, channel_layer, asset_id, url, method, status_code, req_headers, req_content, resp_headers,
                         resp_content):
@@ -113,7 +157,11 @@ class DataCollectionScanner:
                     'helpers': self.helpers,
                     'use_proxy': self.use_proxy,
                     'proxy_address': self.proxy_address,
-                    'scan_timeout': self.scan_timeout
+                    'scan_timeout': self.scan_timeout,
+                    # 添加全局结果缓存和检查方法供子模块使用
+                    'is_result_in_cache': self.is_result_in_cache,
+                    'add_result_to_cache': self.add_result_to_cache,
+                    'scanner': self  # 添加对扫描器自身的引用
                 }
 
                 # 发送扫描开始事件
@@ -136,7 +184,15 @@ class DataCollectionScanner:
                     self.os_scanner.scan(context),
                     self.component_scanner.scan(context)
                 ]
-                await asyncio.gather(*tasks)
+
+                # 等待所有任务完成或有一个失败
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # 处理任务结果，检查是否有异常
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        module_name = ["网络模块", "操作系统模块", "组件模块"][i]
+                        print(f"{module_name}扫描出错: {str(result)}")
 
                 # 发送扫描完成事件
                 await channel_layer.group_send(

@@ -13,14 +13,20 @@ class NetworkScanner:
         """初始化扫描器"""
         self.network_info_scanner = NetworkInfoScanner()
         self.port_scan_cache = set()  # 缓存已扫描的端口
-        # 添加结果缓存，避免重复发送相同结果
-        self.result_cache = set()  # 格式: (asset_id, module, rule_type, match_value)
+
+        # 添加更强的结果缓存，避免重复发送相同结果
+        # 格式: (asset_id, module, rule_type, description)
+        self.result_cache = set()
 
     def clear_cache(self):
         """清除缓存"""
         self.port_scan_cache.clear()
         self.result_cache.clear()
         print("网络扫描器缓存已清除")
+
+        # 如果 NetworkInfoScanner 也有缓存清理方法，同时清理
+        if hasattr(self.network_info_scanner, 'clear_cache'):
+            self.network_info_scanner.clear_cache()
 
     async def scan(self, context):
         """
@@ -44,6 +50,9 @@ class NetworkScanner:
         proxy_address = context['proxy_address']
         scan_timeout = context['scan_timeout']
 
+        # 重要：获取全局扫描器实例的方法用于检查和添加全局缓存
+        scanner = context.get('scanner')
+
         # 格式化请求和响应数据，用于保存
         request_data = helpers.format_request_data(method, url, req_headers, req_content)
         response_data = helpers.format_response_data(status_code, resp_headers, resp_content)
@@ -58,7 +67,8 @@ class NetworkScanner:
             context=context,
             request_data=request_data,
             response_data=response_data,
-            helpers=helpers
+            helpers=helpers,
+            scanner=scanner
         )
 
         # 使用网络信息扫描器进行主动扫描
@@ -76,11 +86,12 @@ class NetworkScanner:
         await self._do_active_scan(
             active_rules=active_rules,
             context=context,
-            helpers=helpers
+            helpers=helpers,
+            scanner=scanner
         )
 
-    async def _do_passive_scan(self, passive_rules, context, request_data, response_data, helpers):
-        """执行被动扫描"""
+    async def _do_passive_scan(self, passive_rules, context, request_data, response_data, helpers, scanner=None):
+        """执行被动扫描，增加去重逻辑"""
         asset = context['asset']
         url = context['url']
         status_code = context['status_code']
@@ -95,6 +106,19 @@ class NetworkScanner:
             description = rule['description']
             rule_type = rule['rule_type']
             match_values = rule['match_values']
+
+            # 创建缓存键
+            cache_key = (asset.id, 'network', rule_type, description)
+
+            # 检查全局缓存
+            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network', description, rule_type, ''):
+                print(f"跳过全局缓存中已存在的结果: {cache_key}")
+                continue
+
+            # 检查模块级缓存
+            if cache_key in self.result_cache:
+                print(f"跳过模块缓存中已存在的结果: {cache_key}")
+                continue
 
             # 根据规则类型进行匹配
             match_results = []
@@ -140,15 +164,12 @@ class NetworkScanner:
                     match_value=match_value
                 )
 
-                # 生成结果缓存键，避免重复发送相同结果
-                cache_key = (asset.id, 'network', rule_type, match_value)
-
-                if cache_key in self.result_cache:
-                    print(f"跳过重复的被动扫描结果通知: 资产={asset.host}, 描述={description}")
-                    continue
-
-                # 添加到结果缓存
+                # 添加到模块级缓存
                 self.result_cache.add(cache_key)
+
+                # 添加到全局缓存
+                if scanner and hasattr(scanner, 'add_result_to_cache'):
+                    scanner.add_result_to_cache(asset.id, 'network', description, rule_type, match_value)
 
                 if not existing:
                     # 保存新的扫描结果，并保存完整的请求和响应数据
@@ -172,6 +193,7 @@ class NetworkScanner:
                         {
                             'type': 'scan_result',
                             'data': {
+                                'id': scan_result.id if scan_result else None,
                                 'asset': asset.host,
                                 'module': 'network',
                                 'module_display': '网络信息',
@@ -190,7 +212,7 @@ class NetworkScanner:
                 else:
                     print(f"跳过重复的被动扫描结果: 资产={asset.host}, 描述={description}")
 
-    async def _do_active_scan(self, active_rules, context, helpers):
+    async def _do_active_scan(self, active_rules, context, helpers, scanner=None):
         """执行主动扫描"""
         asset = context['asset']
         url = context['url']
@@ -206,6 +228,19 @@ class NetworkScanner:
             rule_type = rule['rule_type']
             match_values = rule['match_values']
             behaviors = rule['behaviors']
+
+            # 创建缓存键
+            cache_key = (asset.id, 'network', rule_type, description)
+
+            # 检查全局缓存
+            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network', description, rule_type, ''):
+                print(f"跳过全局缓存中已存在的主动扫描结果: {cache_key}")
+                continue
+
+            # 检查模块级缓存
+            if cache_key in self.result_cache:
+                print(f"跳过模块缓存中已存在的主动扫描结果: {cache_key}")
+                continue
 
             # 对端口扫描规则的特殊处理
             if rule_type == 'port':
@@ -251,15 +286,12 @@ class NetworkScanner:
                             match_value=match_value
                         )
 
-                        # 生成结果缓存键，避免重复发送相同结果
-                        cache_key = (asset.id, 'network', rule_type, match_value)
-
-                        if cache_key in self.result_cache:
-                            print(f"跳过重复的端口扫描结果通知: 资产={asset.host}, 描述={description}")
-                            continue
-
-                        # 添加到结果缓存
+                        # 添加到模块级缓存
                         self.result_cache.add(cache_key)
+
+                        # 添加到全局缓存
+                        if scanner and hasattr(scanner, 'add_result_to_cache'):
+                            scanner.add_result_to_cache(asset.id, 'network', description, rule_type, match_value)
 
                         if not existing:
                             scan_result = await helpers.save_scan_result(
@@ -365,6 +397,9 @@ class NetworkScanner:
                         active_request_data = f"GET {active_url}\nHost: {parsed_url.netloc}\nUser-Agent: Mozilla/5.0...\nAccept: */*"
                         active_response_data = f"HTTP/1.1 200 OK\nContent-Type: text/html\n\n<active scan result containing: {match_value}>"
 
+                        # 创建行为特定的缓存键
+                        behavior_cache_key = (asset.id, 'network', rule_type, description, behavior)
+
                         # 检查是否已存在相同的结果
                         existing = await helpers.check_existing_result(
                             asset=asset,
@@ -374,15 +409,12 @@ class NetworkScanner:
                             match_value=match_value
                         )
 
-                        # 生成结果缓存键，避免重复发送相同结果
-                        cache_key = (asset.id, 'network', rule_type, match_value)
+                        # 添加到模块级缓存
+                        self.result_cache.add(behavior_cache_key)
 
-                        if cache_key in self.result_cache:
-                            print(f"跳过重复的主动扫描结果通知: 资产={asset.host}, 描述={description}, 行为={behavior}")
-                            continue
-
-                        # 添加到结果缓存
-                        self.result_cache.add(cache_key)
+                        # 添加到全局缓存
+                        if scanner and hasattr(scanner, 'add_result_to_cache'):
+                            scanner.add_result_to_cache(asset.id, 'network', description, rule_type, match_value)
 
                         if not existing:
                             scan_result = await helpers.save_scan_result(
