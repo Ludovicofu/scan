@@ -77,6 +77,65 @@ export default {
   },
 
   /**
+   * 获取资产备注
+   * @param {Number} assetId 资产ID
+   * @param {Object} params 查询参数
+   * @returns {Promise} 资产备注数据
+   */
+  async getAssetNotes(assetId, params = {}) {
+    try {
+      return await assetAPI.getAssetNotes(assetId, params);
+    } catch (error) {
+      console.error('获取资产备注失败', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 添加资产备注
+   * @param {Number} assetId 资产ID
+   * @param {Object} data 备注数据
+   * @returns {Promise} 新增备注结果
+   */
+  async addAssetNote(assetId, data) {
+    try {
+      return await assetAPI.createAssetNote(assetId, data);
+    } catch (error) {
+      console.error('添加资产备注失败', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 更新资产备注
+   * @param {Number} noteId 备注ID
+   * @param {Object} data 备注数据
+   * @returns {Promise} 更新备注结果
+   */
+  async updateAssetNote(noteId, data) {
+    try {
+      return await assetAPI.updateAssetNote(noteId, data);
+    } catch (error) {
+      console.error('更新资产备注失败', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 删除资产备注
+   * @param {Number} noteId 备注ID
+   * @returns {Promise} 删除备注结果
+   */
+  async deleteAssetNote(noteId) {
+    try {
+      return await assetAPI.deleteAssetNote(noteId);
+    } catch (error) {
+      console.error('删除资产备注失败', error);
+      throw error;
+    }
+  },
+
+  /**
    * 计算资产统计数据
    * @param {Array} assets 资产列表
    * @returns {Object} 统计数据
@@ -93,8 +152,8 @@ export default {
 
     // 计算统计数据
     const totalAssets = assets.length;
-    const totalInfoResults = assets.reduce((sum, asset) => sum + (asset.info_results_count || 0), 0);
-    const totalVulnResults = assets.reduce((sum, asset) => sum + (asset.vuln_results_count || 0), 0);
+    const totalInfoResults = assets.reduce((sum, asset) => sum + (asset.info_count || 0), 0);
+    const totalVulnResults = assets.reduce((sum, asset) => sum + (asset.vuln_count || 0), 0);
 
     // 计算有高危漏洞的资产数量 (如果有这个数据的话)
     const highVulnAssets = assets.filter(asset => asset.high_vuln_count > 0).length;

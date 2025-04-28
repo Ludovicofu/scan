@@ -18,24 +18,7 @@
           </el-input>
         </el-form-item>
 
-        <el-form-item label="标签">
-          <el-select
-            v-model="selectedTag"
-            placeholder="选择标签"
-            clearable
-            @change="handleTagChange"
-          >
-            <el-option
-              v-for="tag in tags"
-              :key="tag.id"
-              :label="tag.name"
-              :value="tag.id"
-            >
-              <span :style="{color: tag.color}">● </span>
-              <span>{{ tag.name }}</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
+        <!-- 删除标签过滤器 -->
 
         <el-form-item label="分组">
           <el-select
@@ -124,27 +107,14 @@
           width="220"
         >
           <template #default="scope">
-            <div>
-              {{ scope.row.host }}
-              <span v-if="scope.row.tags && scope.row.tags.length > 0" class="asset-tags">
-                <el-tag
-                  v-for="tag in scope.row.tags"
-                  :key="tag.id"
-                  :color="tag.color"
-                  effect="plain"
-                  size="small"
-                  class="tag-item"
-                >
-                  {{ tag.name }}
-                </el-tag>
-              </span>
-            </div>
+            {{ scope.row.host }}
+            <!-- 删除了标签显示部分 -->
           </template>
         </el-table-column>
 
         <el-table-column
           label="信息收集结果"
-          width="150"
+          width="120"
           align="center"
         >
           <template #default="scope">
@@ -154,7 +124,7 @@
 
         <el-table-column
           label="漏洞检测结果"
-          width="150"
+          width="120"
           align="center"
         >
           <template #default="scope">
@@ -162,9 +132,22 @@
           </template>
         </el-table-column>
 
+        <!-- 添加资产备注列 -->
+        <el-table-column
+          label="资产备注"
+          width="200"
+        >
+          <template #default="scope">
+            <span v-if="getFirstNote(scope.row)" class="note-preview">
+              {{ truncateNoteText(getFirstNote(scope.row)) }}
+            </span>
+            <span v-else class="note-empty">暂无备注</span>
+          </template>
+        </el-table-column>
+
         <el-table-column
           label="操作"
-          width="180"
+          width="220"
           fixed="right"
         >
           <template #default="scope">
@@ -175,6 +158,14 @@
               plain
             >
               详情
+            </el-button>
+            <el-button
+              @click="showNoteDialog(scope.row)"
+              type="success"
+              size="small"
+              plain
+            >
+              备注
             </el-button>
             <el-button
               @click="deleteAsset(scope.row.id)"
@@ -215,61 +206,7 @@
           <strong>最后发现时间：</strong> {{ formatDate(selectedAsset.last_seen) }}
         </p>
 
-        <!-- 标签管理 -->
-        <div class="asset-tags-section">
-          <h3>标签管理</h3>
-          <div class="tags-container">
-            <el-tag
-              v-for="tag in selectedAsset.tags"
-              :key="tag.id"
-              :color="tag.color"
-              effect="plain"
-              closable
-              @close="removeTagFromAsset(selectedAsset.id, tag.id)"
-              class="asset-tag"
-            >
-              {{ tag.name }}
-            </el-tag>
-
-            <el-dropdown @command="addTagToAsset(selectedAsset.id, $event)" trigger="click">
-              <el-button size="small" plain>添加标签</el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="tag in availableTags"
-                    :key="tag.id"
-                    :command="tag.id"
-                  >
-                    <span :style="{color: tag.color}">● </span>
-                    {{ tag.name }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </div>
-
-        <!-- 资产备注 -->
-        <div class="asset-notes-section">
-          <h3>资产备注</h3>
-          <div class="notes-container">
-            <div v-for="note in assetNotes" :key="note.id" class="note-item">
-              <div class="note-content">{{ note.content }}</div>
-              <div class="note-time">{{ formatDate(note.created_at) }}</div>
-              <el-button type="danger" size="small" plain icon="Delete" @click="deleteNote(note.id)" class="note-delete-btn"></el-button>
-            </div>
-
-            <div class="add-note">
-              <el-input
-                v-model="newNoteContent"
-                type="textarea"
-                :rows="3"
-                placeholder="添加备注..."
-              ></el-input>
-              <el-button type="primary" @click="addNote(selectedAsset.id)" :disabled="!newNoteContent">添加备注</el-button>
-            </div>
-          </div>
-        </div>
+        <!-- 删除了资产标签显示区 -->
 
         <!-- 详情标签页 -->
         <el-tabs v-model="activeDetailTab">
@@ -321,6 +258,11 @@
                 width="120"
               ></el-table-column>
             </el-table>
+
+            <!-- 无数据提示 -->
+            <div v-if="infoResults.length === 0" class="no-data-tip">
+              暂无信息收集结果
+            </div>
           </el-tab-pane>
 
           <el-tab-pane label="漏洞检测结果" name="vuln">
@@ -380,6 +322,39 @@
                 show-overflow-tooltip
               ></el-table-column>
             </el-table>
+
+            <!-- 无数据提示 -->
+            <div v-if="vulnResults.length === 0" class="no-data-tip">
+              暂无漏洞检测结果
+            </div>
+          </el-tab-pane>
+
+          <!-- 资产备注标签页 -->
+          <el-tab-pane label="资产备注" name="notes">
+            <div class="asset-notes-container">
+              <div v-if="assetNotes.length > 0" class="notes-list">
+                <div v-for="note in assetNotes" :key="note.id" class="note-item">
+                  <div class="note-content">{{ note.content }}</div>
+                  <div class="note-footer">
+                    <span class="note-time">{{ formatDate(note.created_at) }}</span>
+                    <div class="note-actions">
+                      <el-button type="primary" size="small" @click="editNote(note)" icon="Edit" plain></el-button>
+                      <el-button type="danger" size="small" @click="deleteNote(note.id)" icon="Delete" plain></el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="no-data-tip">
+                暂无资产备注
+              </div>
+
+              <div class="add-note-section">
+                <el-button type="primary" @click="showNoteDialog(selectedAsset)" icon="Plus">
+                  添加备注
+                </el-button>
+              </div>
+            </div>
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -389,13 +364,37 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 备注编辑对话框 -->
+    <el-dialog
+      :title="editingNote ? '修改备注' : '添加备注'"
+      v-model="noteDialogVisible"
+      width="50%"
+    >
+      <el-form :model="noteForm" ref="noteFormRef" :rules="noteRules">
+        <el-form-item label="备注内容" prop="content">
+          <el-input
+            v-model="noteForm.content"
+            type="textarea"
+            :rows="5"
+            placeholder="请输入备注内容"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="noteDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveNote" :loading="noteSaving">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { assetAPI } from '@/services/api';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Search } from '@element-plus/icons-vue';
+import { Search, Edit, Delete, Plus } from '@element-plus/icons-vue';
 
 export default {
   name: 'AssetPage',
@@ -411,11 +410,9 @@ export default {
 
       // 搜索和过滤
       searchQuery: '',
-      selectedTag: null,
       selectedGroup: null,
 
-      // 标签和分组数据
-      tags: [],
+      // 分组数据
       groups: [],
 
       // 统计数据
@@ -437,18 +434,31 @@ export default {
 
       // 资产备注相关
       assetNotes: [],
-      newNoteContent: '',
 
-      // 可用标签（排除已经添加的）
-      availableTags: [],
+      // 备注对话框相关
+      noteDialogVisible: false,
+      noteSaving: false,
+      editingNote: null,
+      noteForm: {
+        assetId: null,
+        content: ''
+      },
+      noteRules: {
+        content: [
+          { required: true, message: '请输入备注内容', trigger: 'blur' },
+          { min: 1, max: 500, message: '备注长度在1-500个字符之间', trigger: 'blur' }
+        ]
+      },
 
-      // 添加Search图标
-      Search
+      // 图标
+      Search,
+      Edit,
+      Delete,
+      Plus
     };
   },
   created() {
     this.fetchAssets();
-    this.fetchTags();
     this.fetchGroups();
     this.fetchStatistics();
   },
@@ -463,11 +473,6 @@ export default {
           search: this.searchQuery || undefined
         };
 
-        // 添加标签过滤
-        if (this.selectedTag) {
-          params.tag = this.selectedTag;
-        }
-
         // 添加分组过滤
         if (this.selectedGroup) {
           params.group = this.selectedGroup;
@@ -476,6 +481,11 @@ export default {
         const response = await assetAPI.getAssets(params);
         this.assets = response.results || [];
         this.totalAssets = response.count || 0;
+
+        // 加载每个资产的备注
+        for (const asset of this.assets) {
+          this.loadAssetNotes(asset.id);
+        }
       } catch (error) {
         console.error('获取资产列表失败', error);
         ElMessage.error('获取资产列表失败');
@@ -484,14 +494,18 @@ export default {
       }
     },
 
-    // 获取标签列表
-    async fetchTags() {
-      try {
-        const response = await assetAPI.getTags();
-        this.tags = response.results || [];
-      } catch (error) {
-        console.error('获取标签列表失败', error);
+    // 获取资产的第一条备注
+    getFirstNote(asset) {
+      if (!asset || !asset.notes || asset.notes.length === 0) {
+        return null;
       }
+      return asset.notes[0].content;
+    },
+
+    // 截断备注文本
+    truncateNoteText(text) {
+      if (!text) return '';
+      return text.length > 15 ? text.substring(0, 15) + '...' : text;
     },
 
     // 获取分组列表
@@ -520,11 +534,6 @@ export default {
       this.fetchAssets();
     },
 
-    handleTagChange() {
-      this.currentPage = 1;
-      this.fetchAssets();
-    },
-
     handleGroupChange() {
       this.currentPage = 1;
       this.fetchAssets();
@@ -541,16 +550,13 @@ export default {
 
       // 获取资产备注
       await this.fetchAssetNotes(asset.id);
-
-      // 更新可用标签列表
-      this.updateAvailableTags();
     },
 
     // 加载详情数据
     async loadDetailData(assetId) {
       this.detailLoading = true;
       try {
-        // 获取资产详情（包含标签）
+        // 获取资产详情
         const assetDetail = await assetAPI.getAssetDetail(assetId);
         this.selectedAsset = assetDetail;
 
@@ -569,6 +575,20 @@ export default {
       }
     },
 
+    // 加载资产备注（用于列表中显示）
+    async loadAssetNotes(assetId) {
+      try {
+        const response = await assetAPI.getAssetNotes(assetId);
+        // 将备注添加到资产对象中
+        const asset = this.assets.find(a => a.id === assetId);
+        if (asset) {
+          asset.notes = response.results || [];
+        }
+      } catch (error) {
+        console.error(`加载资产${assetId}的备注失败`, error);
+      }
+    },
+
     // 获取资产备注
     async fetchAssetNotes(assetId) {
       try {
@@ -580,20 +600,66 @@ export default {
       }
     },
 
-    // 添加资产备注
-    async addNote(assetId) {
-      if (!this.newNoteContent) return;
+    // 显示备注对话框
+    showNoteDialog(asset) {
+      this.selectedAsset = asset;
+      this.editingNote = null;
+      this.noteForm = {
+        assetId: asset.id,
+        content: ''
+      };
+      this.noteDialogVisible = true;
+    },
 
+    // 编辑备注
+    editNote(note) {
+      this.editingNote = note;
+      this.noteForm = {
+        assetId: this.selectedAsset.id,
+        content: note.content
+      };
+      this.noteDialogVisible = true;
+    },
+
+    // 保存备注
+    async saveNote() {
       try {
-        await assetAPI.createAssetNote(assetId, { content: this.newNoteContent });
-        ElMessage.success('添加备注成功');
+        // 表单验证
+        await this.$refs.noteFormRef.validate();
+
+        this.noteSaving = true;
+
+        if (this.editingNote) {
+          // 更新备注
+          await assetAPI.updateAssetNote(this.editingNote.id, {
+            content: this.noteForm.content
+          });
+          ElMessage.success('备注更新成功');
+        } else {
+          // 添加新备注 - 修复: 添加asset字段
+          await assetAPI.createAssetNote(this.noteForm.assetId, {
+            content: this.noteForm.content,
+            asset: this.noteForm.assetId
+          });
+          ElMessage.success('备注添加成功');
+        }
+
+        // 关闭对话框
+        this.noteDialogVisible = false;
 
         // 刷新备注列表
-        await this.fetchAssetNotes(assetId);
-        this.newNoteContent = ''; // 清空输入
+        await this.fetchAssetNotes(this.selectedAsset.id);
+
+        // 如果是在列表页添加的备注，更新资产的备注
+        await this.loadAssetNotes(this.selectedAsset.id);
+
       } catch (error) {
-        console.error('添加备注失败', error);
-        ElMessage.error('添加备注失败');
+        if (error !== false) { // 非表单验证错误
+          console.error('保存备注失败', error);
+          ElMessage.error('保存备注失败');
+        }
+      } finally {
+        this.noteSaving = false;
       }
     },
 
@@ -612,51 +678,14 @@ export default {
         // 刷新备注列表
         if (this.selectedAsset) {
           await this.fetchAssetNotes(this.selectedAsset.id);
+          // 更新资产的备注
+          await this.loadAssetNotes(this.selectedAsset.id);
         }
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除备注失败', error);
           ElMessage.error('删除备注失败');
         }
-      }
-    },
-
-    // 更新可用标签列表
-    updateAvailableTags() {
-      if (!this.selectedAsset || !this.selectedAsset.tags) return;
-
-      // 过滤出未添加到当前资产的标签
-      const currentTagIds = this.selectedAsset.tags.map(tag => tag.id);
-      this.availableTags = this.tags.filter(tag => !currentTagIds.includes(tag.id));
-    },
-
-    // 添加标签到资产
-    async addTagToAsset(assetId, tagId) {
-      try {
-        await assetAPI.addTagToAsset(assetId, tagId);
-        ElMessage.success('添加标签成功');
-
-        // 刷新资产详情
-        await this.loadDetailData(assetId);
-        this.updateAvailableTags();
-      } catch (error) {
-        console.error('添加标签失败', error);
-        ElMessage.error('添加标签失败');
-      }
-    },
-
-    // 从资产移除标签
-    async removeTagFromAsset(assetId, tagId) {
-      try {
-        await assetAPI.removeTagFromAsset(assetId, tagId);
-        ElMessage.success('移除标签成功');
-
-        // 刷新资产详情
-        await this.loadDetailData(assetId);
-        this.updateAvailableTags();
-      } catch (error) {
-        console.error('移除标签失败', error);
-        ElMessage.error('移除标签失败');
       }
     },
 
@@ -792,74 +821,71 @@ h1 {
   padding-left: 10px;
 }
 
-.asset-tags-section, .asset-notes-section {
-  background-color: #f5f7fa;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+.asset-notes-container {
+  padding: 10px 0;
 }
 
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.asset-tag {
-  margin-right: 5px;
-}
-
-.notes-container {
+.notes-list {
   margin-bottom: 20px;
 }
 
 .note-item {
-  display: flex;
-  padding: 10px;
-  border-bottom: 1px solid #ebeef5;
+  padding: 15px;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  margin-bottom: 10px;
   position: relative;
 }
 
 .note-content {
-  flex: 1;
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #ebeef5;
+  padding-top: 10px;
+  margin-top: 10px;
 }
 
 .note-time {
   color: #909399;
   font-size: 12px;
-  margin-left: 15px;
-  min-width: 120px;
 }
 
-.note-delete-btn {
-  visibility: hidden;
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.note-item:hover .note-delete-btn {
-  visibility: visible;
-}
-
-.add-note {
-  margin-top: 15px;
+.note-actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 5px;
 }
 
-.add-note .el-button {
-  align-self: flex-end;
+.note-preview {
+  color: #606266;
+  font-size: 13px;
 }
 
-.asset-tags {
-  margin-left: 10px;
+.note-empty {
+  color: #909399;
+  font-size: 13px;
+  font-style: italic;
 }
 
-.tag-item {
-  margin-right: 5px;
+.add-note-section {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.no-data-tip {
+  text-align: center;
+  color: #909399;
+  padding: 30px 0;
+  font-size: 14px;
 }
 </style>
