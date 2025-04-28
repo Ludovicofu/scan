@@ -81,7 +81,15 @@
           prop="match_value"
           label="匹配值"
           show-overflow-tooltip
-        ></el-table-column>
+        >
+          <template #default="scope">
+            <!-- 对端口扫描结果特殊处理 -->
+            <span v-if="scope.row.is_port_scan && scope.row.port_display">
+              {{ scope.row.port_display }}
+            </span>
+            <span v-else>{{ scope.row.match_value }}</span>
+          </template>
+        </el-table-column>
 
         <el-table-column
           fixed="right"
@@ -253,14 +261,18 @@ export default {
 
       // 添加一个Map来跟踪已经显示的结果
       displayedResults: new Map(),
+
       // 添加一个Set来跟踪已经通知的结果
       notifiedResults: new Set(),
 
-      // 添加一个Map用于防止短时间内重复显示相同的通知
-      recentNotifications: new Map(),
+      // 添加一个Set来跟踪已经处理过的结果ID
+      processedResultIds: new Set(),
 
-      // 添加通知节流时间 (毫秒)
-      notificationThrottle: 2000
+      // 添加通知节流时间
+      notificationThrottle: 2000,
+
+      // 添加一个Map用于防止短时间内重复显示相同的通知
+      recentNotifications: new Map()
     };
   },
   computed: {
@@ -367,7 +379,8 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改handleScanResult方法
+
+    // 修改后的处理扫描结果方法
     handleScanResult(data) {
       console.log("收到扫描结果:", data);
 
@@ -377,96 +390,64 @@ export default {
         return;
       }
 
-      // 检查是否是端口扫描结果
-      const isPortScan = data.data.rule_type === 'port';
-      let portNumber = null;
+      const resultData = data.data;
 
-      // 提取端口号(如果是端口扫描结果)
-      if (isPortScan && data.data.match_value && data.data.match_value.includes(':')) {
-        portNumber = data.data.match_value.split(':', 1)[0];
+      // 如果结果有ID且已处理过，则跳过
+      if (resultData.id && this.processedResultIds.has(resultData.id)) {
+        console.log(`跳过已处理的结果: ID=${resultData.id}`);
+        return;
+      }
 
-        // 检查此端口是否已经显示过
-        if (this.displayedPorts.has(portNumber)) {
-          console.log(`忽略重复端口扫描结果: ${portNumber}`);
-          return;
-        }
+      // 如果有ID，记录为已处理
+      if (resultData.id) {
+        this.processedResultIds.add(resultData.id);
+      }
 
-        // 将端口号添加到已显示集合
-        this.displayedPorts.add(portNumber);
+      // 检查是否是当前显示的扫描类型
+      if (resultData.scan_type !== this.currentScanType) {
+        console.log(`跳过不匹配当前扫描类型的结果: ${resultData.scan_type} != ${this.currentScanType}`);
+        return;
+      }
+
+      // 直接添加到列表头部，为当前页显示
+      this.results.unshift(resultData);
+      this.totalResults++;
+      console.log("结果已添加到列表:", resultData.description || resultData.rule_type);
+
+      // 构建通知消息
+      let notificationMessage = '';
+      let notificationType = 'success';
+
+      // 根据结果类型构造不同的通知消息
+      if (resultData.rule_type === 'port') {
+        // 端口扫描结果
+        notificationMessage = `发现开放端口: ${resultData.port_display || resultData.match_value.split("\n")[0]}`;
+        notificationType = 'warning';
+      } else if (resultData.module === 'network') {
+        // 网络信息结果
+        notificationMessage = `发现网络信息: ${resultData.description}`;
+        notificationType = 'info';
+      } else if (resultData.module === 'os') {
+        // 操作系统信息结果
+        notificationMessage = `发现操作系统信息: ${resultData.description}`;
+        notificationType = 'info';
+      } else if (resultData.module === 'component') {
+        // 组件与服务信息结果
+        notificationMessage = `发现组件信息: ${resultData.description}`;
+        notificationType = 'info';
       } else {
-        // 非端口扫描结果 - 使用常规检查
-        const resultKey = `${data.data.module}-${data.data.description}-${data.data.match_value}`;
-        if (this.notifiedResults.has(resultKey)) {
-          console.log(`忽略重复结果: ${resultKey}`);
-          return;
-        }
-
-        // 添加到已通知结果集合
-        this.notifiedResults.add(resultKey);
+        // 其他结果
+        notificationMessage = `发现新结果: ${resultData.description || resultData.rule_type}`;
       }
 
-      // 更新结果列表 - 无论是否是端口扫描结果
-      if (data.data.scan_type === this.currentScanType) {
-        // 直接添加到列表头部，为当前页显示
-        this.results.unshift(data.data);
-        this.totalResults++;
-        console.log("结果已添加到列表:", data.data.description || data.data.rule_type);
-      }
-
-      // 显示通知 - 所有类型的结果都要显示
-      const message = isPortScan && portNumber
-        ? `发现开放端口: ${portNumber}`
-        : data.data.description;
-
+      // 显示通知
       ElNotification({
-        title: '发现新结果',
-        message: `${data.data.module_display}: ${message}`,
-        type: 'success',
+        title: `${resultData.module_display}扫描结果`,
+        message: notificationMessage,
+        type: notificationType,
         duration: 3000
       });
     },
-
-
-    // 新增方法: 更新结果列表
-    // 修改updateResultsList方法
-updateResultsList(data, isPortScan = false, portNumber = null) {
-  // 检查是否是当前显示的扫描类型
-  if (data.scan_type !== this.currentScanType) {
-    return false;
-  }
-
-  // 检查是否重复
-  let isDuplicate = false;
-
-  if (isPortScan && portNumber) {
-    // 端口扫描结果 - 检查是否已有相同端口的结果
-    isDuplicate = this.results.some(item =>
-      item.rule_type === 'port' &&
-      item.match_value &&
-      item.match_value.includes(':') &&
-      item.match_value.split(':', 1)[0] === portNumber
-    );
-  } else {
-    // 其他结果 - 检查是否有完全相同的结果
-    isDuplicate = this.results.some(item =>
-      item.module === data.module &&
-      item.description === data.description &&
-      item.match_value === data.match_value
-    );
-  }
-
-  // 如果不是重复，则添加到列表
-  if (!isDuplicate) {
-    // 将新结果添加到列表头部
-    this.results.unshift(data);
-    this.totalResults++;
-    console.log(`添加结果到列表: ${isPortScan ? '端口 ' + portNumber : data.description}`);
-    return true;
-  } else {
-    console.log(`结果已在列表中，跳过添加: ${isPortScan ? '端口 ' + portNumber : data.description}`);
-    return false;
-  }
-},
 
     handleScanStatus(data) {
       // 处理扫描状态更新
@@ -488,6 +469,11 @@ updateResultsList(data, isPortScan = false, portNumber = null) {
         return;
       }
 
+      // 先重置缓存，确保不会漏掉新的扫描结果
+      dataCollectionWS.send({
+        type: 'reset_cache'
+      });
+
       // 发送开始扫描消息
       dataCollectionWS.send({
         type: 'start_scan',
@@ -508,7 +494,6 @@ updateResultsList(data, isPortScan = false, portNumber = null) {
 
     // 数据操作方法
     async fetchResults() {
-      console.log("获取扫描结果, 类型:", this.currentScanType);
       this.loading = true;
       try {
         let response;
@@ -531,11 +516,11 @@ updateResultsList(data, isPortScan = false, portNumber = null) {
         this.results = response.results || [];
         this.totalResults = response.count || 0;
 
-        // 更新已显示结果的集合
-        this.displayedResults.clear();
+        // 更新已处理的结果IDs
         this.results.forEach(result => {
-          const resultKey = `${result.module}-${result.description}-${result.match_value}`;
-          this.displayedResults.set(resultKey, result);
+          if (result.id) {
+            this.processedResultIds.add(result.id);
+          }
         });
 
         console.log("结果数量:", this.results.length);
@@ -558,12 +543,8 @@ updateResultsList(data, isPortScan = false, portNumber = null) {
         await infoCollectionAPI.deleteScanResult(id);
         ElMessage.success('删除成功');
 
-        // 找到并从displayedResults中移除
-        const resultToRemove = this.results.find(r => r.id === id);
-        if (resultToRemove) {
-          const key = `${resultToRemove.module}-${resultToRemove.description}-${resultToRemove.match_value}`;
-          this.displayedResults.delete(key);
-        }
+        // 从已处理ID集合中移除
+        this.processedResultIds.delete(id);
 
         // 刷新结果列表
         this.fetchResults();

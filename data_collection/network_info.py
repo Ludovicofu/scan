@@ -14,6 +14,8 @@ class NetworkInfoScanner:
         """初始化扫描器"""
         # 添加缓存来记录已扫描过的资产和端口组合
         self.port_scan_cache = set()  # 缓存格式：(host, port1,port2,...)
+        # 添加记录已发现的开放端口
+        self.discovered_ports = {}  # 格式：{host: set(ports)}
 
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
         """
@@ -58,16 +60,37 @@ class NetworkInfoScanner:
             # 检查是否已经扫描过此主机和端口组合
             if cache_key in self.port_scan_cache:
                 print(f"跳过重复的端口扫描: 主机={host}, 端口={ports}")
-                return None  # 返回None表示不需要再次扫描
+
+                # 如果已扫描但有之前的结果，返回之前的结果
+                if host in self.discovered_ports and self.discovered_ports[host]:
+                    open_ports = self.discovered_ports[host]
+                    print(f"返回缓存的端口扫描结果: 主机={host}, 开放端口={open_ports}")
+
+                    # 格式化返回结果
+                    result_value = []
+                    for port in open_ports:
+                        result_value.append(f"{port}:端口开放，无banner信息")
+
+                    if result_value:
+                        return {'match_value': '\n'.join(result_value)}
+
+                return None  # 如果没有缓存的结果，返回None表示不需要再次扫描
 
             # 添加到缓存中标记为已扫描
             self.port_scan_cache.add(cache_key)
 
-            # 执行端口扫描
+            # 执行端口扫描 - 现在只扫描未扫描过的端口
             open_ports_info = await self.scan_ports_with_banner(host, ports)
 
-            # 如果有开放端口，返回匹配结果
+            # 如果有开放端口，更新已发现端口缓存
             if open_ports_info:
+                if host not in self.discovered_ports:
+                    self.discovered_ports[host] = set()
+
+                # 添加新发现的端口
+                for port in open_ports_info.keys():
+                    self.discovered_ports[host].add(port)
+
                 # 将端口和banner信息格式化为字符串
                 result_value = []
                 for port, banner in open_ports_info.items():
@@ -364,6 +387,7 @@ class NetworkInfoScanner:
     def clear_cache(self):
         """清除扫描缓存"""
         self.port_scan_cache.clear()
+        self.discovered_ports.clear()
         print("已清除端口扫描缓存")
 
     def get_cache_size(self):

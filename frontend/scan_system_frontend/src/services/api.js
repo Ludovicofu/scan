@@ -240,3 +240,75 @@ const settingsAPI = {
     return api.delete(`data_collection/skip-targets/${id}/`);
   }
 };
+
+// 资产管理API
+const assetAPI = {
+  // 获取资产列表
+  getAssets(params) {
+    return api.get('asset_management/assets/', { params });
+  },
+
+  // 获取资产详情
+  getAssetDetail(id) {
+    return api.get(`asset_management/assets/${id}/`);
+  },
+
+  // 删除资产
+  deleteAsset(id) {
+    return api.delete(`asset_management/assets/${id}/`);
+  },
+
+  // 获取资产的信息收集结果
+  getAssetInfoResults(assetId, params) {
+    return api.get(`asset_management/assets/${assetId}/info-results/`, { params });
+  },
+
+  // 获取资产的漏洞检测结果
+  getAssetVulnResults(assetId, params) {
+    return api.get(`asset_management/assets/${assetId}/vuln-results/`, { params });
+  },
+
+  // 获取资产备注
+  getAssetNotes(assetId, params) {
+    return api.get(`asset_management/assets/${assetId}/notes/`, { params });
+  },
+
+  // 创建资产备注
+  createAssetNote(assetId, data) {
+    return api.post(`asset_management/assets/${assetId}/notes/`, data);
+  },
+
+  // 更新资产备注
+  updateAssetNote(noteId, data) {
+    return api.put(`asset_management/notes/${noteId}/`, data);
+  },
+
+  // 删除资产备注
+  deleteAssetNote(noteId) {
+    return api.delete(`asset_management/notes/${noteId}/`);
+  },
+
+  // 获取资产标签
+  getTags(params) {
+    return api.get('asset_management/tags/', { params });
+  },
+
+  // 获取资产分组
+  getGroups(params) {
+    return api.get('asset_management/groups/', { params });
+  },
+
+  // 获取资产统计信息
+  getAssetStatistics() {
+    return api.get('asset_management/statistics/');
+  }
+};
+
+// 导出所有API服务
+export {
+  infoCollectionAPI,
+  vulnScanAPI,
+  rulesAPI,
+  settingsAPI,
+  assetAPI
+};

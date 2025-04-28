@@ -37,11 +37,23 @@ class DataCollectionScanner:
         # 添加已扫描资产跟踪
         self.scanned_assets = set()  # 记录已扫描资产ID
 
+        # 添加结果缓存跟踪
+        self.result_cache = set()  # 记录已发送的结果ID
+
     # 添加重置扫描状态的方法
     def reset_scan_state(self):
         """重置扫描状态，清除缓存"""
         self.scanned_assets.clear()  # 清除资产记录
+        self.result_cache.clear()  # 清除结果缓存
         self.network_scanner.clear_cache() if hasattr(self.network_scanner, 'clear_cache') else None
+
+        # 重置其他扫描模块的缓存
+        if hasattr(self.os_scanner, 'clear_cache'):
+            self.os_scanner.clear_cache()
+
+        if hasattr(self.component_scanner, 'clear_cache'):
+            self.component_scanner.clear_cache()
+
         print("扫描状态已重置")
 
     async def scan_data(self, channel_layer, asset_id, url, method, status_code, req_headers, req_content, resp_headers,
@@ -63,9 +75,6 @@ class DataCollectionScanner:
         # 添加调试信息
         print(f"开始扫描资产{asset_id}: {url}, 方法: {method}, 状态码: {status_code}")
 
-        # 临时清除缓存，确保所有扫描都执行
-        self.scanned_assets.clear()
-
         # 解析URL获取主机名
         parsed_url = urlparse(url)
         host = parsed_url.netloc
@@ -82,16 +91,6 @@ class DataCollectionScanner:
             return
 
         print(f"成功获取资产: {asset.host}, ID: {asset.id}")
-
-        # 检查是否已经处理过该资产的端口扫描
-        asset_key = f"{asset_id}-port-scan"
-        if asset_key in self.scanned_assets:
-            # 如果已处理过，只进行非端口扫描的检查
-            print(f"跳过资产{asset_id}的重复端口扫描")
-        else:
-            # 标记该资产已处理端口扫描
-            self.scanned_assets.add(asset_key)
-            print(f"已将资产{asset_id}添加到端口扫描缓存")
 
         # 使用信号量控制并发扫描数量
         async with self.semaphore:

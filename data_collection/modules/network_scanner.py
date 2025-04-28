@@ -13,10 +13,13 @@ class NetworkScanner:
         """初始化扫描器"""
         self.network_info_scanner = NetworkInfoScanner()
         self.port_scan_cache = set()  # 缓存已扫描的端口
+        # 添加结果缓存，避免重复发送相同结果
+        self.result_cache = set()  # 格式: (asset_id, module, rule_type, match_value)
 
     def clear_cache(self):
         """清除缓存"""
         self.port_scan_cache.clear()
+        self.result_cache.clear()
         print("网络扫描器缓存已清除")
 
     async def scan(self, context):
@@ -137,9 +140,19 @@ class NetworkScanner:
                     match_value=match_value
                 )
 
+                # 生成结果缓存键，避免重复发送相同结果
+                cache_key = (asset.id, 'network', rule_type, match_value)
+
+                if cache_key in self.result_cache:
+                    print(f"跳过重复的被动扫描结果通知: 资产={asset.host}, 描述={description}")
+                    continue
+
+                # 添加到结果缓存
+                self.result_cache.add(cache_key)
+
                 if not existing:
                     # 保存新的扫描结果，并保存完整的请求和响应数据
-                    await helpers.save_scan_result(
+                    scan_result = await helpers.save_scan_result(
                         asset=asset,
                         module='network',
                         scan_type='passive',
@@ -238,8 +251,18 @@ class NetworkScanner:
                             match_value=match_value
                         )
 
+                        # 生成结果缓存键，避免重复发送相同结果
+                        cache_key = (asset.id, 'network', rule_type, match_value)
+
+                        if cache_key in self.result_cache:
+                            print(f"跳过重复的端口扫描结果通知: 资产={asset.host}, 描述={description}")
+                            continue
+
+                        # 添加到结果缓存
+                        self.result_cache.add(cache_key)
+
                         if not existing:
-                            await helpers.save_scan_result(
+                            scan_result = await helpers.save_scan_result(
                                 asset=asset,
                                 module='network',
                                 scan_type='active',
@@ -253,12 +276,24 @@ class NetworkScanner:
 
                             print(f"保存端口扫描结果: 资产={asset.host}, 描述={description}, 匹配值={match_value}")
 
+                            # 提取端口号
+                            port_numbers = []
+                            for line in match_value.split('\n'):
+                                if ':' in line:
+                                    port = line.split(':', 1)[0].strip()
+                                    if port.isdigit():
+                                        port_numbers.append(port)
+
+                            # 用于展示的端口号字符串
+                            port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
+
                             # 发送扫描结果事件
                             await channel_layer.group_send(
                                 'data_collection_scanner',
                                 {
                                     'type': 'scan_result',
                                     'data': {
+                                        'id': scan_result.id if scan_result else None,
                                         'asset': asset.host,
                                         'module': 'network',
                                         'module_display': '网络信息',
@@ -270,7 +305,10 @@ class NetworkScanner:
                                         'behavior': None,
                                         'request_data': port_request_data,
                                         'response_data': port_response_data,
-                                        'scan_date': None  # 由Django生成
+                                        'scan_date': None,  # 由Django生成
+                                        'is_port_scan': True,  # 标记为端口扫描结果
+                                        'port_numbers': port_numbers,
+                                        'port_display': port_display
                                     }
                                 }
                             )
@@ -336,8 +374,18 @@ class NetworkScanner:
                             match_value=match_value
                         )
 
+                        # 生成结果缓存键，避免重复发送相同结果
+                        cache_key = (asset.id, 'network', rule_type, match_value)
+
+                        if cache_key in self.result_cache:
+                            print(f"跳过重复的主动扫描结果通知: 资产={asset.host}, 描述={description}, 行为={behavior}")
+                            continue
+
+                        # 添加到结果缓存
+                        self.result_cache.add(cache_key)
+
                         if not existing:
-                            await helpers.save_scan_result(
+                            scan_result = await helpers.save_scan_result(
                                 asset=asset,
                                 module='network',
                                 scan_type='active',
@@ -358,6 +406,7 @@ class NetworkScanner:
                                 {
                                     'type': 'scan_result',
                                     'data': {
+                                        'id': scan_result.id if scan_result else None,
                                         'asset': asset.host,
                                         'module': 'network',
                                         'module_display': '网络信息',
@@ -369,7 +418,8 @@ class NetworkScanner:
                                         'behavior': behavior,
                                         'request_data': active_request_data,
                                         'response_data': active_response_data,
-                                        'scan_date': None  # 由Django生成
+                                        'scan_date': None,  # 由Django生成
+                                        'is_port_scan': False  # 标记为非端口扫描结果
                                     }
                                 }
                             )

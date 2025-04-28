@@ -208,7 +208,7 @@
 
         <!-- 删除了资产标签显示区 -->
 
-        <!-- 详情标签页 -->
+        <!-- 详情标签页 - 移除资产备注标签页 -->
         <el-tabs v-model="activeDetailTab">
           <el-tab-pane label="信息收集结果" name="info">
             <el-table
@@ -326,34 +326,6 @@
             <!-- 无数据提示 -->
             <div v-if="vulnResults.length === 0" class="no-data-tip">
               暂无漏洞检测结果
-            </div>
-          </el-tab-pane>
-
-          <!-- 资产备注标签页 -->
-          <el-tab-pane label="资产备注" name="notes">
-            <div class="asset-notes-container">
-              <div v-if="assetNotes.length > 0" class="notes-list">
-                <div v-for="note in assetNotes" :key="note.id" class="note-item">
-                  <div class="note-content">{{ note.content }}</div>
-                  <div class="note-footer">
-                    <span class="note-time">{{ formatDate(note.created_at) }}</span>
-                    <div class="note-actions">
-                      <el-button type="primary" size="small" @click="editNote(note)" icon="Edit" plain></el-button>
-                      <el-button type="danger" size="small" @click="deleteNote(note.id)" icon="Delete" plain></el-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="no-data-tip">
-                暂无资产备注
-              </div>
-
-              <div class="add-note-section">
-                <el-button type="primary" @click="showNoteDialog(selectedAsset)" icon="Plus">
-                  添加备注
-                </el-button>
-              </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -548,7 +520,7 @@ export default {
       // 加载详情数据
       await this.loadDetailData(asset.id);
 
-      // 获取资产备注
+      // 仍然获取资产备注，但不在详情页显示
       await this.fetchAssetNotes(asset.id);
     },
 
@@ -636,7 +608,7 @@ export default {
           });
           ElMessage.success('备注更新成功');
         } else {
-          // 添加新备注 - 修复: 添加asset字段
+          // 添加新备注
           await assetAPI.createAssetNote(this.noteForm.assetId, {
             content: this.noteForm.content,
             asset: this.noteForm.assetId
@@ -650,7 +622,7 @@ export default {
         // 刷新备注列表
         await this.fetchAssetNotes(this.selectedAsset.id);
 
-        // 如果是在列表页添加的备注，更新资产的备注
+        // 更新资产的备注
         await this.loadAssetNotes(this.selectedAsset.id);
 
       } catch (error) {
@@ -660,32 +632,6 @@ export default {
         }
       } finally {
         this.noteSaving = false;
-      }
-    },
-
-    // 删除资产备注
-    async deleteNote(noteId) {
-      try {
-        await ElMessageBox.confirm('确认删除此备注？', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        });
-
-        await assetAPI.deleteAssetNote(noteId);
-        ElMessage.success('删除备注成功');
-
-        // 刷新备注列表
-        if (this.selectedAsset) {
-          await this.fetchAssetNotes(this.selectedAsset.id);
-          // 更新资产的备注
-          await this.loadAssetNotes(this.selectedAsset.id);
-        }
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('删除备注失败', error);
-          ElMessage.error('删除备注失败');
-        }
       }
     },
 
@@ -821,50 +767,6 @@ h1 {
   padding-left: 10px;
 }
 
-.asset-notes-container {
-  padding: 10px 0;
-}
-
-.notes-list {
-  margin-bottom: 20px;
-}
-
-.note-item {
-  padding: 15px;
-  border-radius: 4px;
-  background-color: #f5f7fa;
-  margin-bottom: 10px;
-  position: relative;
-}
-
-.note-content {
-  font-size: 14px;
-  color: #303133;
-  line-height: 1.5;
-  margin-bottom: 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.note-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid #ebeef5;
-  padding-top: 10px;
-  margin-top: 10px;
-}
-
-.note-time {
-  color: #909399;
-  font-size: 12px;
-}
-
-.note-actions {
-  display: flex;
-  gap: 5px;
-}
-
 .note-preview {
   color: #606266;
   font-size: 13px;
@@ -874,12 +776,6 @@ h1 {
   color: #909399;
   font-size: 13px;
   font-style: italic;
-}
-
-.add-note-section {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
 }
 
 .no-data-tip {

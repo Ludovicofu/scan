@@ -91,6 +91,15 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                     'data': results
                 }))
 
+            elif message_type == 'reset_cache':
+                # 重置缓存
+                self.scanner.reset_scan_state()
+                await self.send(text_data=json.dumps({
+                    'type': 'cache_reset',
+                    'status': 'success',
+                    'message': '扫描缓存已重置'
+                }))
+
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -203,7 +212,22 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         # 序列化结果
         results = []
         for result in queryset:
-            results.append({
+            # 添加端口扫描结果的特殊处理
+            is_port_scan = result.rule_type == 'port'
+            port_numbers = []
+            port_display = ""
+
+            if is_port_scan:
+                # 解析端口号
+                for line in result.match_value.split('\n'):
+                    if ':' in line:
+                        port = line.split(':', 1)[0].strip()
+                        if port.isdigit():
+                            port_numbers.append(port)
+                port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
+
+            # 创建结果对象
+            result_data = {
                 'id': result.id,
                 'asset': result.asset.host,
                 'module': result.module,
@@ -217,8 +241,13 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                 # 添加请求和响应数据
                 'request_data': result.request_data,
                 'response_data': result.response_data,
-                'scan_date': result.scan_date.isoformat()
-            })
+                'scan_date': result.scan_date.isoformat(),
+                # 添加端口扫描结果的特殊字段
+                'is_port_scan': is_port_scan,
+                'port_numbers': port_numbers,
+                'port_display': port_display
+            }
+            results.append(result_data)
 
         return results
 
