@@ -576,6 +576,7 @@ export default {
     },
 
     // 辅助方法：根据类型获取漏洞扫描规则
+    // 在fetchVulnScanRulesByType方法中
     async fetchVulnScanRulesByType(vulnType, subType) {
       try {
         // 获取指定类型的漏洞扫描规则
@@ -597,31 +598,19 @@ export default {
           } catch (e) {
             // 如果解析失败，检查rule_content中是否包含子类型标识
             return rule.rule_content.includes(`"subType":"${subType}"`) ||
-                   rule.rule_content.includes(`"subType": "${subType}"`);
+                  rule.rule_content.includes(`"subType": "${subType}"`);
           }
         });
       } catch (error) {
         console.error(`获取${vulnType}/${subType}类型规则失败`, error);
         return [];
       }
-    },
+    }
 
-    // 解析规则内容
-    parseRuleContent(ruleContent) {
-      try {
-        // 尝试解析为JSON
-        const data = JSON.parse(ruleContent);
-        return Array.isArray(data.payloads) ? data.payloads : [];
-      } catch (error) {
-        // 如果解析失败，尝试直接分割
-        return ruleContent.split(/\r?\n/).map(line => line.trim()).filter(line => line);
-      }
-    },
-
-    // 创建默认规则
+    // 在createDefaultErrorBasedRule方法中
     async createDefaultErrorBasedRule() {
       try {
-        // 准备规则数据
+        // 准备规则数据 - 移除scan_type
         const ruleData = {
           vuln_type: 'sql_injection',
           name: '回显型SQL注入规则',
@@ -644,11 +633,12 @@ export default {
         console.error('创建默认回显型SQL注入规则失败', error);
         return null;
       }
-    },
+    }
 
+    // 在createDefaultBlindRule方法中
     async createDefaultBlindRule() {
       try {
-        // 准备规则数据
+        // 准备规则数据 - 移除scan_type
         const ruleData = {
           vuln_type: 'sql_injection',
           name: '无回显型SQL注入规则',
@@ -671,8 +661,9 @@ export default {
         console.error('创建默认无回显型SQL注入规则失败', error);
         return null;
       }
-    },
+    }
 
+    // 在createDefaultHttpHeaderRule方法中
     async createDefaultHttpHeaderRule() {
       try {
         // 准备规则数据
@@ -698,8 +689,9 @@ export default {
         console.error('创建默认HTTP头SQL注入规则失败', error);
         return null;
       }
-    },
+    }
 
+    // 在createDefaultErrorPatternRule方法中
     async createDefaultErrorPatternRule() {
       try {
         // 准备规则数据
@@ -725,20 +717,9 @@ export default {
         console.error('创建默认SQL错误匹配模式规则失败', error);
         return null;
       }
-    },
+    }
 
-    // 编辑回显型SQL注入载荷
-    editErrorPayloads() {
-      this.isEditingError = true;
-    },
-
-    // 取消编辑回显型SQL注入载荷
-    cancelEditError() {
-      this.errorPayloadsText = this.errorPayloads.join('\n');
-      this.isEditingError = false;
-    },
-
-    // 保存回显型SQL注入载荷
+    // 在saveErrorPayloads方法中
     async saveErrorPayloads() {
       try {
         // 处理文本框中的内容，分割为载荷数组
@@ -778,20 +759,9 @@ export default {
         console.error('保存回显型SQL注入规则失败', error);
         ElMessage.error('保存回显型SQL注入规则失败');
       }
-    },
+    }
 
-    // 编辑无回显型SQL注入载荷
-    editBlindPayloads() {
-      this.isEditingBlind = true;
-    },
-
-    // 取消编辑无回显型SQL注入载荷
-    cancelEditBlind() {
-      this.blindPayloadsText = this.blindPayloads.join('\n');
-      this.isEditingBlind = false;
-    },
-
-    // 保存无回显型SQL注入载荷
+    // 在saveBlindPayloads方法中
     async saveBlindPayloads() {
       try {
         // 处理文本框中的内容，分割为载荷数组
@@ -831,20 +801,9 @@ export default {
         console.error('保存无回显型SQL注入规则失败', error);
         ElMessage.error('保存无回显型SQL注入规则失败');
       }
-    },
+    }
 
-    // 编辑HTTP头注入设置
-    editHttpHeaders() {
-      this.isEditingHeaders = true;
-    },
-
-    // 取消编辑HTTP头注入设置
-    cancelEditHeaders() {
-      this.httpHeadersText = this.httpHeaders.join('\n');
-      this.isEditingHeaders = false;
-    },
-
-    // 保存HTTP头注入设置
+    // 在saveHttpHeaders方法中
     async saveHttpHeaders() {
       try {
         // 处理文本框中的内容，分割为HTTP头数组
@@ -884,20 +843,9 @@ export default {
         console.error('保存HTTP头SQL注入规则失败', error);
         ElMessage.error('保存HTTP头SQL注入规则失败');
       }
-    },
+    }
 
-    // 编辑SQL错误匹配模式
-    editErrorPatterns() {
-      this.isEditingPattern = true;
-    },
-
-    // 取消编辑SQL错误匹配模式
-    cancelEditPattern() {
-      this.errorPatternsText = this.errorPatterns.join('\n');
-      this.isEditingPattern = false;
-    },
-
-    // 保存SQL错误匹配模式
+    // 在saveErrorPatterns方法中
     async saveErrorPatterns() {
       try {
         // 处理文本框中的内容，分割为匹配模式数组

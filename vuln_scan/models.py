@@ -25,8 +25,6 @@ class VulnScanResult(models.Model):
         ('info', '信息'),
     )
 
-    # 移除了 SCAN_TYPE_CHOICES 和 scan_type 字段
-
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='vuln_scan_results', verbose_name='资产')
     vuln_type = models.CharField(max_length=20, choices=VULN_TYPE_CHOICES, verbose_name='漏洞类型')
     name = models.CharField(max_length=255, verbose_name='漏洞名称')

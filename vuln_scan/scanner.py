@@ -165,8 +165,7 @@ class VulnScanner:
                     vuln_result = await self.save_vuln_result(
                         asset=asset,
                         vuln_type=result['vuln_type'],
-                        vuln_subtype=result.get('vuln_subtype', ''),
-                        scan_type=result['scan_type'],
+                        vuln_subtype=result['vuln_subtype'],
                         name=result['name'],
                         description=result['description'],
                         severity=result['severity'],
@@ -187,8 +186,6 @@ class VulnScanner:
                                 'vuln_type': vuln_result.vuln_type,
                                 'vuln_type_display': vuln_result.get_vuln_type_display(),
                                 'vuln_subtype': vuln_result.vuln_subtype,
-                                'scan_type': vuln_result.scan_type,
-                                'scan_type_display': vuln_result.get_scan_type_display(),
                                 'name': vuln_result.name,
                                 'description': vuln_result.description,
                                 'severity': vuln_result.severity,
@@ -251,7 +248,7 @@ class VulnScanner:
             return None
 
     @sync_to_async
-    def save_vuln_result(self, asset, vuln_type, vuln_subtype, scan_type, name, description, severity, url, request,
+    def save_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
                          response, proof):
         """保存漏洞结果"""
         try:
@@ -270,7 +267,6 @@ class VulnScanner:
                     asset=asset,
                     vuln_type=vuln_type,
                     vuln_subtype=vuln_subtype,
-                    scan_type=scan_type,
                     name=name,
                     description=description,
                     severity=severity,

@@ -76,7 +76,7 @@ const infoCollectionAPI = {
 
 // 漏洞扫描API
 const vulnScanAPI = {
-  // 获取扫描结果
+    // 获取扫描结果
     getVulnScanRules(params) {
       return api.get('rules/vuln-scan/', { params });
     },
@@ -99,9 +99,33 @@ const vulnScanAPI = {
     // 删除漏洞扫描规则
     deleteVulnScanRule(id) {
       return api.delete(`rules/vuln-scan/${id}/`);
+    },
+
+    // 获取漏洞扫描结果
+    getScanResults(params) {
+      return api.get('vuln_scan/results/', { params });
+    },
+
+    // 按类型获取漏洞扫描结果
+    getVulnResultsByType(vulnType, params) {
+      return api.get(`vuln_scan/results/type/${vulnType}/`, { params });
+    },
+
+    // 获取漏洞扫描结果详情
+    getScanResultDetail(id) {
+      return api.get(`vuln_scan/results/${id}/`);
+    },
+
+    // 删除漏洞扫描结果
+    deleteScanResult(id) {
+      return api.delete(`vuln_scan/results/${id}/`);
+    },
+
+    // 验证漏洞
+    verifyVulnerability(id) {
+      return api.post(`vuln_scan/results/${id}/verify/`);
     }
 };
-
 // 规则管理API
 const rulesAPI = {
   // 获取所有信息收集规则
@@ -187,7 +211,7 @@ const rulesAPI = {
       });
   },
 
-  // 获取所有漏洞扫描规则
+ // 获取所有漏洞扫描规则
   getVulnScanRules(params) {
     return api.get('rules/vuln-scan/', { params });
   },
@@ -197,12 +221,7 @@ const rulesAPI = {
     return api.get(`rules/vuln-scan/type/${vulnType}/`, { params });
   },
 
-  // 按类型和扫描类型获取漏洞扫描规则
-  getVulnScanRulesByTypeAndScanType(vulnType, scanType, params) {
-    return api.get(`rules/vuln-scan/type/${vulnType}/scan-type/${scanType}/`, { params });
-  },
-
-  // 创建漏洞扫描规则
+  // 创建漏洞扫描规则 - 移除scan_type参数
   createVulnScanRule(data) {
     return api.post('rules/vuln-scan/', data);
   },

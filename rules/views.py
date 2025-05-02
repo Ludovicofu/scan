@@ -145,13 +145,13 @@ class InfoCollectionRuleByModuleAndType(generics.ListAPIView):
         return InfoCollectionRule.objects.filter(module=module, scan_type=scan_type)
 
 
-# 漏洞检测规则视图
+# 漏洞检测规则视图 - 修改以移除对 scan_type 的引用
 class VulnScanRuleList(generics.ListCreateAPIView):
     queryset = VulnScanRule.objects.all()
     serializer_class = VulnScanRuleSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'rule_content']
-    ordering_fields = ['vuln_type', 'name', 'updated_at']
+    ordering_fields = ['vuln_type', 'name', 'updated_at']  # 移除 'scan_type'
 
     def perform_create(self, serializer):
         rule = serializer.save()
@@ -228,4 +228,5 @@ class VulnScanRuleByType(generics.ListAPIView):
 
     def get_queryset(self):
         vuln_type = self.kwargs['vuln_type']
+        # 移除对scan_type的过滤
         return VulnScanRule.objects.filter(vuln_type=vuln_type)

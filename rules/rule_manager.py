@@ -109,13 +109,12 @@ class RuleManager:
         return InfoCollectionRule.objects.filter(module=module, scan_type=scan_type, is_enabled=True)
 
     @staticmethod
-    def create_vuln_scan_rule(vuln_type, scan_type, name, description, rule_content):
+    def create_vuln_scan_rule(vuln_type, name, description, rule_content):
         """
         创建漏洞检测规则
 
         参数:
             vuln_type: 漏洞类型
-            scan_type: 扫描类型 (passive, active)
             name: 漏洞名称
             description: 漏洞描述
             rule_content: 规则内容
@@ -123,6 +122,7 @@ class RuleManager:
         返回:
             创建的规则对象
         """
+        # 修改：移除scan_type参数
         rule = VulnScanRule.objects.create(
             vuln_type=vuln_type,
             name=name,
@@ -192,19 +192,25 @@ class RuleManager:
         """
         return VulnScanRule.objects.filter(vuln_type=vuln_type, is_enabled=True)
 
+    # 修改这个方法
     @staticmethod
-    def get_vuln_scan_rules_by_type_and_scan_type(vuln_type, scan_type):
+    def get_vuln_scan_rules_by_subtype(vuln_type, vuln_subtype):
         """
-        根据漏洞类型和扫描类型获取漏洞检测规则
+        根据漏洞类型和子类型获取漏洞检测规则
+        (替代原来的get_vuln_scan_rules_by_type_and_scan_type方法)
 
         参数:
             vuln_type: 漏洞类型
-            scan_type: 扫描类型 (passive, active)
+            vuln_subtype: 漏洞子类型
 
         返回:
             规则对象列表
         """
-        return VulnScanRule.objects.filter(vuln_type=vuln_type, scan_type=scan_type, is_enabled=True)
+        # 注意：需要在规则内容中查找子类型
+        rules = VulnScanRule.objects.filter(vuln_type=vuln_type, is_enabled=True)
+        # 这里假设rule_content是JSON格式，包含subType字段
+        # 实际过滤需要在应用层进行
+        return rules
 
     @staticmethod
     def search_info_collection_rules(query):

@@ -180,10 +180,10 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         queryset = VulnScanResult.objects.all()
 
         # 应用过滤器
-        if 'scan_type' in filters:
-            queryset = queryset.filter(scan_type=filters['scan_type'])
         if 'vuln_type' in filters:
             queryset = queryset.filter(vuln_type=filters['vuln_type'])
+        if 'vuln_subtype' in filters:
+            queryset = queryset.filter(vuln_subtype=filters['vuln_subtype'])
         if 'severity' in filters:
             queryset = queryset.filter(severity=filters['severity'])
         if 'host' in filters:
@@ -199,10 +199,10 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
             results.append({
                 'id': result.id,
                 'asset': result.asset.host,
+                'asset_host': result.asset.host,
                 'vuln_type': result.vuln_type,
                 'vuln_type_display': result.get_vuln_type_display(),
-                'scan_type': result.scan_type,
-                'scan_type_display': result.get_scan_type_display(),
+                'vuln_subtype': result.vuln_subtype,
                 'name': result.name,
                 'description': result.description,
                 'severity': result.severity,
@@ -210,7 +210,9 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
                 'url': result.url,
                 'proof': result.proof,
                 'scan_date': result.scan_date.isoformat(),
-                'is_verified': result.is_verified
+                'is_verified': result.is_verified,
+                'parameter': result.parameter,
+                'payload': result.payload
             })
 
         return results
