@@ -830,8 +830,6 @@ h1 {
 }
 
 .delete-btn {
-  color: #F
- .delete-btn {
   color: #F56C6C;
 }
 

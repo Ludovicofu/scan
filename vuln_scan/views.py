@@ -6,15 +6,7 @@ from .models import VulnScanResult
 
 # 序列化器定义
 from rest_framework import serializers
-
-
-class VulnScanResultSerializer(serializers.ModelSerializer):
-    asset_host = serializers.CharField(source='asset.host', read_only=True)
-    vuln_type_display = serializers.CharField(source='get_vuln_type_display', read_only=True)
-
-    class Meta:
-        model = VulnScanResult
-        fields = '__all__'
+from .serializers import VulnScanResultSerializer
 
 
 # 漏洞扫描结果视图

@@ -151,11 +151,14 @@ def asset_statistics(request):
     recent_date = timezone.now() - datetime.timedelta(days=7)
     recent_assets = Asset.objects.filter(first_seen__gte=recent_date).count()
 
-    # 有漏洞的资产数量
-    vuln_assets = Asset.objects.filter(vuln_scan_results__isnull=False).distinct().count()
+    # 有漏洞的资产数量 - 修改查询方式
+    vuln_assets = Asset.objects.filter(id__in=VulnScanResult.objects.values('asset_id').distinct()).count()
 
-    # 高危漏洞资产数量
-    high_risk_assets = Asset.objects.filter(vuln_scan_results__severity='high').distinct().count()
+    # 高危漏洞资产数量 - 修改查询方式，使用子查询
+    # 注意：此处假设VulnScanResult模型有一个名为'severity'的字段，实际应根据您的模型结构调整
+    high_risk_assets = Asset.objects.filter(
+        id__in=VulnScanResult.objects.filter(severity='high').values('asset_id')
+    ).distinct().count()
 
     # 按标签统计
     tag_stats = AssetTag.objects.annotate(asset_count=Count('assets')).values('id', 'name', 'color', 'asset_count')

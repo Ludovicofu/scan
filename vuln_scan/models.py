@@ -18,10 +18,24 @@ class VulnScanResult(models.Model):
         ('other', '其他'),
     )
 
+    SEVERITY_CHOICES = (
+        ('high', '高'),
+        ('medium', '中'),
+        ('low', '低'),
+        ('info', '信息'),
+    )
+
+    SCAN_TYPE_CHOICES = (
+        ('passive', '被动扫描'),
+        ('active', '主动扫描'),
+    )
+
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='vuln_scan_results', verbose_name='资产')
     vuln_type = models.CharField(max_length=20, choices=VULN_TYPE_CHOICES, verbose_name='漏洞类型')
+    scan_type = models.CharField(max_length=10, choices=SCAN_TYPE_CHOICES, verbose_name='扫描类型')
     name = models.CharField(max_length=255, verbose_name='漏洞名称')
     description = models.TextField(verbose_name='漏洞描述')
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, verbose_name='严重程度')
     url = models.URLField(verbose_name='漏洞URL')
     request = models.TextField(blank=True, null=True, verbose_name='请求数据')
     response = models.TextField(blank=True, null=True, verbose_name='响应数据')
@@ -48,3 +62,15 @@ class VulnScanResult(models.Model):
         verbose_name = '漏洞扫描结果'
         verbose_name_plural = '漏洞扫描结果列表'
         ordering = ['-scan_date']
+
+    def get_severity_display(self):
+        """返回严重程度的显示名称"""
+        return dict(self.SEVERITY_CHOICES).get(self.severity, self.severity)
+
+    def get_scan_type_display(self):
+        """返回扫描类型的显示名称"""
+        return dict(self.SCAN_TYPE_CHOICES).get(self.scan_type, self.scan_type)
+
+    def get_vuln_type_display(self):
+        """返回漏洞类型的显示名称"""
+        return dict(self.VULN_TYPE_CHOICES).get(self.vuln_type, self.vuln_type)
