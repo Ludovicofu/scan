@@ -1,16 +1,7 @@
+<!-- frontend/scan_system_frontend/src/views/VulnResultsPage.vue -->
 <template>
   <div class="vuln-results-page">
     <h1>漏洞检测结果</h1>
-
-    <div class="placeholder-message">
-      <el-alert
-        title="功能开发中"
-        type="info"
-        :closable="false"
-        description="漏洞检测模块尚在开发中，敬请期待。"
-        show-icon
-      ></el-alert>
-    </div>
 
     <!-- 扫描进度 -->
     <ScanProgress
@@ -29,6 +20,19 @@
       @filter-change="handleFilterChange"
     />
 
+    <!-- 漏洞类型选择 -->
+    <div class="vuln-type-tabs">
+      <el-tabs v-model="currentVulnType" @tab-click="handleVulnTypeChange">
+        <el-tab-pane label="SQL注入" name="sql_injection"></el-tab-pane>
+        <el-tab-pane label="XSS" name="xss"></el-tab-pane>
+        <el-tab-pane label="文件包含" name="file_inclusion"></el-tab-pane>
+        <el-tab-pane label="命令注入" name="command_injection"></el-tab-pane>
+        <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
+        <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
+        <el-tab-pane label="其他" name="other"></el-tab-pane>
+      </el-tabs>
+    </div>
+
     <!-- 扫描类型切换 -->
     <div class="scan-type-tabs">
       <el-radio-group v-model="currentScanType" @change="handleScanTypeChange">
@@ -37,8 +41,23 @@
       </el-radio-group>
     </div>
 
-    <!-- 结果表格 -->
-    <div class="result-table">
+    <!-- SQL注入结果 -->
+    <SqlInjectionResults
+      v-if="currentVulnType === 'sql_injection'"
+      :vuln-results="filteredResults"
+      :loading="loading"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      :total="totalResults"
+      :show-pagination="true"
+      @size-change="handleSizeChange"
+      @current-change="handlePageChange"
+      @view-detail="showDetail"
+      @delete-vuln="deleteResult"
+    />
+
+    <!-- 其他漏洞类型结果 - 通用表格 -->
+    <div v-else class="result-table">
       <el-table
         v-loading="loading"
         :data="results"
@@ -71,7 +90,7 @@
         <el-table-column
           prop="name"
           label="漏洞名称"
-          width="180"
+          width="200"
         ></el-table-column>
 
         <el-table-column
@@ -143,14 +162,24 @@
       <div v-if="selectedResult">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="资产">{{ selectedResult.asset }}</el-descriptions-item>
+          <el-descriptions-item label="漏洞类型">
+            {{ selectedResult.vuln_type_display }}
+            <el-tag v-if="selectedResult.vuln_subtype" style="margin-left: 10px" size="small">
+              {{ getVulnSubtypeDisplay(selectedResult.vuln_subtype) }}
+            </el-tag>
+          </el-descriptions-item>
           <el-descriptions-item label="漏洞名称">{{ selectedResult.name }}</el-descriptions-item>
-          <el-descriptions-item label="漏洞类型">{{ selectedResult.vuln_type_display }}</el-descriptions-item>
           <el-descriptions-item label="严重程度">
-            <el-tag :type="getSeverityType(selectedResult.severity)">
+            <el-tag
+              :type="getSeverityType(selectedResult.severity)"
+              size="small"
+            >
               {{ selectedResult.severity_display }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="URL">{{ selectedResult.url }}</el-descriptions-item>
+          <el-descriptions-item v-if="selectedResult.parameter" label="参数">{{ selectedResult.parameter }}</el-descriptions-item>
+          <el-descriptions-item v-if="selectedResult.payload" label="Payload">{{ selectedResult.payload }}</el-descriptions-item>
           <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
           <el-descriptions-item label="漏洞证明">{{ selectedResult.proof }}</el-descriptions-item>
           <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
@@ -167,13 +196,13 @@
             <el-tab-pane label="HTTP请求">
               <div class="detail-panel">
                 <!-- 使用实际的请求数据 -->
-                <pre>{{ selectedResult.request_data || '无请求数据' }}</pre>
+                <pre>{{ selectedResult.request || '无请求数据' }}</pre>
               </div>
             </el-tab-pane>
             <el-tab-pane label="HTTP响应">
               <div class="detail-panel">
                 <!-- 使用实际的响应数据 -->
-                <pre>{{ selectedResult.response_data || '无响应数据' }}</pre>
+                <pre>{{ selectedResult.response || '无响应数据' }}</pre>
               </div>
             </el-tab-pane>
             <el-tab-pane label="漏洞详情" v-if="selectedResult.proof">
@@ -183,9 +212,26 @@
                   <div class="highlight-content">{{ selectedResult.proof }}</div>
                 </div>
                 <!-- 高亮显示匹配的漏洞内容 -->
-                <div v-if="selectedResult.proof && selectedResult.response_data" class="highlight-section">
-                  <div class="highlight-title">响应中的漏洞点:</div>
-                  <div class="highlight-content" v-html="highlightVulnerability(selectedResult.response_data, selectedResult.proof)"></div>
+                <div v-if="selectedResult.vuln_type === 'sql_injection' && selectedResult.vuln_subtype === 'error_based' && selectedResult.proof && selectedResult.response" class="highlight-section">
+                  <div class="highlight-title">响应中的SQL错误:</div>
+                  <div class="highlight-content" v-html="highlightSqlError(selectedResult.response, selectedResult.proof)"></div>
+                </div>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="复现" v-if="selectedResult.vuln_type === 'sql_injection'">
+              <div class="detail-panel">
+                <div class="highlight-section">
+                  <div class="highlight-title">复现方法:</div>
+                  <div class="highlight-content">
+                    <p>1. 向以下URL发送请求: <code>{{ selectedResult.url }}</code></p>
+                    <p v-if="selectedResult.parameter">2. 修改参数 <code>{{ selectedResult.parameter }}</code> 的值为: <code>{{ selectedResult.payload }}</code></p>
+                    <p>3. 观察响应中的错误信息或延时情况</p>
+                    <p>4. 可使用以下SQL注入工具进行更深入验证:</p>
+                    <ul>
+                      <li>SQLmap: <code>sqlmap -u "{{ buildSqlmapUrl(selectedResult) }}" --batch</code></li>
+                      <li>Burp Suite: 使用Intruder模块进行参数Fuzz测试</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </el-tab-pane>
@@ -195,6 +241,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="detailDialogVisible = false">关闭</el-button>
+          <el-button v-if="!selectedResult.is_verified" type="success" @click="verifyVulnerability(selectedResult.id)">验证</el-button>
         </span>
       </template>
     </el-dialog>
@@ -204,6 +251,7 @@
 <script>
 import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
+import SqlInjectionResults from '@/components/vuln/SqlInjectionResults.vue';
 import { vulnScanAPI } from '@/services/api';
 import { vulnScanWS } from '@/services/websocket';
 import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
@@ -212,7 +260,8 @@ export default {
   name: 'VulnResultsPage',
   components: {
     ScanProgress,
-    ResultFilters
+    ResultFilters,
+    SqlInjectionResults
   },
   data() {
     return {
@@ -232,6 +281,7 @@ export default {
       // 过滤条件
       filters: {},
       currentScanType: 'passive',
+      currentVulnType: 'sql_injection', // 默认显示SQL注入
 
       // 详情对话框
       detailDialogVisible: false,
@@ -242,6 +292,12 @@ export default {
       // 添加一个Set来跟踪已经通知的结果
       notifiedResults: new Set()
     };
+  },
+  computed: {
+    // 根据当前选择的漏洞类型过滤结果
+    filteredResults() {
+      return this.results.filter(result => result.vuln_type === this.currentVulnType);
+    }
   },
   created() {
     this.initWebSocket();
@@ -254,18 +310,10 @@ export default {
     this.closeWebSocket();
 
     // 保存去重数据到localStorage
-    this.saveDeduplicationData();
+    this.saveCacheToStorage();
   },
   methods: {
     // 保存和加载去重数据
-    saveDeduplicationData() {
-      try {
-        // 将通知过的结果保存到localStorage
-        localStorage.setItem('vulnResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
-      } catch (e) {
-        console.error('保存去重数据失败', e);
-      }
-    },
     loadDeduplicationData() {
       try {
         // 从localStorage加载通知过的结果
@@ -275,6 +323,14 @@ export default {
         }
       } catch (e) {
         console.error('加载去重数据失败', e);
+      }
+    },
+    saveCacheToStorage() {
+      try {
+        // 将通知过的结果保存到localStorage
+        localStorage.setItem('vulnResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
+      } catch (e) {
+        console.error('保存去重数据失败', e);
       }
     },
 
@@ -308,7 +364,7 @@ export default {
       this.currentScanUrl = data.data.url || '';
       this.scanMessage = data.data.message || '';
     },
-    // 修改扫描结果处理方法，添加请求和响应数据处理
+
     handleScanResult(data) {
       // 创建唯一标识符
       const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
@@ -321,19 +377,14 @@ export default {
 
       // 添加到已通知集合
       this.notifiedResults.add(resultKey);
-      // 定期保存去重数据
-      this.saveDeduplicationData();
 
       console.log("收到新的漏洞扫描结果:", data);
-      if (data.data.scan_type === this.currentScanType) {
+
+      if (data.data.scan_type === this.currentScanType && data.data.vuln_type === this.currentVulnType) {
         // 检查是否已在显示列表中
         if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合，确保包含请求和响应数据
-          this.displayedResults.set(resultKey, {
-            ...data.data,
-            request_data: data.data.request_data || '',
-            response_data: data.data.response_data || ''
-          });
+          // 保存到显示集合
+          this.displayedResults.set(resultKey, data.data);
 
           // 添加到显示列表
           if (this.results.length < this.pageSize) {
@@ -354,6 +405,7 @@ export default {
         }
       }
     },
+
     handleScanStatus(data) {
       // 处理扫描状态更新
       if (data.status === 'started') {
@@ -400,7 +452,8 @@ export default {
         const params = {
           ...this.filters,
           page: this.currentPage,
-          page_size: this.pageSize
+          page_size: this.pageSize,
+          vuln_type: this.currentVulnType
         };
 
         console.log("查询漏洞参数:", params);
@@ -434,7 +487,7 @@ export default {
 
     async deleteResult(id) {
       try {
-        await ElMessageBox.confirm('确认删除该漏洞记录?', '提示', {
+        await ElMessageBox.confirm('确认删除此漏洞记录?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
@@ -460,6 +513,26 @@ export default {
       }
     },
 
+    // 验证漏洞
+    async verifyVulnerability(id) {
+      try {
+        // 调用验证API
+        await vulnScanAPI.verifyVulnerability(id);
+        ElMessage.success('漏洞验证成功');
+
+        // 更新详情对话框
+        if (this.selectedResult && this.selectedResult.id === id) {
+          this.selectedResult.is_verified = true;
+        }
+
+        // 刷新结果列表
+        await this.fetchResults();
+      } catch (error) {
+        console.error('漏洞验证失败', error);
+        ElMessage.error('漏洞验证失败');
+      }
+    },
+
     // 分页和过滤器方法
     handleSizeChange(val) {
       this.pageSize = val;
@@ -474,50 +547,16 @@ export default {
       this.currentPage = 1; // 重置为第一页
       this.fetchResults();
     },
+    handleVulnTypeChange() {
+      this.currentPage = 1; // 重置为第一页
+      this.fetchResults();
+    },
     handleScanTypeChange() {
       this.currentPage = 1; // 重置为第一页
       this.fetchResults();
     },
 
-    // 查看详情
-    showDetail(row) {
-      this.selectedResult = row;
-      this.detailDialogVisible = true;
-    },
-
-    // 高亮显示漏洞点
-    highlightVulnerability(text, vulnerabilityProof) {
-      if (!text || !vulnerabilityProof) return text;
-
-      // 对vulnerabilityProof进行处理，获取关键词
-      let keywords = vulnerabilityProof;
-
-      // 如果是复杂的描述，尝试提取关键词
-      if (vulnerabilityProof.length > 30) {
-        // 简单处理：提取引号内的内容，或者提取特定的关键字
-        const quoteMatch = vulnerabilityProof.match(/'([^']+)'|"([^"]+)"/);
-        if (quoteMatch) {
-          keywords = quoteMatch[1] || quoteMatch[2];
-        } else {
-          // 尝试提取关键字（SQL注入、XSS等）
-          const keywordMatch = vulnerabilityProof.match(/SQL|XSS|注入|脚本|命令|漏洞|error|syntax|\/bin\/bash|alert\(|<script>|select\s+.*from/i);
-          if (keywordMatch) {
-            keywords = keywordMatch[0];
-          }
-        }
-      }
-
-      // 对关键词进行转义，以便正确用于正则表达式
-      const escapedKeywords = keywords.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      // 创建正则表达式，使用全局搜索和不区分大小写选项
-      const regex = new RegExp(escapedKeywords, 'gi');
-
-      // 用带有高亮的HTML替换匹配的文本
-      return text.replace(regex, match => `<span class="highlight-vulnerability">${match}</span>`);
-    },
-
-    // 工具方法
+    // 获取漏洞严重程度对应的标签类型
     getSeverityType(severity) {
       const severityMap = {
         'high': 'danger',
@@ -526,6 +565,90 @@ export default {
         'info': 'success'
       };
       return severityMap[severity] || 'info';
+    },
+
+    // 查看详情
+    showDetail(row) {
+      this.selectedResult = row;
+      this.detailDialogVisible = true;
+    },
+
+    // 高亮SQL错误
+    highlightSqlError(response, proof) {
+      if (!response || !proof) return response;
+
+      // 尝试从证明中提取错误信息关键词
+      const errorKeywords = [];
+
+      // 检查常见的SQL错误关键词
+      const commonSqlErrors = [
+        'SQL syntax', 'MySQL', 'mysqli', 'ORA-', 'Oracle error',
+        'SQLSTATE', 'PostgreSQL', 'SQL Server', 'syntax error'
+      ];
+
+      commonSqlErrors.forEach(keyword => {
+        if (proof.includes(keyword)) {
+          errorKeywords.push(keyword);
+        }
+      });
+
+      // 如果没有找到关键词，尝试提取更多信息
+      if (errorKeywords.length === 0) {
+        const proofMatch = proof.match(/响应中包含SQL错误信息(.+)/);
+        if (proofMatch && proofMatch[1]) {
+          errorKeywords.push(proofMatch[1].trim());
+        }
+      }
+
+      // 如果还是没有关键词，返回原始响应
+      if (errorKeywords.length === 0) {
+        return response;
+      }
+
+      // 高亮显示错误关键词
+      let highlightedResponse = response;
+      errorKeywords.forEach(keyword => {
+        // 转义特殊字符
+        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 创建正则表达式
+        const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+        // 高亮替换
+        highlightedResponse = highlightedResponse.replace(
+          regex,
+          '<span class="sql-error-highlight">$1</span>'
+        );
+      });
+
+      return highlightedResponse;
+    },
+
+    // 构建SQLmap URL
+    buildSqlmapUrl(result) {
+      if (!result || !result.url) return '';
+
+      if (result.parameter) {
+        // 如果有参数信息，构建带参数的URL
+        const urlObj = new URL(result.url);
+        if (!urlObj.searchParams.has(result.parameter)) {
+          // 如果URL中没有该参数，添加一个占位符
+          urlObj.searchParams.set(result.parameter, '*');
+        } else {
+          // 标记该参数为注入点
+          const paramValue = urlObj.searchParams.get(result.parameter);
+          urlObj.searchParams.set(result.parameter, paramValue + '*');
+        }
+        return urlObj.toString();
+      }
+
+      // 如果没有参数信息，返回原始URL
+      return result.url;
+    },
+
+    // 格式化日期
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     },
 
     getSeverityNotificationType(severity) {
@@ -538,10 +661,25 @@ export default {
       return notificationMap[severity] || 'info';
     },
 
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    // 获取漏洞子类型显示名称
+    getVulnSubtypeDisplay(subtype) {
+      const subtypeMap = {
+        'error_based': '错误回显型',
+        'blind': '盲注型',
+        'time_based': '时间盲注型',
+        'boolean_based': '布尔盲注型',
+        'stacked_queries': '堆叠查询型',
+        'out_of_band': '带外型',
+        'stored': '存储型',
+        'reflected': '反射型',
+        'dom': 'DOM型',
+        'lfi': '本地文件包含',
+        'rfi': '远程文件包含',
+        'os_command': '系统命令',
+        'blind_os_command': '盲命令',
+        'http_header': 'HTTP头注入'
+      };
+      return subtypeMap[subtype] || subtype;
     }
   }
 };
@@ -558,8 +696,8 @@ h1 {
   color: #303133;
 }
 
-.placeholder-message {
-  margin-bottom: 20px;
+.vuln-type-tabs {
+  margin-bottom: 15px;
 }
 
 .scan-type-tabs {
@@ -624,7 +762,7 @@ h1 {
   font-size: 13px;
 }
 
-:deep(.highlight-vulnerability) {
+:deep(.sql-error-highlight) {
   background-color: #F56C6C;
   color: white;
   padding: 2px 4px;
