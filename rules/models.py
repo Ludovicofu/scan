@@ -47,7 +47,7 @@ class VulnScanRule(models.Model):
     """
     漏洞检测规则模型
     """
-    # 这里先定义一个基本的模型，后期可以根据需要扩展
+    # 修改后的模型，移除scan_type字段
 
     VULN_TYPE_CHOICES = (
         ('sql_injection', 'SQL注入'),
@@ -59,13 +59,7 @@ class VulnScanRule(models.Model):
         ('other', '其他'),
     )
 
-    SCAN_TYPE_CHOICES = (
-        ('passive', '被动扫描'),
-        ('active', '主动扫描'),
-    )
-
     vuln_type = models.CharField(max_length=20, choices=VULN_TYPE_CHOICES, verbose_name='漏洞类型')
-    scan_type = models.CharField(max_length=10, choices=SCAN_TYPE_CHOICES, verbose_name='扫描类型')
     name = models.CharField(max_length=255, verbose_name='漏洞名称')
     description = models.TextField(verbose_name='漏洞描述')
     rule_content = models.TextField(verbose_name='规则内容')

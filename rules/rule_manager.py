@@ -125,7 +125,6 @@ class RuleManager:
         """
         rule = VulnScanRule.objects.create(
             vuln_type=vuln_type,
-            scan_type=scan_type,
             name=name,
             description=description,
             rule_content=rule_content,

@@ -77,24 +77,29 @@ const infoCollectionAPI = {
 // 漏洞扫描API
 const vulnScanAPI = {
   // 获取扫描结果
-  getScanResults(params) {
-    return api.get('vuln_scan/results/', { params });
-  },
+    getVulnScanRules(params) {
+      return api.get('rules/vuln-scan/', { params });
+    },
 
-  // 删除扫描结果
-  deleteScanResult(id) {
-    return api.delete(`vuln_scan/results/${id}/`);
-  },
+    // 按类型获取漏洞扫描规则
+    getVulnScanRulesByType(vulnType, params) {
+      return api.get(`rules/vuln-scan/type/${vulnType}/`, { params });
+    },
 
-  // 按漏洞类型获取结果
-  getVulnResultsByType(vulnType, params) {
-    return api.get(`vuln_scan/results/type/${vulnType}/`, { params });
-  },
+    // 创建漏洞扫描规则 - 移除scan_type参数
+    createVulnScanRule(data) {
+      return api.post('rules/vuln-scan/', data);
+    },
 
-  // 验证漏洞
-  verifyVulnerability(id) {
-    return api.post(`vuln_scan/results/${id}/verify/`);
-  }
+    // 更新漏洞扫描规则
+    updateVulnScanRule(id, data) {
+      return api.put(`rules/vuln-scan/${id}/`, data);
+    },
+
+    // 删除漏洞扫描规则
+    deleteVulnScanRule(id) {
+      return api.delete(`rules/vuln-scan/${id}/`);
+    }
 };
 
 // 规则管理API

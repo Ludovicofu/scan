@@ -25,14 +25,10 @@ class VulnScanResult(models.Model):
         ('info', '信息'),
     )
 
-    SCAN_TYPE_CHOICES = (
-        ('passive', '被动扫描'),
-        ('active', '主动扫描'),
-    )
+    # 移除了 SCAN_TYPE_CHOICES 和 scan_type 字段
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='vuln_scan_results', verbose_name='资产')
     vuln_type = models.CharField(max_length=20, choices=VULN_TYPE_CHOICES, verbose_name='漏洞类型')
-    scan_type = models.CharField(max_length=10, choices=SCAN_TYPE_CHOICES, verbose_name='扫描类型')
     name = models.CharField(max_length=255, verbose_name='漏洞名称')
     description = models.TextField(verbose_name='漏洞描述')
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, verbose_name='严重程度')
@@ -66,10 +62,6 @@ class VulnScanResult(models.Model):
     def get_severity_display(self):
         """返回严重程度的显示名称"""
         return dict(self.SEVERITY_CHOICES).get(self.severity, self.severity)
-
-    def get_scan_type_display(self):
-        """返回扫描类型的显示名称"""
-        return dict(self.SCAN_TYPE_CHOICES).get(self.scan_type, self.scan_type)
 
     def get_vuln_type_display(self):
         """返回漏洞类型的显示名称"""

@@ -30,7 +30,6 @@ class InfoCollectionRuleSerializer(serializers.ModelSerializer):
 
 class VulnScanRuleSerializer(serializers.ModelSerializer):
     vuln_type_display = serializers.SerializerMethodField()
-    scan_type_display = serializers.SerializerMethodField()
 
     class Meta:
         model = VulnScanRule
@@ -38,9 +37,6 @@ class VulnScanRuleSerializer(serializers.ModelSerializer):
 
     def get_vuln_type_display(self, obj):
         return obj.get_vuln_type_display()
-
-    def get_scan_type_display(self, obj):
-        return obj.get_scan_type_display()
 
 
 # 信息收集规则视图
@@ -155,7 +151,7 @@ class VulnScanRuleList(generics.ListCreateAPIView):
     serializer_class = VulnScanRuleSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'rule_content']
-    ordering_fields = ['vuln_type', 'scan_type', 'name', 'updated_at']
+    ordering_fields = ['vuln_type', 'name', 'updated_at']
 
     def perform_create(self, serializer):
         rule = serializer.save()
@@ -228,20 +224,8 @@ class VulnScanRuleByType(generics.ListAPIView):
     serializer_class = VulnScanRuleSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'rule_content']
-    ordering_fields = ['scan_type', 'name', 'updated_at']
-
-    def get_queryset(self):
-        vuln_type = self.kwargs['vuln_type']
-        return VulnScanRule.objects.filter(vuln_type=vuln_type)
-
-
-class VulnScanRuleByTypeAndScanType(generics.ListAPIView):
-    serializer_class = VulnScanRuleSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description', 'rule_content']
     ordering_fields = ['name', 'updated_at']
 
     def get_queryset(self):
         vuln_type = self.kwargs['vuln_type']
-        scan_type = self.kwargs['scan_type']
-        return VulnScanRule.objects.filter(vuln_type=vuln_type, scan_type=scan_type)
+        return VulnScanRule.objects.filter(vuln_type=vuln_type)
