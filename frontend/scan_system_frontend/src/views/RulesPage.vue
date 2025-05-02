@@ -69,7 +69,20 @@
 
         <!-- 漏洞检测规则内容 -->
         <div class="rules-content">
-          <p>漏洞检测规则功能当前不可用，请等待系统更新。</p>
+          <!-- SQL注入模块显示专用组件 -->
+          <template v-if="activeVulnTab === 'sql_injection'">
+            <SqlinjectionRules />
+          </template>
+          <!-- 其他漏洞类型暂时显示提示信息 -->
+          <template v-else>
+            <el-alert
+              title="功能开发中"
+              type="info"
+              :closable="false"
+              description="该漏洞类型的规则管理功能正在开发中，敬请期待。"
+              show-icon
+            ></el-alert>
+          </template>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -93,6 +106,7 @@ import PortScanRules from '@/components/rules/PortScanRules.vue';
 import PassiveScanRules from '@/components/rules/PassiveScanRules.vue';
 import ActiveScanRules from '@/components/rules/ActiveScanRules.vue';
 import InfoRuleEditDialog from '@/components/rules/InfoRuleEditDialog.vue';
+import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue'; // 导入SQL注入规则组件
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
@@ -101,14 +115,15 @@ export default {
     PortScanRules,
     PassiveScanRules,
     ActiveScanRules,
-    InfoRuleEditDialog
+    InfoRuleEditDialog,
+    SqlinjectionRules // 注册SQL注入规则组件
   },
   data() {
     return {
       // 导航标签
       activeMainTab: 'info_collection', // 主标签
       activeInfoTab: 'network', // 信息收集子标签
-      activeVulnTab: 'sql_injection', // 漏洞检测子标签
+      activeVulnTab: 'sql_injection', // 漏洞检测子标签，默认显示SQL注入
 
       // 规则数据
       infoRules: [], // 信息收集规则列表
@@ -200,7 +215,9 @@ export default {
     },
 
     handleVulnTabClick() {
-      // 暂不实现
+      // 漏洞扫描规则标签切换处理
+      // 注意：SQL注入规则已由组件自行加载
+      console.log(`切换到漏洞类型标签: ${this.activeVulnTab}`);
     },
 
     // 加载当前标签页所需规则
@@ -212,7 +229,7 @@ export default {
         }
         // 网络信息模块的端口扫描规则由PortScanRules组件自行加载
       } else if (this.activeMainTab === 'vuln_scan') {
-        // 漏洞检测规则暂不实现
+        // 漏洞检测规则由各自的组件加载
       }
     },
 

@@ -1,3 +1,4 @@
+# vuln_scan/models.py
 from django.db import models
 from django.utils import timezone
 from data_collection.models import Asset
@@ -17,30 +18,28 @@ class VulnScanResult(models.Model):
         ('other', '其他'),
     )
 
-    SCAN_TYPE_CHOICES = (
-        ('passive', '被动扫描'),
-        ('active', '主动扫描'),
-    )
-
-    SEVERITY_CHOICES = (
-        ('high', '高'),
-        ('medium', '中'),
-        ('low', '低'),
-        ('info', '信息'),
-    )
-
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='vuln_scan_results', verbose_name='资产')
     vuln_type = models.CharField(max_length=20, choices=VULN_TYPE_CHOICES, verbose_name='漏洞类型')
-    scan_type = models.CharField(max_length=10, choices=SCAN_TYPE_CHOICES, verbose_name='扫描类型')
     name = models.CharField(max_length=255, verbose_name='漏洞名称')
     description = models.TextField(verbose_name='漏洞描述')
-    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, verbose_name='严重程度')
     url = models.URLField(verbose_name='漏洞URL')
     request = models.TextField(blank=True, null=True, verbose_name='请求数据')
     response = models.TextField(blank=True, null=True, verbose_name='响应数据')
     proof = models.TextField(verbose_name='漏洞证明')
     scan_date = models.DateTimeField(default=timezone.now, verbose_name='扫描日期')
     is_verified = models.BooleanField(default=False, verbose_name='是否已验证')
+
+    # 漏洞子类型，如 error_based, blind 等
+    vuln_subtype = models.CharField(max_length=30, blank=True, null=True, verbose_name='漏洞子类型')
+
+    # 漏洞详细信息
+    vuln_detail = models.TextField(blank=True, null=True, verbose_name='漏洞详细信息')
+
+    # 漏洞参数
+    parameter = models.CharField(max_length=255, blank=True, null=True, verbose_name='漏洞参数')
+
+    # 漏洞载荷
+    payload = models.TextField(blank=True, null=True, verbose_name='漏洞载荷')
 
     def __str__(self):
         return f"{self.asset.host} - {self.name} - {self.scan_date}"

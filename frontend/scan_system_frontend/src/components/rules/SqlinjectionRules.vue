@@ -1,0 +1,802 @@
+// frontend/scan_system_frontend/src/components/rules/SqlinjectionRules.vue
+<template>
+  <div class="sqlinjection-rules">
+    <h3>SQL注入扫描设置</h3>
+    <div class="rules-container">
+      <!-- 回显型SQL注入载荷 -->
+      <div class="rule-section">
+        <div class="rules-header">
+          <div class="rule-info">
+            <span class="rule-title">回显型SQL注入载荷</span>
+            <span class="rule-desc">添加能够引发明显回显的SQL注入测试载荷</span>
+          </div>
+          <div class="rule-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="editErrorPayloads"
+              v-if="!isEditingError">
+              修改
+            </el-button>
+            <template v-else>
+              <el-button
+                type="success"
+                size="small"
+                @click="saveErrorPayloads">
+                保存
+              </el-button>
+              <el-button
+                type="info"
+                size="small"
+                @click="cancelEditError">
+                取消
+              </el-button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="isLoadingError" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else-if="loadErrorFailed" class="error-state">
+          <el-alert
+            title="加载回显型SQL注入规则失败"
+            type="error"
+            description="使用默认配置"
+            :closable="false"
+            show-icon
+          />
+        </div>
+
+        <div v-else class="rules-content">
+          <div v-if="!isEditingError" class="payloads-list">
+            <div v-for="(payload, index) in errorPayloads" :key="index" class="payload-item">
+              {{ payload }}
+            </div>
+            <div v-if="errorPayloads.length === 0" class="no-payload">
+              没有配置回显型SQL注入载荷，点击"修改"添加载荷
+            </div>
+          </div>
+          <div v-else class="payloads-edit">
+            <el-input
+              type="textarea"
+              v-model="errorPayloadsText"
+              :rows="8"
+              placeholder="请输入回显型SQL注入载荷，每行一个"
+            ></el-input>
+            <div class="hint">
+              样例: ', " UNION SELECT 1,2,3--, ' OR '1'='1
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 无回显型SQL注入载荷 -->
+      <div class="rule-section">
+        <div class="rules-header">
+          <div class="rule-info">
+            <span class="rule-title">无回显型SQL注入载荷</span>
+            <span class="rule-desc">添加基于时间延迟等无明显回显的注入测试载荷</span>
+          </div>
+          <div class="rule-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="editBlindPayloads"
+              v-if="!isEditingBlind">
+              修改
+            </el-button>
+            <template v-else>
+              <el-button
+                type="success"
+                size="small"
+                @click="saveBlindPayloads">
+                保存
+              </el-button>
+              <el-button
+                type="info"
+                size="small"
+                @click="cancelEditBlind">
+                取消
+              </el-button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="isLoadingBlind" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else-if="loadBlindFailed" class="error-state">
+          <el-alert
+            title="加载无回显型SQL注入规则失败"
+            type="error"
+            description="使用默认配置"
+            :closable="false"
+            show-icon
+          />
+        </div>
+
+        <div v-else class="rules-content">
+          <div v-if="!isEditingBlind" class="payloads-list">
+            <div v-for="(payload, index) in blindPayloads" :key="index" class="payload-item">
+              {{ payload }}
+            </div>
+            <div v-if="blindPayloads.length === 0" class="no-payload">
+              没有配置无回显型SQL注入载荷，点击"修改"添加载荷
+            </div>
+          </div>
+          <div v-else class="payloads-edit">
+            <el-input
+              type="textarea"
+              v-model="blindPayloadsText"
+              :rows="8"
+              placeholder="请输入无回显型SQL注入载荷，每行一个"
+            ></el-input>
+            <div class="hint">
+              样例: ' OR (SELECT SLEEP(5))--, '; WAITFOR DELAY '0:0:5'--
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HTTP头注入设置 -->
+      <div class="rule-section">
+        <div class="rules-header">
+          <div class="rule-info">
+            <span class="rule-title">HTTP头注入设置</span>
+            <span class="rule-desc">选择要进行SQL注入测试的HTTP头</span>
+          </div>
+          <div class="rule-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="editHttpHeaders"
+              v-if="!isEditingHeaders">
+              修改
+            </el-button>
+            <template v-else>
+              <el-button
+                type="success"
+                size="small"
+                @click="saveHttpHeaders">
+                保存
+              </el-button>
+              <el-button
+                type="info"
+                size="small"
+                @click="cancelEditHeaders">
+                取消
+              </el-button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="isLoadingHeaders" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else-if="loadHeadersFailed" class="error-state">
+          <el-alert
+            title="加载HTTP头注入设置失败"
+            type="error"
+            description="使用默认配置"
+            :closable="false"
+            show-icon
+          />
+        </div>
+
+        <div v-else class="rules-content">
+          <div v-if="!isEditingHeaders" class="headers-list">
+            <div v-for="(header, index) in httpHeaders" :key="index" class="header-item">
+              {{ header }}
+            </div>
+            <div v-if="httpHeaders.length === 0" class="no-header">
+              没有配置HTTP头注入测试，点击"修改"添加HTTP头
+            </div>
+          </div>
+          <div v-else class="headers-edit">
+            <el-input
+              type="textarea"
+              v-model="httpHeadersText"
+              :rows="5"
+              placeholder="请输入要测试的HTTP头，每行一个"
+            ></el-input>
+            <div class="hint">
+              样例: Cookie, X-Forwarded-For, User-Agent, Referer
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { rulesAPI } from '@/services/api';
+import { ElMessage } from 'element-plus';
+
+export default {
+  name: 'SqlinjectionRules',
+  data() {
+    return {
+      // 回显型SQL注入载荷
+      isEditingError: false,
+      isLoadingError: false,
+      loadErrorFailed: false,
+      errorPayloads: [],
+      errorPayloadsText: '',
+      errorRuleId: null,  // 用于存储规则ID，便于更新
+
+      // 无回显型SQL注入载荷
+      isEditingBlind: false,
+      isLoadingBlind: false,
+      loadBlindFailed: false,
+      blindPayloads: [],
+      blindPayloadsText: '',
+      blindRuleId: null,  // 用于存储规则ID，便于更新
+
+      // HTTP头注入设置
+      isEditingHeaders: false,
+      isLoadingHeaders: false,
+      loadHeadersFailed: false,
+      httpHeaders: [],
+      httpHeadersText: '',
+      headersRuleId: null,  // 用于存储规则ID，便于更新
+    };
+  },
+  created() {
+    this.fetchSqlinjectionRules();
+  },
+  methods: {
+    async fetchSqlinjectionRules() {
+      // 获取所有SQL注入规则
+      this.fetchErrorBasedRules();
+      this.fetchBlindRules();
+      this.fetchHttpHeaderRules();
+    },
+
+    async fetchErrorBasedRules() {
+      this.isLoadingError = true;
+      this.loadErrorFailed = false;
+
+      try {
+        // 获取回显型SQL注入规则
+        const rules = await this.fetchVulnScanRulesByType('sql_injection', 'error_based');
+
+        if (rules.length > 0) {
+          // 找到回显型规则
+          const rule = rules[0];  // 使用第一条规则
+          this.errorRuleId = rule.id;
+
+          // 解析载荷
+          this.errorPayloads = this.parseRuleContent(rule.rule_content);
+          this.errorPayloadsText = this.errorPayloads.join('\n');
+
+          console.log("找到回显型SQL注入规则:", rule);
+        } else {
+          console.log("未找到回显型SQL注入规则，使用默认值");
+          // 如果没有找到规则，使用默认值
+          this.errorPayloads = [
+            "'",
+            "\"",
+            "')",
+            "\";",
+            "' UNION SELECT 1,2,3--",
+            "\" UNION SELECT @@version,2,3--",
+            "' OR '1'='1"
+          ];
+          this.errorPayloadsText = this.errorPayloads.join('\n');
+          this.errorRuleId = null;
+
+          // 尝试创建默认规则
+          await this.createDefaultErrorBasedRule();
+        }
+      } catch (error) {
+        console.error('获取回显型SQL注入规则失败', error);
+        this.loadErrorFailed = true;
+
+        // 使用默认值
+        this.errorPayloads = [
+          "'",
+          "\"",
+          "')",
+          "\";",
+          "' UNION SELECT 1,2,3--",
+          "\" UNION SELECT @@version,2,3--",
+          "' OR '1'='1"
+        ];
+        this.errorPayloadsText = this.errorPayloads.join('\n');
+
+        ElMessage.error('获取回显型SQL注入规则失败，使用默认配置');
+      } finally {
+        this.isLoadingError = false;
+      }
+    },
+
+    async fetchBlindRules() {
+      this.isLoadingBlind = true;
+      this.loadBlindFailed = false;
+
+      try {
+        // 获取无回显型SQL注入规则
+        const rules = await this.fetchVulnScanRulesByType('sql_injection', 'blind');
+
+        if (rules.length > 0) {
+          // 找到无回显型规则
+          const rule = rules[0];  // 使用第一条规则
+          this.blindRuleId = rule.id;
+
+          // 解析载荷
+          this.blindPayloads = this.parseRuleContent(rule.rule_content);
+          this.blindPayloadsText = this.blindPayloads.join('\n');
+
+          console.log("找到无回显型SQL注入规则:", rule);
+        } else {
+          console.log("未找到无回显型SQL注入规则，使用默认值");
+          // 如果没有找到规则，使用默认值
+          this.blindPayloads = [
+            "' OR (SELECT SLEEP(5))--",
+            "'; SELECT SLEEP(5)--",
+            "'; WAITFOR DELAY '0:0:5'--",
+            "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
+            "' AND 1=dbms_pipe.receive_message('RDS',10)--"
+          ];
+          this.blindPayloadsText = this.blindPayloads.join('\n');
+          this.blindRuleId = null;
+
+          // 尝试创建默认规则
+          await this.createDefaultBlindRule();
+        }
+      } catch (error) {
+        console.error('获取无回显型SQL注入规则失败', error);
+        this.loadBlindFailed = true;
+
+        // 使用默认值
+        this.blindPayloads = [
+          "' OR (SELECT SLEEP(5))--",
+          "'; SELECT SLEEP(5)--",
+          "'; WAITFOR DELAY '0:0:5'--",
+          "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
+          "' AND 1=dbms_pipe.receive_message('RDS',10)--"
+        ];
+        this.blindPayloadsText = this.blindPayloads.join('\n');
+
+        ElMessage.error('获取无回显型SQL注入规则失败，使用默认配置');
+      } finally {
+        this.isLoadingBlind = false;
+      }
+    },
+
+    async fetchHttpHeaderRules() {
+      this.isLoadingHeaders = true;
+      this.loadHeadersFailed = false;
+
+      try {
+        // 获取HTTP头注入规则
+        const rules = await this.fetchVulnScanRulesByType('sql_injection', 'http_header');
+
+        if (rules.length > 0) {
+          // 找到HTTP头规则
+          const rule = rules[0];  // 使用第一条规则
+          this.headersRuleId = rule.id;
+
+          // 解析HTTP头
+          this.httpHeaders = this.parseRuleContent(rule.rule_content);
+          this.httpHeadersText = this.httpHeaders.join('\n');
+
+          console.log("找到HTTP头注入规则:", rule);
+        } else {
+          console.log("未找到HTTP头注入规则，使用默认值");
+          // 如果没有找到规则，使用默认值
+          this.httpHeaders = [
+            "Cookie",
+            "X-Forwarded-For",
+            "Referer",
+            "User-Agent",
+            "Authorization"
+          ];
+          this.httpHeadersText = this.httpHeaders.join('\n');
+          this.headersRuleId = null;
+
+          // 尝试创建默认规则
+          await this.createDefaultHttpHeaderRule();
+        }
+      } catch (error) {
+        console.error('获取HTTP头注入规则失败', error);
+        this.loadHeadersFailed = true;
+
+        // 使用默认值
+        this.httpHeaders = [
+          "Cookie",
+          "X-Forwarded-For",
+          "Referer",
+          "User-Agent",
+          "Authorization"
+        ];
+        this.httpHeadersText = this.httpHeaders.join('\n');
+
+        ElMessage.error('获取HTTP头注入规则失败，使用默认配置');
+      } finally {
+        this.isLoadingHeaders = false;
+      }
+    },
+
+    // 辅助方法：根据类型获取漏洞扫描规则
+    async fetchVulnScanRulesByType(vulnType, subType) {
+      try {
+        // 获取指定类型的漏洞扫描规则
+        const response = await rulesAPI.getVulnScanRulesByType(vulnType);
+
+        // 从结果中筛选出子类型匹配的规则
+        let rules = [];
+        if (Array.isArray(response)) {
+          rules = response;
+        } else if (response && Array.isArray(response.results)) {
+          rules = response.results;
+        }
+
+        // 过滤子类型
+        return rules.filter(rule => {
+          try {
+            const ruleData = JSON.parse(rule.rule_content);
+            return ruleData.subType === subType;
+          } catch (e) {
+            // 如果解析失败，检查rule_content中是否包含子类型标识
+            return rule.rule_content.includes(`"subType":"${subType}"`) ||
+                   rule.rule_content.includes(`"subType": "${subType}"`);
+          }
+        });
+      } catch (error) {
+        console.error(`获取${vulnType}/${subType}类型规则失败`, error);
+        return [];
+      }
+    },
+
+    // 解析规则内容
+    parseRuleContent(ruleContent) {
+      try {
+        // 尝试解析为JSON
+        const data = JSON.parse(ruleContent);
+        return Array.isArray(data.payloads) ? data.payloads : [];
+      } catch (error) {
+        // 如果解析失败，尝试直接分割
+        return ruleContent.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+      }
+    },
+
+    // 创建默认规则
+    async createDefaultErrorBasedRule() {
+      try {
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: '回显型SQL注入规则',
+          description: '用于检测回显型SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'error_based',
+            payloads: this.errorPayloads
+          })
+        };
+
+        console.log("创建默认回显型SQL注入规则:", ruleData);
+
+        // 创建规则
+        const response = await rulesAPI.createVulnScanRule(ruleData);
+        console.log("默认回显型SQL注入规则创建成功:", response);
+        this.errorRuleId = response.id;
+
+        return response;
+      } catch (error) {
+        console.error('创建默认回显型SQL注入规则失败', error);
+        return null;
+      }
+    },
+
+    async createDefaultBlindRule() {
+      try {
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: '无回显型SQL注入规则',
+          description: '用于检测无回显型SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'blind',
+            payloads: this.blindPayloads
+          })
+        };
+
+        console.log("创建默认无回显型SQL注入规则:", ruleData);
+
+        // 创建规则
+        const response = await rulesAPI.createVulnScanRule(ruleData);
+        console.log("默认无回显型SQL注入规则创建成功:", response);
+        this.blindRuleId = response.id;
+
+        return response;
+      } catch (error) {
+        console.error('创建默认无回显型SQL注入规则失败', error);
+        return null;
+      }
+    },
+
+    async createDefaultHttpHeaderRule() {
+      try {
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: 'HTTP头SQL注入规则',
+          description: '用于检测HTTP头中SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'http_header',
+            payloads: this.httpHeaders
+          })
+        };
+
+        console.log("创建默认HTTP头SQL注入规则:", ruleData);
+
+        // 创建规则
+        const response = await rulesAPI.createVulnScanRule(ruleData);
+        console.log("默认HTTP头SQL注入规则创建成功:", response);
+        this.headersRuleId = response.id;
+
+        return response;
+      } catch (error) {
+        console.error('创建默认HTTP头SQL注入规则失败', error);
+        return null;
+      }
+    },
+
+    // 编辑回显型SQL注入载荷
+    editErrorPayloads() {
+      this.isEditingError = true;
+    },
+
+    // 取消编辑回显型SQL注入载荷
+    cancelEditError() {
+      this.errorPayloadsText = this.errorPayloads.join('\n');
+      this.isEditingError = false;
+    },
+
+    // 保存回显型SQL注入载荷
+    async saveErrorPayloads() {
+      try {
+        // 处理文本框中的内容，分割为载荷数组
+        const payloads = this.errorPayloadsText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line);
+
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: '回显型SQL注入规则',
+          description: '用于检测回显型SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'error_based',
+            payloads: payloads
+          })
+        };
+
+        console.log("准备保存回显型SQL注入规则:", ruleData);
+
+        if (this.errorRuleId) {
+          // 如果已有规则，则更新
+          await rulesAPI.updateVulnScanRule(this.errorRuleId, ruleData);
+          ElMessage.success('回显型SQL注入规则更新成功');
+        } else {
+          // 如果没有规则，则创建
+          const response = await rulesAPI.createVulnScanRule(ruleData);
+          this.errorRuleId = response.id;
+          ElMessage.success('回显型SQL注入规则创建成功');
+        }
+
+        // 更新显示
+        this.errorPayloads = payloads;
+        this.isEditingError = false;
+      } catch (error) {
+        console.error('保存回显型SQL注入规则失败', error);
+        ElMessage.error('保存回显型SQL注入规则失败');
+      }
+    },
+
+    // 编辑无回显型SQL注入载荷
+    editBlindPayloads() {
+      this.isEditingBlind = true;
+    },
+
+    // 取消编辑无回显型SQL注入载荷
+    cancelEditBlind() {
+      this.blindPayloadsText = this.blindPayloads.join('\n');
+      this.isEditingBlind = false;
+    },
+
+    // 保存无回显型SQL注入载荷
+    async saveBlindPayloads() {
+      try {
+        // 处理文本框中的内容，分割为载荷数组
+        const payloads = this.blindPayloadsText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line);
+
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: '无回显型SQL注入规则',
+          description: '用于检测无回显型SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'blind',
+            payloads: payloads
+          })
+        };
+
+        console.log("准备保存无回显型SQL注入规则:", ruleData);
+
+        if (this.blindRuleId) {
+          // 如果已有规则，则更新
+          await rulesAPI.updateVulnScanRule(this.blindRuleId, ruleData);
+          ElMessage.success('无回显型SQL注入规则更新成功');
+        } else {
+          // 如果没有规则，则创建
+          const response = await rulesAPI.createVulnScanRule(ruleData);
+          this.blindRuleId = response.id;
+          ElMessage.success('无回显型SQL注入规则创建成功');
+        }
+
+        // 更新显示
+        this.blindPayloads = payloads;
+        this.isEditingBlind = false;
+      } catch (error) {
+        console.error('保存无回显型SQL注入规则失败', error);
+        ElMessage.error('保存无回显型SQL注入规则失败');
+      }
+    },
+
+    // 编辑HTTP头注入设置
+    editHttpHeaders() {
+      this.isEditingHeaders = true;
+    },
+
+    // 取消编辑HTTP头注入设置
+    cancelEditHeaders() {
+      this.httpHeadersText = this.httpHeaders.join('\n');
+      this.isEditingHeaders = false;
+    },
+
+    // 保存HTTP头注入设置
+    async saveHttpHeaders() {
+      try {
+        // 处理文本框中的内容，分割为HTTP头数组
+        const headers = this.httpHeadersText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line);
+
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: 'HTTP头SQL注入规则',
+          description: '用于检测HTTP头中SQL注入漏洞的规则',
+          rule_content: JSON.stringify({
+            subType: 'http_header',
+            payloads: headers
+          })
+        };
+
+        console.log("准备保存HTTP头SQL注入规则:", ruleData);
+
+        if (this.headersRuleId) {
+          // 如果已有规则，则更新
+          await rulesAPI.updateVulnScanRule(this.headersRuleId, ruleData);
+          ElMessage.success('HTTP头SQL注入规则更新成功');
+        } else {
+          // 如果没有规则，则创建
+          const response = await rulesAPI.createVulnScanRule(ruleData);
+          this.headersRuleId = response.id;
+          ElMessage.success('HTTP头SQL注入规则创建成功');
+        }
+
+        // 更新显示
+        this.httpHeaders = headers;
+        this.isEditingHeaders = false;
+      } catch (error) {
+        console.error('保存HTTP头SQL注入规则失败', error);
+        ElMessage.error('保存HTTP头SQL注入规则失败');
+      }
+    }
+  }
+};
+</script>
+
+<style scoped>
+.sqlinjection-rules {
+  margin-bottom: 30px;
+}
+
+.sqlinjection-rules h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #303133;
+  padding-left: 10px;
+  border-left: 4px solid #409EFF;
+}
+
+.rules-container {
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rule-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.rule-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.rules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.rule-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-right: 10px;
+  color: #303133;
+}
+
+.rule-desc {
+  font-size: 12px;
+  color: #909399;
+}
+
+.rules-content {
+  min-height: 100px;
+}
+
+.payloads-list, .headers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 50px;
+}
+
+.payload-item, .header-item {
+  background-color: #ecf5ff;
+  color: #409eff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.no-payload, .no-header {
+  color: #909399;
+  font-style: italic;
+}
+
+.payloads-edit, .headers-edit {
+  margin-top: 10px;
+}
+
+.hint {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.loading-state {
+  padding: 20px 0;
+}
+
+.error-state {
+  margin: 20px 0;
+}
+</style>
