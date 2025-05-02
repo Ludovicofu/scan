@@ -1,3 +1,5 @@
+
+```vue
 <!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue -->
 <template>
   <div class="sqlinjection-results">
@@ -17,7 +19,7 @@
       <el-table-column
         prop="scan_date"
         label="日期"
-        width="180"
+        width="150"
         sortable
       >
         <template #default="scope">
@@ -28,7 +30,7 @@
       <el-table-column
         prop="asset"
         label="资产"
-        width="150"
+        width="120"
       ></el-table-column>
 
       <el-table-column
@@ -67,6 +69,15 @@
       </el-table-column>
 
       <el-table-column
+        label="响应长度"
+        width="100"
+      >
+        <template #default="scope">
+          {{ getResponseLength(scope.row) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column
         label="响应时间"
         width="100"
       >
@@ -77,7 +88,7 @@
       </el-table-column>
 
       <el-table-column
-        label="状态码"
+        label="响应码"
         width="80"
       >
         <template #default="scope">
@@ -88,22 +99,21 @@
       <el-table-column
         fixed="right"
         label="操作"
-        width="150"
+        width="120"
       >
         <template #default="scope">
           <el-button
             @click="$emit('view-detail', scope.row)"
-            type="primary"
-            plain
+            type="text"
             size="small"
           >
             详情
           </el-button>
           <el-button
             @click="$emit('delete-vuln', scope.row.id)"
-            type="danger"
-            plain
+            type="text"
             size="small"
+            class="delete-btn"
           >
             删除
           </el-button>
@@ -187,14 +197,14 @@ export default {
     // 获取注入类型名称
     getVulnTypeName(row) {
       if (row.vuln_subtype === 'error_based') {
-        return '错误回显';
+        return '回显型';
       } else if (row.vuln_subtype === 'blind') {
         if ((row.proof || '').includes('时间')) {
           return '时间盲注';
         }
-        return '盲注';
+        return '盲注型';
       }
-      return '注入';
+      return '存在';
     },
 
     // 获取注入类型对应的标签样式
@@ -215,6 +225,12 @@ export default {
         return timeMatch[1] + 's';
       }
       return '延时';
+    },
+
+    // 获取响应长度
+    getResponseLength(row) {
+      const response = row.response || '';
+      return response.length;
     },
 
     // 获取状态码
@@ -247,4 +263,14 @@ export default {
   margin-top: 20px;
   text-align: right;
 }
+
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover {
+  color: #f78989;
+}
 </style>
+```
+

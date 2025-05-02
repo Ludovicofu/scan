@@ -1,4 +1,7 @@
 from rest_framework import generics, filters
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from .models import VulnScanResult
 
 # 序列化器定义
@@ -8,8 +11,6 @@ from rest_framework import serializers
 class VulnScanResultSerializer(serializers.ModelSerializer):
     asset_host = serializers.CharField(source='asset.host', read_only=True)
     vuln_type_display = serializers.CharField(source='get_vuln_type_display', read_only=True)
-    scan_type_display = serializers.CharField(source='get_scan_type_display', read_only=True)
-    severity_display = serializers.CharField(source='get_severity_display', read_only=True)
 
     class Meta:
         model = VulnScanResult
@@ -22,7 +23,7 @@ class VulnScanResultList(generics.ListCreateAPIView):
     serializer_class = VulnScanResultSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'url']
-    ordering_fields = ['scan_date', 'vuln_type', 'severity']
+    ordering_fields = ['scan_date', 'vuln_type']
 
 
 class VulnScanResultDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -30,24 +31,16 @@ class VulnScanResultDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = VulnScanResultSerializer
 
 
-class PassiveVulnScanResultList(generics.ListAPIView):
+# 按漏洞类型获取结果视图
+class VulnScanResultByTypeList(generics.ListAPIView):
     serializer_class = VulnScanResultSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'url']
-    ordering_fields = ['scan_date', 'vuln_type', 'severity']
+    ordering_fields = ['scan_date']
 
     def get_queryset(self):
-        return VulnScanResult.objects.filter(scan_type='passive')
-
-
-class ActiveVulnScanResultList(generics.ListAPIView):
-    serializer_class = VulnScanResultSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description', 'url']
-    ordering_fields = ['scan_date', 'vuln_type', 'severity']
-
-    def get_queryset(self):
-        return VulnScanResult.objects.filter(scan_type='active')
+        vuln_type = self.kwargs['vuln_type']
+        return VulnScanResult.objects.filter(vuln_type=vuln_type)
 
 
 # 漏洞验证视图
@@ -63,15 +56,3 @@ def verify_vulnerability(request, pk):
         'status': 'success',
         'message': '漏洞已验证'
     })
-
-
-# 按漏洞类型获取结果视图
-class VulnScanResultByTypeList(generics.ListAPIView):
-    serializer_class = VulnScanResultSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description', 'url']
-    ordering_fields = ['scan_date', 'severity']
-
-    def get_queryset(self):
-        vuln_type = self.kwargs['vuln_type']
-        return VulnScanResult.objects.filter(vuln_type=vuln_type)

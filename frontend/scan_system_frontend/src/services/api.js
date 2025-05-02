@@ -81,19 +81,19 @@ const vulnScanAPI = {
     return api.get('vuln_scan/results/', { params });
   },
 
-  // 获取被动扫描结果
-  getPassiveScanResults(params) {
-    return api.get('vuln_scan/results/passive/', { params });
-  },
-
-  // 获取主动扫描结果
-  getActiveScanResults(params) {
-    return api.get('vuln_scan/results/active/', { params });
-  },
-
   // 删除扫描结果
   deleteScanResult(id) {
     return api.delete(`vuln_scan/results/${id}/`);
+  },
+
+  // 按漏洞类型获取结果
+  getVulnResultsByType(vulnType, params) {
+    return api.get(`vuln_scan/results/type/${vulnType}/`, { params });
+  },
+
+  // 验证漏洞
+  verifyVulnerability(id) {
+    return api.post(`vuln_scan/results/${id}/verify/`);
   }
 };
 
@@ -303,6 +303,7 @@ const assetAPI = {
     return api.get('asset_management/statistics/');
   }
 };
+
 
 // 导出所有API服务
 export {
