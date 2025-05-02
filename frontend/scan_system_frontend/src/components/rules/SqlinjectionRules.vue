@@ -206,6 +206,74 @@
           </div>
         </div>
       </div>
+
+      <!-- SQL错误匹配模式 -->
+      <div class="rule-section">
+        <div class="rules-header">
+          <div class="rule-info">
+            <span class="rule-title">SQL错误匹配模式</span>
+            <span class="rule-desc">添加用于检测SQL注入的错误信息匹配模式</span>
+          </div>
+          <div class="rule-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="editErrorPatterns"
+              v-if="!isEditingPattern">
+              修改
+            </el-button>
+            <template v-else>
+              <el-button
+                type="success"
+                size="small"
+                @click="saveErrorPatterns">
+                保存
+              </el-button>
+              <el-button
+                type="info"
+                size="small"
+                @click="cancelEditPattern">
+                取消
+              </el-button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="isLoadingPattern" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else-if="loadPatternFailed" class="error-state">
+          <el-alert
+            title="加载SQL错误匹配模式失败"
+            type="error"
+            description="使用默认配置"
+            :closable="false"
+            show-icon
+          />
+        </div>
+
+        <div v-else class="rules-content">
+          <div v-if="!isEditingPattern" class="patterns-list">
+            <div v-for="(pattern, index) in errorPatterns" :key="index" class="pattern-item">
+              {{ pattern }}
+            </div>
+            <div v-if="errorPatterns.length === 0" class="no-pattern">
+              没有配置SQL错误匹配模式，点击"修改"添加匹配模式
+            </div>
+          </div>
+          <div v-else class="patterns-edit">
+            <el-input
+              type="textarea"
+              v-model="errorPatternsText"
+              :rows="8"
+              placeholder="请输入SQL错误匹配模式，每行一个"
+            ></el-input>
+            <div class="hint">
+              样例: SQL syntax.*MySQL, Warning.*mysqli, ORA-[0-9][0-9][0-9][0-9], SQLSTATE
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -241,6 +309,14 @@ export default {
       httpHeaders: [],
       httpHeadersText: '',
       headersRuleId: null,  // 用于存储规则ID，便于更新
+
+      // SQL错误匹配模式
+      isEditingPattern: false,
+      isLoadingPattern: false,
+      loadPatternFailed: false,
+      errorPatterns: [],
+      errorPatternsText: '',
+      patternRuleId: null,  // 用于存储规则ID，便于更新
     };
   },
   created() {
@@ -252,6 +328,7 @@ export default {
       this.fetchErrorBasedRules();
       this.fetchBlindRules();
       this.fetchHttpHeaderRules();
+      this.fetchErrorPatternRules();
     },
 
     async fetchErrorBasedRules() {
@@ -420,6 +497,84 @@ export default {
       }
     },
 
+    async fetchErrorPatternRules() {
+      this.isLoadingPattern = true;
+      this.loadPatternFailed = false;
+
+      try {
+        // 获取SQL错误匹配模式规则
+        const rules = await this.fetchVulnScanRulesByType('sql_injection', 'error_pattern');
+
+        if (rules.length > 0) {
+          // 找到错误匹配模式规则
+          const rule = rules[0];  // 使用第一条规则
+          this.patternRuleId = rule.id;
+
+          // 解析匹配模式
+          this.errorPatterns = this.parseRuleContent(rule.rule_content);
+          this.errorPatternsText = this.errorPatterns.join('\n');
+
+          console.log("找到SQL错误匹配模式规则:", rule);
+        } else {
+          console.log("未找到SQL错误匹配模式规则，使用默认值");
+          // 如果没有找到规则，使用默认值
+          this.errorPatterns = [
+            "SQL syntax.*MySQL",
+            "Warning.*mysqli",
+            "MySQLSyntaxErrorException",
+            "valid MySQL result",
+            "check the manual that (corresponds to|fits) your MySQL server version",
+            "MySqlClient\\.",
+            "com\\.mysql\\.jdbc\\.exceptions",
+            "ORA-[0-9][0-9][0-9][0-9]",
+            "Oracle error",
+            "Oracle.*Driver",
+            "SQLSTATE\\[",
+            "SQL Server message",
+            "Warning.*mssql_",
+            "Driver.*? SQL[\\-\\_\\ ]*Server",
+            "JET Database Engine",
+            "Microsoft Access Driver",
+            "Syntax error \\(missing operator\\) in query expression"
+          ];
+          this.errorPatternsText = this.errorPatterns.join('\n');
+          this.patternRuleId = null;
+
+          // 尝试创建默认规则
+          await this.createDefaultErrorPatternRule();
+        }
+      } catch (error) {
+        console.error('获取SQL错误匹配模式规则失败', error);
+        this.loadPatternFailed = true;
+
+        // 使用默认值
+        this.errorPatterns = [
+          "SQL syntax.*MySQL",
+          "Warning.*mysqli",
+          "MySQLSyntaxErrorException",
+          "valid MySQL result",
+          "check the manual that (corresponds to|fits) your MySQL server version",
+          "MySqlClient\\.",
+          "com\\.mysql\\.jdbc\\.exceptions",
+          "ORA-[0-9][0-9][0-9][0-9]",
+          "Oracle error",
+          "Oracle.*Driver",
+          "SQLSTATE\\[",
+          "SQL Server message",
+          "Warning.*mssql_",
+          "Driver.*? SQL[\\-\\_\\ ]*Server",
+          "JET Database Engine",
+          "Microsoft Access Driver",
+          "Syntax error \\(missing operator\\) in query expression"
+        ];
+        this.errorPatternsText = this.errorPatterns.join('\n');
+
+        ElMessage.error('获取SQL错误匹配模式规则失败，使用默认配置');
+      } finally {
+        this.isLoadingPattern = false;
+      }
+    },
+
     // 辅助方法：根据类型获取漏洞扫描规则
     async fetchVulnScanRulesByType(vulnType, subType) {
       try {
@@ -541,6 +696,33 @@ export default {
         return response;
       } catch (error) {
         console.error('创建默认HTTP头SQL注入规则失败', error);
+        return null;
+      }
+    },
+
+    async createDefaultErrorPatternRule() {
+      try {
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: 'SQL错误匹配模式规则',
+          description: '用于检测响应中的SQL错误信息模式',
+          rule_content: JSON.stringify({
+            subType: 'error_pattern',
+            payloads: this.errorPatterns
+          })
+        };
+
+        console.log("创建默认SQL错误匹配模式规则:", ruleData);
+
+        // 创建规则
+        const response = await rulesAPI.createVulnScanRule(ruleData);
+        console.log("默认SQL错误匹配模式规则创建成功:", response);
+        this.patternRuleId = response.id;
+
+        return response;
+      } catch (error) {
+        console.error('创建默认SQL错误匹配模式规则失败', error);
         return null;
       }
     },
@@ -702,6 +884,59 @@ export default {
         console.error('保存HTTP头SQL注入规则失败', error);
         ElMessage.error('保存HTTP头SQL注入规则失败');
       }
+    },
+
+    // 编辑SQL错误匹配模式
+    editErrorPatterns() {
+      this.isEditingPattern = true;
+    },
+
+    // 取消编辑SQL错误匹配模式
+    cancelEditPattern() {
+      this.errorPatternsText = this.errorPatterns.join('\n');
+      this.isEditingPattern = false;
+    },
+
+    // 保存SQL错误匹配模式
+    async saveErrorPatterns() {
+      try {
+        // 处理文本框中的内容，分割为匹配模式数组
+        const patterns = this.errorPatternsText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line);
+
+        // 准备规则数据
+        const ruleData = {
+          vuln_type: 'sql_injection',
+          name: 'SQL错误匹配模式规则',
+          description: '用于检测响应中的SQL错误信息模式',
+          rule_content: JSON.stringify({
+            subType: 'error_pattern',
+            payloads: patterns
+          })
+        };
+
+        console.log("准备保存SQL错误匹配模式规则:", ruleData);
+
+        if (this.patternRuleId) {
+          // 如果已有规则，则更新
+          await rulesAPI.updateVulnScanRule(this.patternRuleId, ruleData);
+          ElMessage.success('SQL错误匹配模式规则更新成功');
+        } else {
+          // 如果没有规则，则创建
+          const response = await rulesAPI.createVulnScanRule(ruleData);
+          this.patternRuleId = response.id;
+          ElMessage.success('SQL错误匹配模式规则创建成功');
+        }
+
+        // 更新显示
+        this.errorPatterns = patterns;
+        this.isEditingPattern = false;
+      } catch (error) {
+        console.error('保存SQL错误匹配模式规则失败', error);
+        ElMessage.error('保存SQL错误匹配模式规则失败');
+      }
     }
   }
 };
@@ -762,14 +997,14 @@ export default {
   min-height: 100px;
 }
 
-.payloads-list, .headers-list {
+.payloads-list, .headers-list, .patterns-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   min-height: 50px;
 }
 
-.payload-item, .header-item {
+.payload-item, .header-item, .pattern-item {
   background-color: #ecf5ff;
   color: #409eff;
   padding: 5px 10px;
@@ -777,12 +1012,12 @@ export default {
   font-family: monospace;
 }
 
-.no-payload, .no-header {
+.no-payload, .no-header, .no-pattern {
   color: #909399;
   font-style: italic;
 }
 
-.payloads-edit, .headers-edit {
+.payloads-edit, .headers-edit, .patterns-edit {
   margin-top: 10px;
 }
 
