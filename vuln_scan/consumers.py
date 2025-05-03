@@ -1,3 +1,4 @@
+# vuln_scan/consumers.py - 修改版
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -85,6 +86,14 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
                     'data': results
                 }))
 
+            elif message_type == 'reset_cache':
+                # 重置缓存以确保不会遗漏结果
+                self.scanner.reset_scan_state()
+                await self.send(text_data=json.dumps({
+                    'type': 'cache_reset',
+                    'message': '缓存已重置'
+                }))
+
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -147,10 +156,30 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
 
     async def scan_result(self, event):
         """处理扫描结果事件"""
+        # 从结果中提取SQL错误匹配信息，用于前端显示
+        result_data = event['data']
+
+        # 对于回显型SQL注入，处理匹配值
+        if result_data.get('vuln_type') == 'sql_injection' and result_data.get('vuln_subtype') == 'error_based':
+            # 处理proof中的匹配信息
+            proof = result_data.get('proof', '')
+            error_match = None
+
+            # 尝试提取错误匹配
+            if "响应中包含SQL错误信息" in proof:
+                # 新格式: "在参数 x 中注入 y 后，响应中包含SQL错误信息: z"
+                match = proof.split("SQL错误信息:")
+                if len(match) > 1:
+                    error_match = match[1].strip()
+
+            # 如果成功提取，添加匹配值字段
+            if error_match:
+                result_data['matched_error'] = error_match
+
         # 发送扫描结果通知给客户端
         await self.send(text_data=json.dumps({
             'type': 'scan_result',
-            'data': event['data']
+            'data': result_data
         }))
 
     # 以下是数据库操作方法
@@ -196,7 +225,8 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         # 序列化结果
         results = []
         for result in queryset:
-            results.append({
+            # 基本结果数据
+            result_data = {
                 'id': result.id,
                 'asset': result.asset.host,
                 'asset_host': result.asset.host,
@@ -213,7 +243,32 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
                 'is_verified': result.is_verified,
                 'parameter': result.parameter,
                 'payload': result.payload
-            })
+            }
+
+            # 对于回显型SQL注入，处理匹配值
+            if result.vuln_type == 'sql_injection' and result.vuln_subtype == 'error_based':
+                # 从proof中提取匹配信息
+                proof = result.proof or ''
+                error_match = None
+
+                # 尝试提取匹配的错误信息
+                if "SQL错误信息:" in proof:
+                    match = proof.split("SQL错误信息:")
+                    if len(match) > 1:
+                        error_match = match[1].strip()
+                elif "包含SQL错误信息" in proof:
+                    # 兼容老格式
+                    match = proof.split("包含SQL错误信息")
+                    if len(match) > 1:
+                        error_parts = match[1].strip().split(None, 1)
+                        if error_parts:
+                            error_match = error_parts[0]
+
+                # 如果成功提取，添加匹配值字段
+                if error_match:
+                    result_data['matched_error'] = error_match
+
+            results.append(result_data)
 
         return results
 

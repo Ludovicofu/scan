@@ -1,6 +1,4 @@
-
-```vue
-<!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue -->
+<!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue 修改版 -->
 <template>
   <div class="sqlinjection-results">
     <el-table
@@ -28,7 +26,7 @@
       </el-table-column>
 
       <el-table-column
-        prop="asset"
+        prop="asset_host"
         label="资产"
         width="120"
       ></el-table-column>
@@ -48,17 +46,18 @@
 
       <el-table-column
         label="匹配值"
-        width="120"
+        width="180"
         show-overflow-tooltip
       >
         <template #default="scope">
+          <!-- 修改：针对错误回显型注入显示实际匹配到的SQL错误关键词 -->
           <span v-if="isSqlErrorMatch(scope.row)">{{ getErrorMatchInfo(scope.row) }}</span>
-          <span v-else>无</span>
+          <span v-else>-</span>
         </template>
       </el-table-column>
 
       <el-table-column
-        label="差异"
+        label="类型"
         width="100"
       >
         <template #default="scope">
@@ -102,21 +101,24 @@
         width="120"
       >
         <template #default="scope">
-          <el-button
-            @click="$emit('view-detail', scope.row)"
-            type="text"
-            size="small"
-          >
-            详情
-          </el-button>
-          <el-button
-            @click="$emit('delete-vuln', scope.row.id)"
-            type="text"
-            size="small"
-            class="delete-btn"
-          >
-            删除
-          </el-button>
+          <!-- 修改：将详情和删除按钮放在同一行 -->
+          <div class="operation-buttons">
+            <el-button
+              @click="$emit('view-detail', scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
+            <el-button
+              @click="$emit('delete-vuln', scope.row.id)"
+              type="text"
+              size="small"
+              class="delete-btn"
+            >
+              删除
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -183,15 +185,31 @@ export default {
       return row.vuln_subtype === 'blind' && (row.proof || '').includes('时间');
     },
 
-    // 获取错误匹配信息
+    // 修改：获取错误匹配信息，提取实际匹配到的SQL错误关键词
     getErrorMatchInfo(row) {
-      // 从proof中提取匹配信息，截取前15个字符
+      // 从proof中提取匹配信息
       const proof = row.proof || '';
-      const matchInfo = proof.match(/包含SQL错误信息(.*)/);
-      if (matchInfo && matchInfo[1]) {
-        return matchInfo[1].slice(0, 15) + '...';
+      
+      // 尝试提取"包含SQL错误信息"后面的具体错误关键词
+      const errorMatch = proof.match(/包含SQL错误信息[：:]?\s*(.+?)(?:\s|$)/);
+      if (errorMatch && errorMatch[1]) {
+        return errorMatch[1].trim();
       }
-      return '错误匹配';
+      
+      // 如果没有明确提取到错误信息，则尝试从响应中查找常见SQL错误模式
+      const response = row.response || '';
+      const commonErrors = [
+        'SQL syntax', 'MySQL', 'SQLSTATE', 'ORA-',
+        'Oracle error', 'Microsoft SQL Server', 'PostgreSQL'
+      ];
+      
+      for (const error of commonErrors) {
+        if (response.includes(error)) {
+          return error;
+        }
+      }
+      
+      return 'SQL错误';
     },
 
     // 获取注入类型名称
@@ -264,6 +282,12 @@ export default {
   text-align: right;
 }
 
+/* 修改：让操作按钮在同一行显示 */
+.operation-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+
 .delete-btn {
   color: #F56C6C;
 }
@@ -272,5 +296,3 @@ export default {
   color: #f78989;
 }
 </style>
-```
-

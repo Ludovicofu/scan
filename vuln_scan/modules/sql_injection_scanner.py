@@ -292,11 +292,13 @@ class SqlInjectionScanner:
                                 response_text = await response.text(errors='replace')
 
                                 # 检查是否有SQL错误信息
-                                if self.check_sql_error(response_text, error_patterns):
+                                error_match, matched_pattern = self.check_sql_error_with_match(response_text,
+                                                                                               error_patterns)
+                                if error_match:
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
-                                    # 创建漏洞结果
+                                    # 创建漏洞结果，包含匹配到的具体错误信息
                                     result = {
                                         'vuln_type': 'sql_injection',
                                         'vuln_subtype': 'error_based',
@@ -308,7 +310,7 @@ class SqlInjectionScanner:
                                         'payload': payload,
                                         'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
                                         'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:500]}...",
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息"
+                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                     }
 
                                     results.append(result)
@@ -374,7 +376,7 @@ class SqlInjectionScanner:
                                         'payload': payload,
                                         'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
                                         'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒",
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time} 秒，超过了预期的 {self.time_delay} 秒"
+                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                     }
 
                                     results.append(result)
@@ -498,7 +500,9 @@ class SqlInjectionScanner:
                                 response_text = await response.text(errors='replace')
 
                                 # 检查是否有SQL错误信息
-                                if self.check_sql_error(response_text, error_patterns):
+                                error_match, matched_pattern = self.check_sql_error_with_match(response_text,
+                                                                                               error_patterns)
+                                if error_match:
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
@@ -514,7 +518,7 @@ class SqlInjectionScanner:
                                         'payload': payload,
                                         'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_data}",
                                         'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:500]}...",
-                                        'proof': f"在POST参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息"
+                                        'proof': f"在POST参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                     }
 
                                     results.append(result)
@@ -584,7 +588,7 @@ class SqlInjectionScanner:
                                         'payload': payload,
                                         'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_data}",
                                         'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒",
-                                        'proof': f"在POST参数 {param} 中注入 {payload} 后，响应时间达到 {response_time} 秒，超过了预期的 {self.time_delay} 秒"
+                                        'proof': f"在POST参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                     }
 
                                     results.append(result)
@@ -721,7 +725,9 @@ class SqlInjectionScanner:
                                     response_text = await response.text(errors='replace')
 
                                     # 检查是否有SQL错误信息
-                                    if self.check_sql_error(response_text, error_patterns):
+                                    error_match, matched_pattern = self.check_sql_error_with_match(response_text,
+                                                                                                   error_patterns)
+                                    if error_match:
                                         # 记录漏洞
                                         self.found_vulnerabilities.add(vuln_key)
 
@@ -737,7 +743,7 @@ class SqlInjectionScanner:
                                             'payload': payload,
                                             'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
                                             'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:500]}...",
-                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应中包含SQL错误信息"
+                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                         }
 
                                         results.append(result)
@@ -808,7 +814,7 @@ class SqlInjectionScanner:
                                             'payload': payload,
                                             'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
                                             'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒",
-                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time} 秒，超过了预期的 {self.time_delay} 秒"
+                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                         }
 
                                         results.append(result)
@@ -853,41 +859,58 @@ class SqlInjectionScanner:
 
         return results
 
-    def check_sql_error(self, response_text, error_patterns=None):
+    def check_sql_error_with_match(self, response_text, error_patterns=None):
         """
-        检查响应中是否包含SQL错误信息
+        检查响应中是否包含SQL错误信息，并返回匹配的模式
 
         参数:
             response_text: 响应文本
-            error_patterns: 错误模式列表，如果为None则不检查
+            error_patterns: 错误模式列表
+
+        返回:
+            (布尔值, 匹配的模式) 元组
         """
         if not response_text:
-            return False
+            return False, None
 
         # 如果没有提供错误模式，无法检查
         if not error_patterns:
-            print("警告: check_sql_error被调用时没有提供错误模式")
-            return False
+            print("警告: check_sql_error_with_match被调用时没有提供错误模式")
+            return False, None
 
         # 编译正则表达式以提高性能
         compiled_patterns = []
         for pattern in error_patterns:
             try:
-                compiled_patterns.append(re.compile(pattern, re.IGNORECASE))
+                compiled_patterns.append((re.compile(pattern, re.IGNORECASE), pattern))
             except Exception as e:
                 print(f"编译正则表达式 '{pattern}' 时出错: {str(e)}")
                 continue
 
         # 如果没有编译成功的模式，无法检查
         if not compiled_patterns:
-            return False
+            return False, None
 
         # 检查响应是否包含任何SQL错误信息
-        for pattern in compiled_patterns:
-            if pattern.search(response_text):
-                return True
+        for compiled_pattern, original_pattern in compiled_patterns:
+            match = compiled_pattern.search(response_text)
+            if match:
+                # 尝试提取匹配的具体文本
+                matched_text = match.group(0) if match.group(0) else original_pattern
+                return True, matched_text
 
-        return False
+        return False, None
+
+    def check_sql_error(self, response_text, error_patterns=None):
+        """
+        检查响应中是否包含SQL错误信息 (兼容旧版本)
+
+        参数:
+            response_text: 响应文本
+            error_patterns: 错误模式列表
+        """
+        result, _ = self.check_sql_error_with_match(response_text, error_patterns)
+        return result
 
     def clear_cache(self):
         """清除缓存"""
