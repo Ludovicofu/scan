@@ -322,7 +322,14 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
+                                # 获取完整的响应文本
                                 response_text = await response.text(errors='replace')
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 检查是否有SQL错误信息
                                 error_match, matched_pattern = self.check_sql_error_with_match(response_text,
@@ -342,7 +349,7 @@ class SqlInjectionScanner:
                                         'parameter': param,
                                         'payload': payload,
                                         'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:1000]}",
+                                        'response': full_response,
                                         'proof': f"在参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                     }
 
@@ -387,7 +394,12 @@ class SqlInjectionScanner:
                             ) as response:
                                 # 获取响应文本，但限制长度以防止占用过多内存
                                 response_text = await response.text(errors='replace')
-                                response_text = response_text[:1000]  # 只保留前1000个字符
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -409,7 +421,7 @@ class SqlInjectionScanner:
                                         'parameter': param,
                                         'payload': payload,
                                         'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒\n{response_text}",
+                                        'response': full_response,
                                         'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                     }
 
@@ -433,7 +445,7 @@ class SqlInjectionScanner:
                                 'parameter': param,
                                 'payload': payload,
                                 'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
-                                'response': f"请求超时",
+                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
                                 'proof': f"在参数 {param} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
                             }
 
@@ -568,7 +580,14 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
+                                # 获取完整的响应文本
                                 response_text = await response.text(errors='replace')
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 检查是否有SQL错误信息
                                 error_match, matched_pattern = self.check_sql_error_with_match(response_text,
@@ -588,7 +607,7 @@ class SqlInjectionScanner:
                                         'parameter': param,
                                         'payload': payload,
                                         'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:1000]}",
+                                        'response': full_response,
                                         'proof': f"在参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                     }
 
@@ -640,7 +659,12 @@ class SqlInjectionScanner:
                             ) as response:
                                 # 获取响应文本
                                 response_text = await response.text(errors='replace')
-                                response_text = response_text[:1000]  # 限制长度
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -662,7 +686,7 @@ class SqlInjectionScanner:
                                         'parameter': param,
                                         'payload': payload,
                                         'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒\n{response_text}",
+                                        'response': full_response,
                                         'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                     }
 
@@ -686,7 +710,7 @@ class SqlInjectionScanner:
                                 'parameter': param,
                                 'payload': payload,
                                 'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                'response': f"请求超时",
+                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
                                 'proof': f"在参数 {param} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
                             }
 
@@ -784,7 +808,14 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
+                                # 获取完整的响应文本
                                 response_text = await response.text(errors='replace')
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 检查是否有SQL错误信息
                                 error_match, matched_pattern = self.check_sql_error_with_match(response_text,
@@ -804,7 +835,7 @@ class SqlInjectionScanner:
                                         'parameter': header,
                                         'payload': payload,
                                         'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {original_value + payload}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:1000]}",
+                                        'response': full_response,
                                         'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                                     }
 
@@ -841,7 +872,12 @@ class SqlInjectionScanner:
                             ) as response:
                                 # 获取响应文本
                                 response_text = await response.text(errors='replace')
-                                response_text = response_text[:1000]  # 限制长度
+
+                                # 获取所有响应头
+                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                # 构建完整的HTTP响应内容
+                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -863,7 +899,7 @@ class SqlInjectionScanner:
                                         'parameter': header,
                                         'payload': payload,
                                         'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {original_value + payload}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒\n{response_text}",
+                                        'response': full_response,
                                         'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
                                     }
 
@@ -887,7 +923,7 @@ class SqlInjectionScanner:
                                 'parameter': header,
                                 'payload': payload,
                                 'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {original_value + payload}",
-                                'response': f"请求超时",
+                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
                                 'proof': f"在HTTP头 {header} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
                             }
 

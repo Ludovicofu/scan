@@ -278,19 +278,28 @@
           </el-descriptions-item>
         </el-descriptions>
 
-        <el-divider content-position="left">请求详情</el-divider>
+        <el-divider content-position="left">请求/响应详情</el-divider>
         <div class="http-details">
           <el-tabs>
             <el-tab-pane label="HTTP请求">
               <div class="detail-panel">
-                <!-- 使用实际的请求数据 -->
-                <pre>{{ selectedResult.request || '无请求数据' }}</pre>
+                <!-- 显示完整的请求数据，使用pre标签保留格式 -->
+                <pre class="http-content">{{ formatHttpRequest(selectedResult.request) }}</pre>
+
+                <!-- 如果有参数和载荷，高亮显示 -->
+                <div v-if="selectedResult.parameter && selectedResult.payload" class="highlight-section">
+                  <div class="highlight-title">注入点:</div>
+                  <div class="highlight-content">
+                    参数 <span class="param-highlight">{{ selectedResult.parameter }}</span>
+                    载荷 <span class="payload-highlight">{{ selectedResult.payload }}</span>
+                  </div>
+                </div>
               </div>
             </el-tab-pane>
             <el-tab-pane label="HTTP响应">
               <div class="detail-panel">
-                <!-- 使用实际的响应数据 -->
-                <pre>{{ selectedResult.response || '无响应数据' }}</pre>
+                <!-- 使用v-html显示带有高亮效果的响应内容 -->
+                <div v-html="highlightSqlError(selectedResult.response, selectedResult.proof)"></div>
               </div>
             </el-tab-pane>
             <el-tab-pane label="漏洞详情" v-if="selectedResult.proof">
@@ -299,10 +308,16 @@
                   <div class="highlight-title">漏洞证明:</div>
                   <div class="highlight-content">{{ selectedResult.proof }}</div>
                 </div>
-                <!-- 高亮显示匹配的漏洞内容 -->
-                <div v-if="selectedResult.vuln_type === 'sql_injection' && selectedResult.vuln_subtype === 'error_based' && selectedResult.proof && selectedResult.response" class="highlight-section">
-                  <div class="highlight-title">响应中的SQL错误:</div>
-                  <div class="highlight-content" v-html="highlightSqlError(selectedResult.response, selectedResult.proof)"></div>
+
+                <!-- 漏洞类型特定信息 -->
+                <div v-if="selectedResult.vuln_type === 'sql_injection'" class="injection-details">
+                  <h4>SQL注入类型: {{ getVulnSubtypeDisplay(selectedResult.vuln_subtype) }}</h4>
+                  <div v-if="selectedResult.vuln_subtype === 'error_based'">
+                    <p>回显型SQL注入漏洞是指攻击者可以通过输入特定的SQL语句片段，使应用程序产生SQL错误并在响应中显示错误信息，从而泄露数据库结构或其他敏感信息。</p>
+                  </div>
+                  <div v-else-if="selectedResult.vuln_subtype === 'blind'">
+                    <p>盲注型SQL注入漏洞是指攻击者无法直接看到SQL错误信息，但可以通过观察应用程序的行为变化（如响应时间）来推断SQL语句的执行结果。</p>
+                  </div>
                 </div>
               </div>
             </el-tab-pane>
@@ -312,7 +327,7 @@
                   <div class="highlight-title">复现方法:</div>
                   <div class="highlight-content">
                     <p>1. 向以下URL发送请求: <code>{{ selectedResult.url }}</code></p>
-                    <p v-if="selectedResult.parameter">2. 修改参数 <code>{{ selectedResult.parameter }}</code> 的值为: <code>{{ selectedResult.payload }}</code></p>
+                    <p v-if="selectedResult.parameter">2. 修改参数 <code>{{ selectedResult.parameter }}</code> 的值为: <code class="payload-highlight">{{ selectedResult.payload }}</code></p>
                     <p>3. 观察响应中的错误信息或延时情况</p>
                     <p>4. 可使用以下SQL注入工具进行更深入验证:</p>
                     <ul>
@@ -587,26 +602,6 @@ export default {
       }
     },
 
-    // 验证漏洞
-    async verifyVulnerability(id) {
-      try {
-        // 调用验证API
-        await vulnScanAPI.verifyVulnerability(id);
-        ElMessage.success('漏洞验证成功');
-
-        // 更新详情对话框
-        if (this.selectedResult && this.selectedResult.id === id) {
-          this.selectedResult.is_verified = true;
-        }
-
-        // 刷新结果列表
-        await this.fetchResults();
-      } catch (error) {
-        console.error('漏洞验证失败', error);
-        ElMessage.error('漏洞验证失败');
-      }
-    },
-
     // 分页和过滤器方法
     handleSizeChange(val) {
       this.pageSize = val;
@@ -626,7 +621,183 @@ export default {
       this.fetchResults();
     },
 
-    // SQL注入特有的方法
+    // 查看详情
+    showDetail(row) {
+      this.selectedResult = row;
+      this.detailDialogVisible = true;
+    },
+
+    // 格式化HTTP请求
+    formatHttpRequest(request) {
+      if (!request) return '无请求数据';
+
+      // 如果请求不是以HTTP开头，尝试添加前缀
+      if (!request.startsWith('GET') && !request.startsWith('POST') && !request.startsWith('HTTP')) {
+        // 推测并补充HTTP方法
+        const url = this.selectedResult ? this.selectedResult.url : '';
+        const method = url.includes('?') ? 'GET' : 'POST';
+        return `${method} ${url} HTTP/1.1\nHost: ${new URL(url).hostname}\n\n${request}`;
+      }
+
+      return request;
+    },
+
+    // 格式化HTTP响应
+    formatHttpResponse(response) {
+      if (!response) return '无响应数据';
+
+      // 如果响应不是以HTTP开头，尝试添加前缀
+      if (!response.startsWith('HTTP')) {
+        return `HTTP/1.1 200 OK\n\n${response}`;
+      }
+
+      return response;
+    },
+
+    // 高亮SQL错误信息
+    highlightSqlError(response, proof) {
+      if (!response || !proof) return '<pre class="http-content">无响应数据</pre>';
+
+      let responseText = this.formatHttpResponse(response);
+      // 先将HTML特殊字符转义，防止XSS攻击
+      responseText = this.escapeHtml(responseText);
+
+      // 从证明中提取错误关键词
+      const errorKeywords = this.extractErrorKeywords(proof);
+
+      // 如果没有关键词，返回原始响应
+      if (errorKeywords.length === 0) {
+        return `<pre class="http-content">${responseText}</pre>`;
+      }
+
+      // 高亮显示错误关键词
+      for (const keyword of errorKeywords) {
+        if (keyword.length < 3) continue; // 跳过太短的关键词
+
+        try {
+          // 创建一个忽略大小写的正则表达式
+          const regex = new RegExp(`(${this.escapeRegExp(keyword)})`, 'gi');
+
+          // 替换为高亮的HTML
+          responseText = responseText.replace(
+            regex,
+            '<span class="sql-error-highlight">$1</span>'
+          );
+        } catch (e) {
+          console.error('高亮关键词出错:', e);
+        }
+      }
+
+      return `<pre class="http-content">${responseText}</pre>`;
+    },
+
+    // 提取错误关键词
+    extractErrorKeywords(proof) {
+      const keywords = [];
+
+      // 从漏洞证明中提取关键词
+      if (proof) {
+        // 尝试提取包含"SQL错误信息"后面的内容
+        const errorMatch = proof.match(/包含SQL错误信息[:：]\s*(.+)/i);
+        if (errorMatch && errorMatch[1]) {
+          const errorInfo = errorMatch[1].trim();
+          // 拆分可能的多个关键词
+          errorInfo.split(/[,，;；\s]+/).forEach(keyword => {
+            if (keyword && keyword.length > 3) { // 只添加有意义的关键词
+              keywords.push(keyword);
+            }
+          });
+        }
+
+        // 尝试直接从proof中提取常见SQL错误关键词
+        const commonPatterns = [
+          "SQL syntax", "MySQL", "SQL Server", "ORA-", "SQLSTATE",
+          "syntax error", "mysqli", "Warning"
+        ];
+
+        for (const pattern of commonPatterns) {
+          if (proof.includes(pattern)) {
+            keywords.push(pattern);
+          }
+        }
+      }
+
+      // 如果从证明中提取不到关键词，添加常见的SQL错误关键词
+      if (keywords.length === 0) {
+        keywords.push(
+          "SQL syntax", "MySQL", "SQLSTATE", "ORA-", "SQL Server",
+          "Warning", "mysqli", "syntax error"
+        );
+      }
+
+      return keywords;
+    },
+
+    // 转义正则表达式中的特殊字符
+    escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& 表示整个匹配的字符串
+    },
+
+    // 转义HTML，防止XSS攻击
+    escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    },
+
+    // 构建SQLmap URL
+    buildSqlmapUrl(result) {
+      if (!result || !result.url) return '';
+
+      if (result.parameter) {
+        // 如果有参数信息，构建带参数的URL
+        const urlObj = new URL(result.url);
+        if (!urlObj.searchParams.has(result.parameter)) {
+          // 如果URL中没有该参数，添加一个占位符
+          urlObj.searchParams.set(result.parameter, '*');
+        } else {
+          // 标记该参数为注入点
+          const paramValue = urlObj.searchParams.get(result.parameter);
+          urlObj.searchParams.set(result.parameter, paramValue + '*');
+        }
+        return urlObj.toString();
+      }
+
+      // 如果没有参数信息，返回原始URL
+      return result.url;
+    },
+
+    // 格式化日期
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    },
+
+    // 获取漏洞子类型显示名称
+    getVulnSubtypeDisplay(subtype) {
+      const subtypeMap = {
+        'error_based': '回显型',
+        'blind': '盲注型',
+        'time_based': '时间盲注型',
+        'boolean_based': '布尔盲注型',
+        'stacked_queries': '堆叠查询型',
+        'out_of_band': '带外型',
+        'stored': '存储型',
+        'reflected': '反射型',
+        'dom': 'DOM型',
+        'lfi': '本地文件包含',
+        'rfi': '远程文件包含',
+        'os_command': '系统命令',
+        'blind_os_command': '盲命令',
+        'http_header': 'HTTP头注入'
+      };
+      return subtypeMap[subtype] || subtype;
+    },
+
     // 是否为错误回显注入
     isSqlErrorMatch(row) {
       return row.vuln_subtype === 'error_based';
@@ -697,109 +868,24 @@ export default {
       return '-';
     },
 
-    // 查看详情
-    showDetail(row) {
-      this.selectedResult = row;
-      this.detailDialogVisible = true;
-    },
+    // 验证漏洞
+    async verifyVulnerability(id) {
+      try {
+        // 调用验证API
+        await vulnScanAPI.verifyVulnerability(id);
+        ElMessage.success('漏洞验证成功');
 
-    // 高亮SQL错误
-    highlightSqlError(response, proof) {
-      if (!response || !proof) return response;
-
-      // 尝试从证明中提取错误信息关键词
-      const errorKeywords = [];
-
-      // 检查常见的SQL错误关键词
-      const commonSqlErrors = [
-        'SQL syntax', 'MySQL', 'mysqli', 'ORA-', 'Oracle error',
-        'SQLSTATE', 'PostgreSQL', 'SQL Server', 'syntax error'
-      ];
-
-      commonSqlErrors.forEach(keyword => {
-        if (proof.includes(keyword)) {
-          errorKeywords.push(keyword);
+        // 更新详情对话框
+        if (this.selectedResult && this.selectedResult.id === id) {
+          this.selectedResult.is_verified = true;
         }
-      });
 
-      // 如果没有找到关键词，尝试提取更多信息
-      if (errorKeywords.length === 0) {
-        const proofMatch = proof.match(/响应中包含SQL错误信息(.+)/);
-        if (proofMatch && proofMatch[1]) {
-          errorKeywords.push(proofMatch[1].trim());
-        }
+        // 刷新结果列表
+        await this.fetchResults();
+      } catch (error) {
+        console.error('漏洞验证失败', error);
+        ElMessage.error('漏洞验证失败');
       }
-
-      // 如果还是没有关键词，返回原始响应
-      if (errorKeywords.length === 0) {
-        return response;
-      }
-
-      // 高亮显示错误关键词
-      let highlightedResponse = response;
-      errorKeywords.forEach(keyword => {
-        // 转义特殊字符
-        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // 创建正则表达式
-        const regex = new RegExp(`(${escapedKeyword})`, 'gi');
-        // 高亮替换
-        highlightedResponse = highlightedResponse.replace(
-          regex,
-          '<span class="sql-error-highlight">$1</span>'
-        );
-      });
-
-      return highlightedResponse;
-    },
-
-    // 构建SQLmap URL
-    buildSqlmapUrl(result) {
-      if (!result || !result.url) return '';
-
-      if (result.parameter) {
-        // 如果有参数信息，构建带参数的URL
-        const urlObj = new URL(result.url);
-        if (!urlObj.searchParams.has(result.parameter)) {
-          // 如果URL中没有该参数，添加一个占位符
-          urlObj.searchParams.set(result.parameter, '*');
-        } else {
-          // 标记该参数为注入点
-          const paramValue = urlObj.searchParams.get(result.parameter);
-          urlObj.searchParams.set(result.parameter, paramValue + '*');
-        }
-        return urlObj.toString();
-      }
-
-      // 如果没有参数信息，返回原始URL
-      return result.url;
-    },
-
-    // 格式化日期
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-    },
-
-    // 获取漏洞子类型显示名称
-    getVulnSubtypeDisplay(subtype) {
-      const subtypeMap = {
-        'error_based': '回显型',
-        'blind': '盲注型',
-        'time_based': '时间盲注型',
-        'boolean_based': '布尔盲注型',
-        'stacked_queries': '堆叠查询型',
-        'out_of_band': '带外型',
-        'stored': '存储型',
-        'reflected': '反射型',
-        'dom': 'DOM型',
-        'lfi': '本地文件包含',
-        'rfi': '远程文件包含',
-        'os_command': '系统命令',
-        'blind_os_command': '盲命令',
-        'http_header': 'HTTP头注入'
-      };
-      return subtypeMap[subtype] || subtype;
     }
   }
 };
@@ -851,14 +937,20 @@ h1 {
 .detail-panel pre {
   white-space: pre-wrap;
   word-wrap: break-word;
-  background-color: #f5f7fa;
-  padding: 10px;
   font-family: monospace;
   font-size: 13px;
+  padding: 10px;
   border-radius: 4px;
   max-height: 500px;
   overflow-x: auto;
   overflow-y: auto;
+  background-color: #2d2d2d;
+  color: #f8f8f2;
+}
+
+.http-content {
+  line-height: 1.5;
+  margin: 0;
 }
 
 .highlight-section {
@@ -871,17 +963,73 @@ h1 {
 .highlight-title {
   font-weight: bold;
   margin-bottom: 5px;
+  color: #303133;
 }
 
 .highlight-content {
   font-family: Consolas, Monaco, 'Andale Mono', monospace;
   font-size: 13px;
+  line-height: 1.6;
 }
 
+/* 参数和Payload高亮样式 */
+.param-highlight {
+  background-color: #409EFF;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.payload-highlight {
+  background-color: #F56C6C;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* SQL错误高亮样式 */
 :deep(.sql-error-highlight) {
   background-color: #F56C6C;
   color: white;
   padding: 2px 4px;
   border-radius: 3px;
+  font-weight: bold;
+}
+
+/* HTTP内容样式改进 */
+.detail-panel :deep(pre.http-content) {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 10px;
+  border-radius: 4px;
+  max-height: 500px;
+  overflow-x: auto;
+  overflow-y: auto;
+  background-color: #2d2d2d;
+  color: #f8f8f2;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.injection-details {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f0f9eb;
+  border-radius: 4px;
+  border-left: 4px solid #67C23A;
+}
+
+.injection-details h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #67C23A;
+}
+
+.injection-details p {
+  margin: 5px 0;
+  line-height: 1.6;
 }
 </style>
