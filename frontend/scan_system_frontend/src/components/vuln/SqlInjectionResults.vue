@@ -44,10 +44,10 @@
         show-overflow-tooltip
       ></el-table-column>
 
+      <!-- 修改匹配值列，增加宽度并添加悬停提示 -->
       <el-table-column
         label="匹配值"
-        width="180"
-        show-overflow-tooltip
+        width="220"
       >
         <template #default="scope">
           <el-tooltip
@@ -55,8 +55,10 @@
             :content="getFullErrorMatchInfo(scope.row)"
             placement="top"
             effect="light"
+            :enterable="false"
           >
-            <span class="match-value error-match">{{ getErrorMatchInfo(scope.row) }}</span>
+            <!-- 移除字数限制，只有在需要时才添加省略号 -->
+            <span class="match-value error-match">{{ getFullErrorMatchInfo(scope.row) }}</span>
           </el-tooltip>
           <span v-else class="match-value">{{ scope.row.proof ? getMatchValueFromProof(scope.row.proof) : '无' }}</span>
         </template>
@@ -212,23 +214,11 @@ export default {
         }
       }
 
-      // 如果没有找到明确的匹配模式，返回前30个字符
-      return proof.length > 30 ? proof.slice(0, 30) + '...' : proof;
+      // 如果没有找到明确的匹配模式，返回前50个字符
+      return proof.length > 50 ? proof.slice(0, 50) + '...' : proof;
     },
 
-    // 获取错误匹配信息（用于表格显示）- 修改了字符限制
-    getErrorMatchInfo(row) {
-      const fullMatchInfo = this.getFullErrorMatchInfo(row);
-
-      // 将字符限制从15增加到30，更好地显示SQL语法错误
-      if (fullMatchInfo.length > 30) {
-        return fullMatchInfo.slice(0, 30) + '...';
-      }
-
-      return fullMatchInfo || '错误匹配';
-    },
-
-    // 获取完整的错误匹配信息（用于悬停提示）
+    // 修改以获取完整错误匹配信息（不再截断）
     getFullErrorMatchInfo(row) {
       const proof = row.proof || '';
 
@@ -254,7 +244,7 @@ export default {
           return proof.substring(start, end);
         }
       }
-      
+
       return '未能提取完整错误信息';
     },
 
@@ -336,15 +326,23 @@ export default {
   color: #f78989;
 }
 
+/* 修改匹配值样式，确保内容可以完整显示 */
 .match-value {
   word-break: break-all;
   display: inline-block;
   max-width: 100%;
+  line-height: 1.5;
+  white-space: normal; /* 允许文本换行 */
 }
 
 .error-match {
   color: #F56C6C;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* 当鼠标悬停时显示手型光标，表示可以查看更多信息 */
+.error-match:hover {
+  text-decoration: underline;
 }
 </style>
