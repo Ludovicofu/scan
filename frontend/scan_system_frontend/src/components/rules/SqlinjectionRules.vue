@@ -316,7 +316,7 @@ export default {
       loadPatternFailed: false,
       errorPatterns: [],
       errorPatternsText: '',
-      patternRuleId: null,  // 用于存储规则ID，便于更新
+      patternRuleId: null  // 用于存储规则ID，便于更新
     };
   },
   created() {
@@ -576,7 +576,6 @@ export default {
     },
 
     // 辅助方法：根据类型获取漏洞扫描规则
-    // 在fetchVulnScanRulesByType方法中
     async fetchVulnScanRulesByType(vulnType, subType) {
       try {
         // 获取指定类型的漏洞扫描规则
@@ -605,9 +604,57 @@ export default {
         console.error(`获取${vulnType}/${subType}类型规则失败`, error);
         return [];
       }
-    }
+    },
 
-    // 在createDefaultErrorBasedRule方法中
+    // 解析规则内容
+    parseRuleContent(ruleContent) {
+      try {
+        const data = JSON.parse(ruleContent);
+        return Array.isArray(data.payloads) ? data.payloads : [];
+      } catch (e) {
+        console.error('解析规则内容失败', e);
+        return [];
+      }
+    },
+
+    // 编辑方法
+    editErrorPayloads() {
+      this.isEditingError = true;
+    },
+
+    cancelEditError() {
+      this.isEditingError = false;
+      this.errorPayloadsText = this.errorPayloads.join('\n');
+    },
+
+    editBlindPayloads() {
+      this.isEditingBlind = true;
+    },
+
+    cancelEditBlind() {
+      this.isEditingBlind = false;
+      this.blindPayloadsText = this.blindPayloads.join('\n');
+    },
+
+    editHttpHeaders() {
+      this.isEditingHeaders = true;
+    },
+
+    cancelEditHeaders() {
+      this.isEditingHeaders = false;
+      this.httpHeadersText = this.httpHeaders.join('\n');
+    },
+
+    editErrorPatterns() {
+      this.isEditingPattern = true;
+    },
+
+    cancelEditPattern() {
+      this.isEditingPattern = false;
+      this.errorPatternsText = this.errorPatterns.join('\n');
+    },
+
+    // 创建默认规则方法
     async createDefaultErrorBasedRule() {
       try {
         // 准备规则数据 - 移除scan_type
@@ -633,9 +680,8 @@ export default {
         console.error('创建默认回显型SQL注入规则失败', error);
         return null;
       }
-    }
+    },
 
-    // 在createDefaultBlindRule方法中
     async createDefaultBlindRule() {
       try {
         // 准备规则数据 - 移除scan_type
@@ -661,9 +707,8 @@ export default {
         console.error('创建默认无回显型SQL注入规则失败', error);
         return null;
       }
-    }
+    },
 
-    // 在createDefaultHttpHeaderRule方法中
     async createDefaultHttpHeaderRule() {
       try {
         // 准备规则数据
@@ -689,9 +734,8 @@ export default {
         console.error('创建默认HTTP头SQL注入规则失败', error);
         return null;
       }
-    }
+    },
 
-    // 在createDefaultErrorPatternRule方法中
     async createDefaultErrorPatternRule() {
       try {
         // 准备规则数据
@@ -717,9 +761,9 @@ export default {
         console.error('创建默认SQL错误匹配模式规则失败', error);
         return null;
       }
-    }
+    },
 
-    // 在saveErrorPayloads方法中
+    // 保存方法
     async saveErrorPayloads() {
       try {
         // 处理文本框中的内容，分割为载荷数组
@@ -759,9 +803,8 @@ export default {
         console.error('保存回显型SQL注入规则失败', error);
         ElMessage.error('保存回显型SQL注入规则失败');
       }
-    }
+    },
 
-    // 在saveBlindPayloads方法中
     async saveBlindPayloads() {
       try {
         // 处理文本框中的内容，分割为载荷数组
@@ -801,9 +844,8 @@ export default {
         console.error('保存无回显型SQL注入规则失败', error);
         ElMessage.error('保存无回显型SQL注入规则失败');
       }
-    }
+    },
 
-    // 在saveHttpHeaders方法中
     async saveHttpHeaders() {
       try {
         // 处理文本框中的内容，分割为HTTP头数组
@@ -843,9 +885,8 @@ export default {
         console.error('保存HTTP头SQL注入规则失败', error);
         ElMessage.error('保存HTTP头SQL注入规则失败');
       }
-    }
+    },
 
-    // 在saveErrorPatterns方法中
     async saveErrorPatterns() {
       try {
         // 处理文本框中的内容，分割为匹配模式数组

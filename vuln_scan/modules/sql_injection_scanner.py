@@ -525,7 +525,24 @@ class SqlInjectionScanner:
                 if header not in req_headers:
                     continue
 
-                original_value = req_headers[header]
+                # 安全获取原始值，处理可能的编码问题
+                try:
+                    original_value = req_headers[header]
+
+                    # 处理二进制数据或非UTF-8编码的字符串
+                    if isinstance(original_value, bytes):
+                        original_value = original_value.decode('utf-8', errors='replace')
+                    else:
+                        # 确保字符串值是有效的UTF-8
+                        if isinstance(original_value, str):
+                            original_value = original_value.encode('utf-8', errors='replace').decode('utf-8',
+                                                                                                     errors='replace')
+                        else:
+                            # 处理其他类型，如None或非字符串类型
+                            original_value = str(original_value)
+                except Exception as e:
+                    print(f"处理HTTP头 {header} 的值时出错: {str(e)}")
+                    continue  # 跳过这个头部
 
                 # 测试回显型注入
                 for payload in error_payloads:
@@ -547,14 +564,14 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
-                                response_text = await response.text()
+                                response_text = await response.text(errors='replace')  # 使用errors='replace'处理响应编码问题
 
                                 # 检查是否有SQL错误信息
                                 if self.check_sql_error(response_text):
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
-                                    # 创建漏洞结果 - 注意：使用vuln_subtype替代scan_type
+                                    # 创建漏洞结果
                                     result = {
                                         'vuln_type': 'sql_injection',
                                         'vuln_subtype': 'error_based',
@@ -601,7 +618,7 @@ class SqlInjectionScanner:
                                     ssl=False
                             ) as response:
                                 # 忽略响应内容，只关注时间
-                                _ = await response.text()
+                                _ = await response.text(errors='replace')  # 使用errors='replace'处理响应编码问题
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -612,7 +629,7 @@ class SqlInjectionScanner:
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
-                                    # 创建漏洞结果 - 注意：使用vuln_subtype替代scan_type
+                                    # 创建漏洞结果
                                     result = {
                                         'vuln_type': 'sql_injection',
                                         'vuln_subtype': 'blind',
@@ -636,7 +653,7 @@ class SqlInjectionScanner:
                             # 记录漏洞
                             self.found_vulnerabilities.add(vuln_key)
 
-                            # 创建漏洞结果 - 注意：使用vuln_subtype替代scan_type
+                            # 创建漏洞结果
                             result = {
                                 'vuln_type': 'sql_injection',
                                 'vuln_subtype': 'blind',
