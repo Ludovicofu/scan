@@ -44,16 +44,7 @@
         show-overflow-tooltip
       ></el-table-column>
 
-      <el-table-column
-        label="XSS类型"
-        width="120"
-      >
-        <template #default="scope">
-          <el-tag :type="getXssTagType(scope.row)">
-            {{ getXssTypeName(scope.row) }}
-          </el-tag>
-        </template>
-      </el-table-column>
+      <!-- 已移除XSS类型列 -->
 
       <el-table-column
         label="上下文"
@@ -77,21 +68,24 @@
         width="120"
       >
         <template #default="scope">
-          <el-button
-            @click="$emit('view-detail', scope.row)"
-            type="text"
-            size="small"
-          >
-            详情
-          </el-button>
-          <el-button
-            @click="$emit('delete-vuln', scope.row.id)"
-            type="text"
-            size="small"
-            class="delete-btn"
-          >
-            删除
-          </el-button>
+          <!-- 操作按钮放在同一个div内，保持在同一行 -->
+          <div class="operation-buttons">
+            <el-button
+              @click="$emit('view-detail', scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
+            <el-button
+              @click="$emit('delete-vuln', scope.row.id)"
+              type="text"
+              size="small"
+              class="delete-btn"
+            >
+              删除
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -148,30 +142,6 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     },
 
-    // 获取XSS类型名称
-    getXssTypeName(row) {
-      if (row.vuln_subtype === 'reflected') {
-        return '反射型';
-      } else if (row.vuln_subtype === 'stored') {
-        return '存储型';
-      } else if (row.vuln_subtype === 'dom') {
-        return 'DOM型';
-      }
-      return 'XSS';
-    },
-
-    // 获取XSS类型对应的标签样式
-    getXssTagType(row) {
-      if (row.vuln_subtype === 'reflected') {
-        return 'warning';
-      } else if (row.vuln_subtype === 'stored') {
-        return 'danger';
-      } else if (row.vuln_subtype === 'dom') {
-        return 'info';
-      }
-      return 'info';
-    },
-
     // 获取XSS上下文
     getXssContext(row) {
       // 从proof中提取上下文信息
@@ -214,6 +184,14 @@ export default {
   text-align: right;
 }
 
+/* 操作按钮容器样式，确保按钮在同一行 */
+.operation-buttons {
+  display: flex;
+  gap: 5px; /* 控制两个按钮之间的间距 */
+  white-space: nowrap;
+}
+
+/* 删除按钮样式 */
 .delete-btn {
   color: #F56C6C;
 }

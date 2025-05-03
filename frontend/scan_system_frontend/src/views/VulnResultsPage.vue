@@ -239,8 +239,8 @@ export default {
     },
 
     handleScanResult(data) {
-      // 创建唯一标识符
-      const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
+      // 创建更健壮的唯一标识符
+      const resultKey = `${data.data.vuln_type}-${data.data.vuln_subtype}-${data.data.parameter}-${data.data.url}`;
 
       // 检查是否已经通知过这个结果
       if (this.notifiedResults.has(resultKey)) {
@@ -255,27 +255,31 @@ export default {
 
       // 只按漏洞类型过滤
       if (data.data.vuln_type === this.currentVulnType) {
-        // 检查是否已在显示列表中
-        if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合
-          this.displayedResults.set(resultKey, data.data);
-
-          // 添加到显示列表
-          if (this.results.length < this.pageSize) {
-            // 将新结果添加到列表头部
-            this.results.unshift(data.data);
-            this.totalResults++;
-            console.log("添加漏洞到列表");
-          }
-
-          // 显示通知
-          ElNotification({
-            title: '漏洞发现',
-            message: `发现新漏洞: ${data.data.name}`,
-            type: 'warning',
-            duration: 5000
-          });
+        // 添加到显示列表时使用unshift保证新结果在顶部
+        if (this.results.length >= this.pageSize) {
+          // 如果已达到页大小，移除末尾项
+          this.results.pop();
         }
+        this.results.unshift(data.data);
+        this.totalResults++;
+
+        // 显示通知
+        ElNotification({
+          title: '漏洞发现',
+          message: `发现新${data.data.vuln_type_display}漏洞: ${data.data.name}`,
+          type: this.getNotificationType(data.data.severity),
+          duration: 5000
+        });
+      }
+    },
+
+    // 添加新方法，根据严重程度返回通知类型
+    getNotificationType(severity) {
+      switch(severity) {
+        case 'high': return 'error';
+        case 'medium': return 'warning';
+        case 'low': return 'info';
+        default: return 'warning';
       }
     },
 

@@ -103,29 +103,31 @@
         </template>
       </el-table-column>
 
-      <el-table-column
-        fixed="right"
-        label="操作"
-        width="120"
-      >
-        <template #default="scope">
-          <el-button
-            @click="$emit('view-detail', scope.row)"
-            type="text"
-            size="small"
-          >
-            详情
-          </el-button>
-          <el-button
-            @click="$emit('delete-vuln', scope.row.id)"
-            type="text"
-            size="small"
-            class="delete-btn"
-          >
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
+        <el-table-column
+          fixed="right"
+          label="操作"
+          width="120"
+        >
+          <template #default="scope">
+            <div class="operation-buttons">
+              <el-button
+                @click="$emit('view-detail', scope.row)"
+                type="text"
+                size="small"
+              >
+                详情
+              </el-button>
+              <el-button
+                @click="$emit('delete-vuln', scope.row.id)"
+                type="text"
+                size="small"
+                class="delete-btn"
+              >
+                删除
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
     </el-table>
 
     <!-- 分页 -->
@@ -324,6 +326,11 @@ export default {
 
 .delete-btn:hover {
   color: #f78989;
+}
+
+.operation-buttons {
+  display: flex;
+  justify-content: space-between;
 }
 
 /* 修改匹配值样式，确保内容可以完整显示 */

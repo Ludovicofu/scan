@@ -89,14 +89,12 @@ class XssScanner:
         # 标记为已扫描
         self.scanned_urls.add(url)
 
-        # 获取扫描配置
-        reflected_payloads = await self.get_reflected_payloads(context)
-        stored_payloads = await self.get_stored_payloads(context)
-        dom_payloads = await self.get_dom_payloads(context)
+        # 获取扫描配置 - 合并所有XSS载荷，不严格区分类型
+        xss_payloads = await self.get_all_xss_payloads(context)
         context_patterns = await self.get_context_patterns(context)
 
         # 检查是否有规则可用
-        if not reflected_payloads and not stored_payloads and not dom_payloads:
+        if not xss_payloads:
             print(f"警告: 没有可用的XSS载荷规则，跳过XSS扫描")
             return []
 
@@ -107,7 +105,7 @@ class XssScanner:
             url_results = await self.scan_url_parameters(
                 context,
                 url,
-                reflected_payloads,
+                xss_payloads,
                 context_patterns
             )
             results.extend(url_results)
@@ -118,13 +116,14 @@ class XssScanner:
                 context,
                 url,
                 req_content,
-                reflected_payloads,
+                xss_payloads,
                 context_patterns
             )
             results.extend(post_results)
 
         # 3. 检查DOM XSS (需要浏览器引擎支持)
-        if dom_payloads and len(dom_payloads) > 0:
+        dom_payloads = [p for p in xss_payloads if 'javascript:' in p or '#' in p]
+        if dom_payloads:
             # 简化示例，实际DOM XSS检测需要浏览器引擎支持
             dom_results = await self.scan_dom_xss(
                 context,
@@ -165,6 +164,22 @@ class XssScanner:
         except Exception as e:
             print(f"从数据库获取规则时出错: {str(e)}")
             return None
+
+    async def get_all_xss_payloads(self, context):
+        """获取所有XSS测试载荷，不区分类型"""
+        # 获取反射型XSS载荷
+        reflected_payloads = await self.get_reflected_payloads(context)
+
+        # 获取存储型XSS载荷
+        stored_payloads = await self.get_stored_payloads(context)
+
+        # 获取DOM型XSS载荷
+        dom_payloads = await self.get_dom_payloads(context)
+
+        # 合并所有载荷，去除重复
+        all_payloads = list(set(reflected_payloads + stored_payloads + dom_payloads))
+
+        return all_payloads
 
     async def get_reflected_payloads(self, context):
         """获取反射型XSS测试载荷"""
@@ -268,7 +283,7 @@ class XssScanner:
                 # 测试XSS载荷
                 for payload in xss_payloads:
                     # 检测是否已存在相同漏洞
-                    vuln_key = f"reflected_xss_url_{param}_{url}"
+                    vuln_key = f"xss_url_{param}_{url}"
                     if vuln_key in self.found_vulnerabilities:
                         continue
 
@@ -308,12 +323,15 @@ class XssScanner:
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
+                                    # 确定XSS类型 (反射型还是DOM型)
+                                    xss_subtype = 'dom' if '#' in payload or 'javascript:' in payload else 'reflected'
+
                                     # 创建漏洞结果
                                     result = {
                                         'vuln_type': 'xss',
-                                        'vuln_subtype': 'reflected',
-                                        'name': f'URL参数 {param} 中的反射型XSS漏洞',
-                                        'description': f'在URL参数 {param} 中发现反射型XSS漏洞，上下文: {xss_context}',
+                                        'vuln_subtype': xss_subtype,
+                                        'name': f'URL参数 {param} 中的{self.get_xss_type_name(xss_subtype)}XSS漏洞',
+                                        'description': f'在URL参数 {param} 中发现{self.get_xss_type_name(xss_subtype)}XSS漏洞，上下文: {xss_context}',
                                         'severity': 'high',
                                         'url': url,
                                         'parameter': param,
@@ -402,89 +420,171 @@ class XssScanner:
 
                 original_value = values[0]
 
+                # 创建任务列表，用于并行测试
+                test_tasks = []
+
                 # 测试XSS载荷
                 for payload in xss_payloads:
                     # 检测是否已存在相同漏洞
-                    vuln_key = f"reflected_xss_post_{param}_{url}"
+                    vuln_key = f"xss_post_{param}_{url}"
                     if vuln_key in self.found_vulnerabilities:
                         continue
 
-                    # 创建测试参数
-                    test_params = post_params.copy()
-                    test_params[param] = [payload]  # 替换原值
+                    # 创建任务
+                    test_task = self._test_post_parameter(
+                        url, parsed_url, param, payload, post_params,
+                        content_type, vuln_key, context_patterns
+                    )
+                    test_tasks.append(test_task)
 
-                    # 根据content_type准备请求内容
-                    if content_type and 'application/json' in content_type:
-                        # 将扁平的参数还原为JSON
-                        test_json = {}
-                        for k, v in test_params.items():
-                            if '.' in k:  # 处理嵌套字段
-                                parts = k.split('.')
-                                current = test_json
-                                for part in parts[:-1]:
-                                    if part not in current:
-                                        current[part] = {}
-                                    current = current[part]
-                                current[parts[-1]] = v[0]
-                            else:
-                                test_json[k] = v[0]
-                        test_content = json.dumps(test_json)
-                        headers = {'Content-Type': 'application/json'}
-                    else:
-                        # 默认使用表单格式
-                        test_content = urlencode(test_params, doseq=True)
-                        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                # 并行执行测试任务
+                if test_tasks:
+                    # 使用信号量限制并发数
+                    sem = asyncio.Semaphore(5)  # 最多5个并发测试
 
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.post(
-                                    url,
-                                    data=test_content,
-                                    headers=headers,
-                                    timeout=self.timeout,
-                                    ssl=False
-                            ) as response:
-                                # 获取完整的响应文本
-                                response_text = await response.text(errors='replace')
+                    async def run_with_sem(task):
+                        async with sem:
+                            return await task
 
-                                # 检查XSS是否成功注入
-                                if self.check_xss_injection(response_text, payload):
-                                    # 确定XSS上下文
-                                    xss_context = self.determine_xss_context(response_text, payload, context_patterns)
+                    # 执行所有测试任务
+                    test_results = await asyncio.gather(
+                        *[run_with_sem(task) for task in test_tasks],
+                        return_exceptions=True
+                    )
 
-                                    # 构造完整的HTTP响应内容
-                                    headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-                                    full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
-
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'xss',
-                                        'vuln_subtype': 'reflected',
-                                        'name': f'POST参数 {param} 中的反射型XSS漏洞',
-                                        'description': f'在POST参数 {param} 中发现反射型XSS漏洞，上下文: {xss_context}',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': param,
-                                        'payload': payload,
-                                        'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                        'response': full_response,
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，上下文 {xss_context}，响应包中包含相同的XSS载荷"
-                                    }
-
-                                    results.append(result)
-                                    break  # 找到一个参数的漏洞后，就不再测试该参数的其他载荷
-                        except Exception as e:
-                            print(f"测试POST参数 {param} 时出错: {str(e)}")
-                            continue
+                    # 处理结果
+                    for result in test_results:
+                        if result and not isinstance(result, Exception):
+                            results.append(result)
+                            # 找到一个漏洞后，不再测试该参数
+                            break
 
         except Exception as e:
             print(f"扫描POST参数XSS时出错: {str(e)}")
 
         return results
+
+    async def _test_post_parameter(self, url, parsed_url, param, payload, post_params, content_type, vuln_key,
+                                   context_patterns):
+        """测试单个POST参数的XSS漏洞"""
+        try:
+            # 创建测试参数
+            test_params = post_params.copy()
+            test_params[param] = [payload]  # 替换原值
+
+            # 根据content_type准备请求内容
+            if content_type and 'application/json' in content_type:
+                # 将扁平的参数还原为JSON
+                test_json = {}
+                for k, v in test_params.items():
+                    if '.' in k:  # 处理嵌套字段
+                        parts = k.split('.')
+                        current = test_json
+                        for part in parts[:-1]:
+                            if part not in current:
+                                current[part] = {}
+                            current = current[part]
+                        current[parts[-1]] = v[0]
+                    else:
+                        test_json[k] = v[0]
+                test_content = json.dumps(test_json)
+                headers = {'Content-Type': 'application/json'}
+            else:
+                # 默认使用表单格式
+                test_content = urlencode(test_params, doseq=True)
+                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+            # 发送POST请求
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                        url,
+                        data=test_content,
+                        headers=headers,
+                        timeout=self.timeout,
+                        ssl=False
+                ) as response:
+                    # 获取完整的响应文本
+                    response_text = await response.text(errors='replace')
+
+                    # 检查XSS是否成功注入
+                    if self.check_xss_injection(response_text, payload):
+                        # 确定XSS上下文
+                        xss_context = self.determine_xss_context(response_text, payload, context_patterns)
+
+                        # 构造完整的HTTP响应内容
+                        headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+                        full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
+
+                        # 记录漏洞
+                        self.found_vulnerabilities.add(vuln_key)
+
+                        # 尝试检测XSS类型
+                        # 如果响应中包含完整的payload，可能是反射型或存储型
+                        # 大多数情况下POST参数的XSS是存储型的，但也可能立即反射
+                        xss_subtype = 'stored'  # 默认认为是存储型
+
+                        # 创建漏洞结果
+                        result = {
+                            'vuln_type': 'xss',
+                            'vuln_subtype': xss_subtype,
+                            'name': f'POST参数 {param} 中的{self.get_xss_type_name(xss_subtype)}XSS漏洞',
+                            'description': f'在POST参数 {param} 中发现{self.get_xss_type_name(xss_subtype)}XSS漏洞，上下文: {xss_context}',
+                            'severity': 'high',
+                            'url': url,
+                            'parameter': param,
+                            'payload': payload,
+                            'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
+                            'response': full_response,
+                            'proof': f"在参数 {param} 中注入 {payload} 后，上下文 {xss_context}，响应包中包含相同的XSS载荷"
+                        }
+
+                        return result
+
+            # 如果没有找到漏洞，可以再尝试GET请求以检测存储型XSS
+            # 由于无法确定哪个URL会显示存储的内容，这里仅做示例
+            # 在实际环境中，应根据具体应用逻辑确定可能的内容显示页面
+
+            # 尝试请求自身URL，查看是否显示注入的内容
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                        url,
+                        timeout=self.timeout,
+                        ssl=False
+                ) as response:
+                    response_text = await response.text(errors='replace')
+
+                    # 检查是否包含注入的payload
+                    if self.check_xss_injection(response_text, payload):
+                        # 确定XSS上下文
+                        xss_context = self.determine_xss_context(response_text, payload, context_patterns)
+
+                        # 构造完整的HTTP响应内容
+                        headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+                        full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
+
+                        # 记录漏洞
+                        self.found_vulnerabilities.add(vuln_key)
+
+                        # 创建漏洞结果
+                        result = {
+                            'vuln_type': 'xss',
+                            'vuln_subtype': 'stored',
+                            'name': f'POST参数 {param} 中的存储型XSS漏洞',
+                            'description': f'在POST参数 {param} 中发现存储型XSS漏洞，上下文: {xss_context}',
+                            'severity': 'high',
+                            'url': url,
+                            'parameter': param,
+                            'payload': payload,
+                            'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
+                            'response': full_response,
+                            'proof': f"在参数 {param} 中注入 {payload} 后，通过GET请求发现存储的XSS载荷，上下文: {xss_context}"
+                        }
+
+                        return result
+
+        except Exception as e:
+            print(f"测试POST参数 {param} 的XSS漏洞时出错: {str(e)}")
+            return None
 
     async def scan_dom_xss(self, context, url, dom_payloads):
         """
@@ -621,6 +721,15 @@ class XssScanner:
 
         # 默认上下文
         return "HTML内容上下文"
+
+    def get_xss_type_name(self, subtype):
+        """获取XSS类型的中文名称"""
+        type_names = {
+            'reflected': '反射型',
+            'stored': '存储型',
+            'dom': 'DOM型'
+        }
+        return type_names.get(subtype, '')
 
     def clear_cache(self):
         """清除缓存"""

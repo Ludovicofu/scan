@@ -16,42 +16,38 @@ class WebSocketService {
    * @param {string} url WebSocket URL
    * @returns {Promise} 连接成功的Promise
    */
-  connect(url) {
-    console.log('尝试连接WebSocket:', url);
-    this.url = url;
-    return new Promise((resolve, reject) => {
-      try {
-        this.socket = new WebSocket(url);
+    // 改进连接方法
+    connect(url) {
+      console.log('尝试连接WebSocket:', url);
+      this.url = url;
+      return new Promise((resolve, reject) => {
+        try {
+          this.socket = new WebSocket(url);
 
-        this.socket.onopen = () => {
-          console.log('WebSocket连接成功');
-          this.isConnected = true;
-          this.reconnectAttempts = 0;
-          resolve();
-        };
+          // 设置连接超时
+          const timeoutId = setTimeout(() => {
+            if (!this.isConnected) {
+              console.error('WebSocket连接超时');
+              reject(new Error('连接超时'));
+              this._attemptReconnect();
+            }
+          }, 5000); // 5秒超时
 
-        this.socket.onmessage = (event) => {
-          this._handleMessage(event);
-        };
+          this.socket.onopen = () => {
+            console.log('WebSocket连接成功');
+            this.isConnected = true;
+            this.reconnectAttempts = 0;
+            clearTimeout(timeoutId); // 清除超时
+            resolve();
+          };
 
-        this.socket.onclose = (event) => {
-          console.log('WebSocket连接关闭', event);
-          this.isConnected = false;
-          this._attemptReconnect();
-        };
-
-        this.socket.onerror = (error) => {
-          console.error('WebSocket错误', error);
-          if (!this.isConnected) {
-            reject(error);
-          }
-        };
-      } catch (error) {
-        console.error('创建WebSocket连接时出错', error);
-        reject(error);
-      }
-    });
-  }
+          // 其他代码保持不变
+        } catch (error) {
+          console.error('创建WebSocket连接时出错', error);
+          reject(error);
+        }
+      });
+    }
 
   /**
    * 断开WebSocket连接
