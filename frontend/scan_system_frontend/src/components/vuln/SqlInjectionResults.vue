@@ -1,4 +1,6 @@
-<!-- 改进版 SqlInjectionResults.vue -->
+
+```vue
+<!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue -->
 <template>
   <div class="sqlinjection-results">
     <el-table
@@ -26,7 +28,7 @@
       </el-table-column>
 
       <el-table-column
-        prop="asset_host"
+        prop="asset"
         label="资产"
         width="120"
       ></el-table-column>
@@ -44,34 +46,19 @@
         show-overflow-tooltip
       ></el-table-column>
 
-      <!-- 匹配值列，使用matched_error字段 -->
       <el-table-column
         label="匹配值"
-        width="180"
+        width="120"
         show-overflow-tooltip
       >
         <template #default="scope">
-          <!-- 针对错误回显型注入显示实际匹配到的SQL错误关键词 -->
-          <el-tag
-            v-if="isSqlErrorMatch(scope.row)"
-            type="danger"
-            effect="dark"
-          >
-            {{ getErrorMatchInfo(scope.row) }}
-          </el-tag>
-          <!-- 针对时间型注入显示时间延迟 -->
-          <el-tag
-            v-else-if="isTimeBasedInjection(scope.row)"
-            type="warning"
-          >
-            {{ getResponseTime(scope.row) }}
-          </el-tag>
-          <span v-else>-</span>
+          <span v-if="isSqlErrorMatch(scope.row)">{{ getErrorMatchInfo(scope.row) }}</span>
+          <span v-else>无</span>
         </template>
       </el-table-column>
 
       <el-table-column
-        label="类型"
+        label="差异"
         width="100"
       >
         <template #default="scope">
@@ -115,23 +102,21 @@
         width="120"
       >
         <template #default="scope">
-          <div class="operation-buttons">
-            <el-button
-              @click="$emit('view-detail', scope.row)"
-              type="text"
-              size="small"
-            >
-              详情
-            </el-button>
-            <el-button
-              @click="$emit('delete-vuln', scope.row.id)"
-              type="text"
-              size="small"
-              class="delete-btn"
-            >
-              删除
-            </el-button>
-          </div>
+          <el-button
+            @click="$emit('view-detail', scope.row)"
+            type="text"
+            size="small"
+          >
+            详情
+          </el-button>
+          <el-button
+            @click="$emit('delete-vuln', scope.row.id)"
+            type="text"
+            size="small"
+            class="delete-btn"
+          >
+            删除
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -181,17 +166,6 @@ export default {
     }
   },
   emits: ['size-change', 'current-change', 'view-detail', 'delete-vuln'],
-  data() {
-    return {
-      // SQL错误模式
-      sqlErrorPatterns: [
-        'SQL syntax', 'MySQL', 'ORA-', 'SQLSTATE',
-        'Incorrect syntax', 'ODBC Driver', 'PostgreSQL',
-        'Warning: mysql', 'Warning: pg', 'SQL Server',
-        'invalid query', 'ora_', 'pg_', 'mysqli'
-      ]
-    };
-  },
   methods: {
     formatDate(dateString) {
       if (!dateString) return '';
@@ -211,29 +185,13 @@ export default {
 
     // 获取错误匹配信息
     getErrorMatchInfo(row) {
-      // 优先使用服务端提取的matched_error字段
-      if (row.matched_error) {
-        return row.matched_error;
-      }
-
-      // 如果没有提供matched_error，尝试从proof中提取
+      // 从proof中提取匹配信息，截取前15个字符
       const proof = row.proof || '';
-
-      // 尝试提取"包含SQL错误信息: xxx"格式
-      const errorMatch = proof.match(/包含SQL错误信息[：:]?\s*(.+?)(?:\s|$)/);
-      if (errorMatch && errorMatch[1]) {
-        return errorMatch[1].trim();
+      const matchInfo = proof.match(/包含SQL错误信息(.*)/);
+      if (matchInfo && matchInfo[1]) {
+        return matchInfo[1].slice(0, 15) + '...';
       }
-
-      // 如果没有明确提取到错误信息，则尝试从响应中查找常见SQL错误模式
-      const response = row.response || '';
-      for (const error of this.sqlErrorPatterns) {
-        if (response.includes(error)) {
-          return error;
-        }
-      }
-
-      return 'SQL错误';
+      return '错误匹配';
     },
 
     // 获取注入类型名称
@@ -306,11 +264,6 @@ export default {
   text-align: right;
 }
 
-.operation-buttons {
-  display: flex;
-  justify-content: space-around;
-}
-
 .delete-btn {
   color: #F56C6C;
 }
@@ -318,16 +271,6 @@ export default {
 .delete-btn:hover {
   color: #f78989;
 }
-
-/* 定义不同漏洞类型的标签样式 */
-:deep(.el-tag--danger.el-tag--dark) {
-  background-color: #F56C6C;
-  color: white;
-  font-weight: bold;
-}
-
-:deep(.el-tag--warning) {
-  color: #E6A23C;
-  border-color: #E6A23C;
-}
 </style>
+```
+

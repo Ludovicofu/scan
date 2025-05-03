@@ -1,5 +1,3 @@
-# vuln_scan/consumers.py
-
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -8,33 +6,12 @@ from .scanner import VulnScanner
 from .models import VulnScanResult
 from data_collection.models import Asset, SystemSettings, SkipTarget
 from django.utils import timezone
-import re
 
 
 class VulnScanConsumer(AsyncWebsocketConsumer):
     """
     WebSocket消费者：处理漏洞扫描模块的WebSocket连接
     """
-    # 类级别的SQL错误模式，用于在前端显示特定的SQL错误
-    SQL_ERROR_PATTERNS = [
-        r"SQL syntax.*MySQL",
-        r"Warning.*mysqli",
-        r"MySQLSyntaxErrorException",
-        r"valid MySQL result",
-        r"check the manual that (corresponds to|fits) your MySQL server version",
-        r"MySqlClient\\.",
-        r"com\\.mysql\\.jdbc\\.exceptions",
-        r"ORA-[0-9][0-9][0-9][0-9]",
-        r"Oracle error",
-        r"Oracle.*Driver",
-        r"SQLSTATE\\[",
-        r"SQL Server message",
-        r"Warning.*mssql_",
-        r"Driver.*? SQL[\\-\\_\\ ]*Server",
-        r"JET Database Engine",
-        r"Microsoft Access Driver",
-        r"Syntax error \\(missing operator\\) in query expression"
-    ]
 
     async def connect(self):
         """处理WebSocket连接"""
@@ -108,14 +85,6 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
                     'data': results
                 }))
 
-            elif message_type == 'reset_cache':
-                # 重置缓存以确保不会遗漏结果
-                self.scanner.reset_scan_state()
-                await self.send(text_data=json.dumps({
-                    'type': 'cache_reset',
-                    'message': '缓存已重置'
-                }))
-
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -177,87 +146,174 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         }))
 
     async def scan_result(self, event):
-        """处理扫描结果事件，增强错误回显型SQL注入的显示"""
-        # 复制结果数据以避免修改原始数据
-        result_data = dict(event['data'])
-
-        # 对SQL注入漏洞结果进行处理
-        if result_data.get('vuln_type') == 'sql_injection':
-            # 特别处理错误回显型SQL注入
-            if result_data.get('vuln_subtype') == 'error_based':
-                # 从proof中提取SQL错误信息
-                proof = result_data.get('proof', '')
-                error_match = self.extract_sql_error_from_proof(proof)
-
-                # 如果成功提取到错误匹配，添加到结果中
-                if error_match:
-                    result_data['matched_error'] = error_match
-
-                # 如果没有从proof中提取到错误，尝试从response中查找
-                elif result_data.get('response'):
-                    response = result_data['response']
-                    error_match = self.extract_sql_error_from_response(response)
-                    if error_match:
-                        result_data['matched_error'] = error_match
-
-            # 确保响应和请求数据完整性
-            if 'request' in result_data and result_data['request']:
-                # 确保请求不会太长
-                if len(result_data['request']) > 2000:
-                    result_data['request'] = result_data['request'][:2000] + "...[已截断]"
-
-            if 'response' in result_data and result_data['response']:
-                # 确保响应不会太长
-                if len(result_data['response']) > 2000:
-                    result_data['response'] = result_data['response'][:2000] + "...[已截断]"
-
-        # 发送处理后的结果
+        """处理扫描结果事件"""
+        # 发送扫描结果通知给客户端
         await self.send(text_data=json.dumps({
             'type': 'scan_result',
-            'data': result_data
+            'data': event['data']
         }))
 
-    def extract_sql_error_from_proof(self, proof):
-        """从proof中提取SQL错误信息"""
-        if not proof:
-            return None
+    # 以下是数据库操作方法
 
-        # 尝试不同的提取模式
-        # 1. 尝试提取"包含SQL错误信息: xxx"格式
-        match = re.search(r'包含SQL错误信息[：:]\s*(.+?)(?:[，。,\.;\s]|$)', proof)
-        if match and match.group(1):
-            return match.group(1).strip()
+    @database_sync_to_async
+    def get_system_settings(self):
+        """获取系统设置"""
+        settings, created = SystemSettings.objects.get_or_create(pk=1)
+        return {
+            'id': settings.id,
+            'use_proxy': settings.use_proxy,
+            'proxy_address': settings.proxy_address,
+            'scan_timeout': settings.scan_timeout,
+            'max_concurrent_scans': settings.max_concurrent_scans
+        }
 
-        # 2. 尝试提取"SQL错误信息: xxx"格式
-        match = re.search(r'SQL错误信息[：:]\s*(.+?)(?:[，。,\.;\s]|$)', proof)
-        if match and match.group(1):
-            return match.group(1).strip()
+    @database_sync_to_async
+    def get_skip_targets(self):
+        """获取跳过目标列表"""
+        targets = SkipTarget.objects.all()
+        return [{'id': t.id, 'target': t.target, 'description': t.description} for t in targets]
 
-        # 如果没有找到明确模式，检查是否包含任何已知SQL错误关键词
-        for pattern in self.SQL_ERROR_PATTERNS:
-            # 移除正则表达式元字符
-            clean_pattern = pattern.replace('\\', '').replace('.*', ' ').replace('[', '').replace(']', '')
-            if clean_pattern in proof:
-                return clean_pattern
+    @database_sync_to_async
+    def get_scan_results(self, filters):
+        """获取扫描结果"""
+        # 构建查询
+        queryset = VulnScanResult.objects.all()
 
-        return None
+        # 应用过滤器
+        if 'vuln_type' in filters:
+            queryset = queryset.filter(vuln_type=filters['vuln_type'])
+        if 'vuln_subtype' in filters:
+            queryset = queryset.filter(vuln_subtype=filters['vuln_subtype'])
+        if 'severity' in filters:
+            queryset = queryset.filter(severity=filters['severity'])
+        if 'host' in filters:
+            queryset = queryset.filter(asset__host__icontains=filters['host'])
+        if 'date_from' in filters:
+            queryset = queryset.filter(scan_date__gte=filters['date_from'])
+        if 'date_to' in filters:
+            queryset = queryset.filter(scan_date__lte=filters['date_to'])
 
-    def extract_sql_error_from_response(self, response):
-        """从响应中提取SQL错误信息"""
-        if not response:
-            return None
+        # 序列化结果
+        results = []
+        for result in queryset:
+            results.append({
+                'id': result.id,
+                'asset': result.asset.host,
+                'asset_host': result.asset.host,
+                'vuln_type': result.vuln_type,
+                'vuln_type_display': result.get_vuln_type_display(),
+                'vuln_subtype': result.vuln_subtype,
+                'name': result.name,
+                'description': result.description,
+                'severity': result.severity,
+                'severity_display': result.get_severity_display(),
+                'url': result.url,
+                'proof': result.proof,
+                'scan_date': result.scan_date.isoformat(),
+                'is_verified': result.is_verified,
+                'parameter': result.parameter,
+                'payload': result.payload
+            })
 
-        # 检查响应中是否包含已知SQL错误关键词
-        for pattern in self.SQL_ERROR_PATTERNS:
-            try:
-                compiled_pattern = re.compile(pattern, re.IGNORECASE)
-                match = compiled_pattern.search(response)
-                if match:
-                    return match.group(0)
-            except Exception:
-                # 如果正则编译失败，尝试简化模式
-                clean_pattern = pattern.replace('\\', '').replace('.*', ' ').replace('[', '').replace(']', '')
-                if clean_pattern in response:
-                    return clean_pattern
+        return results
 
-        return None
+    # 以下是扫描器操作方法
+
+    async def start_scan(self, options):
+        """开始扫描"""
+        # 更新扫描器设置
+        settings = await self.get_system_settings()
+        await self.update_scanner_settings(settings)
+
+        # 更新扫描器跳过目标
+        skip_targets = await self.get_skip_targets()
+        for target in skip_targets:
+            await self.add_scanner_skip_target(target['target'])
+
+        # 发送扫描开始通知
+        await self.send(text_data=json.dumps({
+            'type': 'scan_status',
+            'status': 'started',
+            'message': '扫描已开始'
+        }))
+
+    async def stop_scan(self):
+        """停止扫描"""
+        # 停止扫描器
+        # (这里只是发送通知，实际的停止逻辑在scanner.py中)
+
+        # 发送扫描停止通知
+        await self.send(text_data=json.dumps({
+            'type': 'scan_status',
+            'status': 'stopped',
+            'message': '扫描已停止'
+        }))
+
+    async def process_proxy_data(self, data):
+        """处理代理数据"""
+        # 调用扫描器处理数据
+        try:
+            # 解析URL获取主机名
+            url = data.get('url', '')
+            method = data.get('method', '')
+            status_code = data.get('status_code', 0)
+            req_headers = data.get('req_headers', {})
+            req_content = data.get('req_content', '')
+            resp_headers = data.get('resp_headers', {})
+            resp_content = data.get('resp_content', '')
+
+            # 创建或更新资产
+            asset = await self.update_asset(url)
+
+            # 启动扫描任务
+            asyncio.create_task(self.scanner.scan_data(
+                self.channel_layer,
+                asset.id,
+                url,
+                method,
+                status_code,
+                req_headers,
+                req_content,
+                resp_headers,
+                resp_content
+            ))
+
+        except Exception as e:
+            print(f"处理代理数据时出错: {str(e)}")
+
+    @database_sync_to_async
+    def update_asset(self, url):
+        """更新资产"""
+        from urllib.parse import urlparse
+        # 从URL解析主机名
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc
+
+        # 创建或更新资产
+        asset, created = Asset.objects.get_or_create(
+            host=host,
+            defaults={'first_seen': timezone.now()}
+        )
+
+        # 更新最后发现时间
+        if not created:
+            asset.last_seen = timezone.now()
+            asset.save()
+
+        return asset
+
+    async def update_scanner_settings(self, settings):
+        """更新扫描器设置"""
+        self.scanner.use_proxy = settings.get('use_proxy', False)
+        self.scanner.proxy_address = settings.get('proxy_address', 'http://localhost:7890')
+        self.scanner.scan_timeout = settings.get('scan_timeout', 10)
+        self.scanner.max_concurrent_scans = settings.get('max_concurrent_scans', 5)
+
+    async def add_scanner_skip_target(self, target):
+        """添加扫描器跳过目标"""
+        self.scanner.skip_targets.add(target)
+
+    async def remove_scanner_skip_target(self, target):
+        """移除扫描器跳过目标"""
+        if target in self.scanner.skip_targets:
+            self.scanner.skip_targets.remove(target)

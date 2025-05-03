@@ -1,4 +1,4 @@
-<!-- Enhanced VulnResultsPage.vue -->
+<!-- frontend/scan_system_frontend/src/views/VulnResultsPage.vue -->
 <template>
   <div class="vuln-results-page">
     <h1>漏洞检测结果</h1>
@@ -78,23 +78,19 @@
           show-overflow-tooltip
         ></el-table-column>
 
-        <!-- 重要修改：显示匹配到的具体SQL错误信息 -->
         <el-table-column
           label="匹配值"
-          width="180"
+          width="120"
           show-overflow-tooltip
         >
           <template #default="scope">
-            <el-tag v-if="scope.row.vuln_subtype === 'error_based'" type="danger">
-              {{ getErrorMatchInfo(scope.row) }}
-            </el-tag>
-            <span v-else-if="isTimeBasedInjection(scope.row)">时间延迟</span>
-            <span v-else>-</span>
+            <span v-if="isSqlErrorMatch(scope.row)">{{ getErrorMatchInfo(scope.row) }}</span>
+            <span v-else>无</span>
           </template>
         </el-table-column>
 
         <el-table-column
-          label="类型"
+          label="差异"
           width="100"
         >
           <template #default="scope">
@@ -138,10 +134,21 @@
           width="120"
         >
           <template #default="scope">
-            <div class="operation-buttons">
-              <el-button @click="showDetail(scope.row)" type="text" size="small">详情</el-button>
-              <el-button @click="deleteResult(scope.row.id)" type="text" size="small" class="delete-btn">删除</el-button>
-            </div>
+            <el-button
+              @click="showDetail(scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
+            <el-button
+              @click="deleteResult(scope.row.id)"
+              type="text"
+              size="small"
+              class="delete-btn"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -168,7 +175,64 @@
         border
         style="width: 100%"
       >
-        <!-- 其他类型漏洞的表格列... -->
+        <el-table-column
+          type="index"
+          label="序号"
+          width="60"
+        ></el-table-column>
+
+        <el-table-column
+          prop="scan_date"
+          label="日期"
+          width="180"
+          sortable
+        >
+          <template #default="scope">
+            {{ formatDate(scope.row.scan_date) }}
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="asset_host"
+          label="资产"
+          width="150"
+        ></el-table-column>
+
+        <el-table-column
+          prop="name"
+          label="漏洞名称"
+          width="200"
+        ></el-table-column>
+
+        <el-table-column
+          prop="url"
+          label="URL"
+          show-overflow-tooltip
+        ></el-table-column>
+
+        <el-table-column
+          fixed="right"
+          label="操作"
+          width="150"
+        >
+          <template #default="scope">
+            <el-button
+              @click="showDetail(scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
+            <el-button
+              @click="deleteResult(scope.row.id)"
+              type="text"
+              size="small"
+              class="delete-btn"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <!-- 分页 -->
@@ -214,21 +278,49 @@
           </el-descriptions-item>
         </el-descriptions>
 
-        <!-- 高亮请求和响应 -->
-        <el-divider content-position="left">请求/响应详情</el-divider>
+        <el-divider content-position="left">请求详情</el-divider>
         <div class="http-details">
           <el-tabs>
-            <!-- HTTP请求标签页 - 高亮显示payload -->
             <el-tab-pane label="HTTP请求">
               <div class="detail-panel">
-                <pre v-html="highlightPayloadInRequest(selectedResult)"></pre>
+                <!-- 使用实际的请求数据 -->
+                <pre>{{ selectedResult.request || '无请求数据' }}</pre>
               </div>
             </el-tab-pane>
-
-            <!-- HTTP响应标签页 - 高亮显示匹配的错误信息 -->
             <el-tab-pane label="HTTP响应">
               <div class="detail-panel">
-                <pre v-html="highlightMatchInResponse(selectedResult)"></pre>
+                <!-- 使用实际的响应数据 -->
+                <pre>{{ selectedResult.response || '无响应数据' }}</pre>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="漏洞详情" v-if="selectedResult.proof">
+              <div class="detail-panel">
+                <div class="highlight-section">
+                  <div class="highlight-title">漏洞证明:</div>
+                  <div class="highlight-content">{{ selectedResult.proof }}</div>
+                </div>
+                <!-- 高亮显示匹配的漏洞内容 -->
+                <div v-if="selectedResult.vuln_type === 'sql_injection' && selectedResult.vuln_subtype === 'error_based' && selectedResult.proof && selectedResult.response" class="highlight-section">
+                  <div class="highlight-title">响应中的SQL错误:</div>
+                  <div class="highlight-content" v-html="highlightSqlError(selectedResult.response, selectedResult.proof)"></div>
+                </div>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="复现" v-if="selectedResult.vuln_type === 'sql_injection'">
+              <div class="detail-panel">
+                <div class="highlight-section">
+                  <div class="highlight-title">复现方法:</div>
+                  <div class="highlight-content">
+                    <p>1. 向以下URL发送请求: <code>{{ selectedResult.url }}</code></p>
+                    <p v-if="selectedResult.parameter">2. 修改参数 <code>{{ selectedResult.parameter }}</code> 的值为: <code>{{ selectedResult.payload }}</code></p>
+                    <p>3. 观察响应中的错误信息或延时情况</p>
+                    <p>4. 可使用以下SQL注入工具进行更深入验证:</p>
+                    <ul>
+                      <li>SQLmap: <code>sqlmap -u "{{ buildSqlmapUrl(selectedResult) }}" --batch</code></li>
+                      <li>Burp Suite: 使用Intruder模块进行参数Fuzz测试</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -283,15 +375,7 @@ export default {
       // 添加一个Map来跟踪已经显示的结果
       displayedResults: new Map(),
       // 添加一个Set来跟踪已经通知的结果
-      notifiedResults: new Set(),
-
-      // SQL错误模式
-      sqlErrorPatterns: [
-        'SQL syntax', 'MySQL', 'ORA-', 'SQLSTATE',
-        'Incorrect syntax', 'ODBC Driver', 'PostgreSQL',
-        'Warning: mysql', 'Warning: pg', 'SQL Server',
-        'invalid query', 'ora_', 'pg_', 'mysqli'
-      ]
+      notifiedResults: new Set()
     };
   },
   created() {
@@ -308,33 +392,10 @@ export default {
     this.saveCacheToStorage();
   },
   methods: {
-    // WebSocket相关方法
-    initWebSocket() {
-      // 连接WebSocket
-      console.log("正在连接WebSocket...");
-      vulnScanWS.connect('ws://localhost:8000/ws/vuln_scan/')
-        .then(() => {
-          console.log("WebSocket连接成功!");
-
-          // 重置缓存，确保不会漏掉新的结果
-          vulnScanWS.send({
-            type: 'reset_cache'
-          });
-
-          // 添加事件监听器
-          vulnScanWS.addListener('scan_progress', this.handleScanProgress);
-          vulnScanWS.addListener('scan_result', this.handleScanResult);
-          vulnScanWS.addListener('scan_status', this.handleScanStatus);
-        })
-        .catch(error => {
-          console.error('连接WebSocket失败', error);
-          ElMessage.error('连接服务器失败，实时扫描进度将不可用');
-        });
-    },
-
     // 保存和加载去重数据
     loadDeduplicationData() {
       try {
+        // 从localStorage加载通知过的结果
         const notifiedData = localStorage.getItem('vulnResultNotified');
         if (notifiedData) {
           this.notifiedResults = new Set(JSON.parse(notifiedData));
@@ -345,19 +406,36 @@ export default {
     },
     saveCacheToStorage() {
       try {
+        // 将通知过的结果保存到localStorage
         localStorage.setItem('vulnResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
       } catch (e) {
         console.error('保存去重数据失败', e);
       }
     },
 
+    // WebSocket相关方法
+    initWebSocket() {
+      // 连接WebSocket
+      console.log("正在连接WebSocket...");
+      vulnScanWS.connect('ws://localhost:8000/ws/vuln_scan/')
+        .then(() => {
+          console.log("WebSocket连接成功!");
+          // 添加事件监听器
+          vulnScanWS.addListener('scan_progress', this.handleScanProgress);
+          vulnScanWS.addListener('scan_result', this.handleScanResult);
+          vulnScanWS.addListener('scan_status', this.handleScanStatus);
+        })
+        .catch(error => {
+          console.error('连接WebSocket失败', error);
+          ElMessage.error('连接服务器失败，实时扫描进度将不可用');
+        });
+    },
     closeWebSocket() {
       // 移除事件监听器
       vulnScanWS.removeListener('scan_progress', this.handleScanProgress);
       vulnScanWS.removeListener('scan_result', this.handleScanResult);
       vulnScanWS.removeListener('scan_status', this.handleScanStatus);
     },
-
     handleScanProgress(data) {
       // 处理扫描进度更新
       this.scanStatus = data.data.status;
@@ -366,10 +444,9 @@ export default {
       this.scanMessage = data.data.message || '';
     },
 
-    // 改进的扫描结果处理方法
     handleScanResult(data) {
       // 创建唯一标识符
-      const resultKey = `${data.data.vuln_type}-${data.data.url}-${data.data.parameter || ''}-${data.data.payload || ''}`;
+      const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
 
       // 检查是否已经通知过这个结果
       if (this.notifiedResults.has(resultKey)) {
@@ -381,12 +458,6 @@ export default {
       this.notifiedResults.add(resultKey);
 
       console.log("收到新的漏洞扫描结果:", data);
-
-      // 预处理结果数据，特别是对错误回显型SQL注入进行处理
-      if (data.data.vuln_type === 'sql_injection' && data.data.vuln_subtype === 'error_based') {
-        // 从proof中提取SQL错误信息
-        data.data.error_match = this.extractErrorMatchFromProof(data.data.proof);
-      }
 
       // 只按漏洞类型过滤
       if (data.data.vuln_type === this.currentVulnType) {
@@ -400,6 +471,7 @@ export default {
             // 将新结果添加到列表头部
             this.results.unshift(data.data);
             this.totalResults++;
+            console.log("添加漏洞到列表");
           }
 
           // 显示通知
@@ -413,34 +485,8 @@ export default {
       }
     },
 
-    // 提取proof中的错误匹配信息
-    extractErrorMatchFromProof(proof) {
-      if (!proof) return '';
-
-      // 尝试不同的提取模式
-      // 1. 尝试提取"包含SQL错误信息: xxx"格式
-      let match = proof.match(/包含SQL错误信息[：:]\s*(.+?)(?:\s|$)/);
-      if (match && match[1]) {
-        return match[1].trim();
-      }
-
-      // 2. 尝试提取"SQL错误信息: xxx"格式
-      match = proof.match(/SQL错误信息[：:]\s*(.+?)(?:\s|$)/);
-      if (match && match[1]) {
-        return match[1].trim();
-      }
-
-      // 如果没有找到明确的模式，查找常见SQL错误关键词
-      for (const pattern of this.sqlErrorPatterns) {
-        if (proof.includes(pattern)) {
-          return pattern;
-        }
-      }
-
-      return '错误回显';
-    },
-
     handleScanStatus(data) {
+      // 处理扫描状态更新
       if (data.status === 'started') {
         this.scanStatus = 'scanning';
         this.scanProgress = 0;
@@ -492,24 +538,19 @@ export default {
         // 使用按类型查询的API
         const response = await vulnScanAPI.getVulnResultsByType(this.currentVulnType, params);
 
-        // 处理查询结果
+        console.log("API响应:", response);
+
         this.results = response.results || [];
         this.totalResults = response.count || 0;
-
-        // 为每个SQL注入回显型结果添加错误匹配信息
-        this.results.forEach(result => {
-          if (result.vuln_type === 'sql_injection' && result.vuln_subtype === 'error_based') {
-            result.error_match = this.extractErrorMatchFromProof(result.proof);
-          }
-        });
 
         // 更新已显示结果的集合
         this.displayedResults.clear();
         this.results.forEach(result => {
-          const resultKey = `${result.vuln_type}-${result.url}-${result.parameter || ''}-${result.payload || ''}`;
+          const resultKey = `${result.vuln_type}-${result.name}-${result.url}`;
           this.displayedResults.set(resultKey, result);
         });
 
+        console.log("漏洞结果数量:", this.results.length);
       } catch (error) {
         console.error('获取漏洞扫描结果失败', error);
         ElMessage.error('获取漏洞扫描结果失败');
@@ -532,7 +573,7 @@ export default {
         // 找到并从displayedResults中移除
         const resultToRemove = this.results.find(r => r.id === id);
         if (resultToRemove) {
-          const key = `${resultToRemove.vuln_type}-${resultToRemove.url}-${resultToRemove.parameter || ''}-${resultToRemove.payload || ''}`;
+          const key = `${resultToRemove.vuln_type}-${resultToRemove.name}-${resultToRemove.url}`;
           this.displayedResults.delete(key);
         }
 
@@ -549,6 +590,7 @@ export default {
     // 验证漏洞
     async verifyVulnerability(id) {
       try {
+        // 调用验证API
         await vulnScanAPI.verifyVulnerability(id);
         ElMessage.success('漏洞验证成功');
 
@@ -584,32 +626,8 @@ export default {
       this.fetchResults();
     },
 
-    // 获取错误匹配信息
-    getErrorMatchInfo(row) {
-      // 首先检查是否已提取过错误匹配信息
-      if (row.error_match) {
-        return row.error_match;
-      }
-
-      // 如果没有，则尝试从proof中提取
-      if (row.proof) {
-        const errorMatch = this.extractErrorMatchFromProof(row.proof);
-        return errorMatch || 'SQL错误';
-      }
-
-      // 如果没有proof，尝试从response中匹配错误模式
-      if (row.response) {
-        for (const pattern of this.sqlErrorPatterns) {
-          if (row.response.includes(pattern)) {
-            return pattern;
-          }
-        }
-      }
-
-      return 'SQL错误';
-    },
-
-    // 是否为回显型注入
+    // SQL注入特有的方法
+    // 是否为错误回显注入
     isSqlErrorMatch(row) {
       return row.vuln_subtype === 'error_based';
     },
@@ -617,6 +635,17 @@ export default {
     // 是否为基于时间的盲注
     isTimeBasedInjection(row) {
       return row.vuln_subtype === 'blind' && (row.proof || '').includes('时间');
+    },
+
+    // 获取错误匹配信息
+    getErrorMatchInfo(row) {
+      // 从proof中提取匹配信息，截取前15个字符
+      const proof = row.proof || '';
+      const matchInfo = proof.match(/包含SQL错误信息(.*)/);
+      if (matchInfo && matchInfo[1]) {
+        return matchInfo[1].slice(0, 15) + '...';
+      }
+      return '错误匹配';
     },
 
     // 获取注入类型名称
@@ -674,54 +703,75 @@ export default {
       this.detailDialogVisible = true;
     },
 
-    // 高亮显示请求中的payload
-    highlightPayloadInRequest(result) {
-      if (!result || !result.request || !result.payload) return result.request;
+    // 高亮SQL错误
+    highlightSqlError(response, proof) {
+      if (!response || !proof) return response;
 
-      const request = result.request;
-      const payload = result.payload;
+      // 尝试从证明中提取错误信息关键词
+      const errorKeywords = [];
 
-      // 转义特殊字符
-      const escapedPayload = payload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // 检查常见的SQL错误关键词
+      const commonSqlErrors = [
+        'SQL syntax', 'MySQL', 'mysqli', 'ORA-', 'Oracle error',
+        'SQLSTATE', 'PostgreSQL', 'SQL Server', 'syntax error'
+      ];
 
-      try {
-        // 高亮替换
-        return request.replace(
-          new RegExp(escapedPayload, 'g'),
-          '<span class="payload-highlight">$&</span>'
-        );
-      } catch (e) {
-        console.error('高亮payload出错', e);
-        return request;
-      }
-    },
+      commonSqlErrors.forEach(keyword => {
+        if (proof.includes(keyword)) {
+          errorKeywords.push(keyword);
+        }
+      });
 
-    // 高亮显示响应中的匹配值
-    highlightMatchInResponse(result) {
-      if (!result || !result.response) return result.response;
-
-      let response = result.response;
-
-      // 对于回显型SQL注入，高亮SQL错误信息
-      if (result.vuln_subtype === 'error_based') {
-        const matchedError = this.getErrorMatchInfo(result);
-        if (matchedError && matchedError !== 'SQL错误' && matchedError !== '错误回显') {
-          try {
-            // 转义特殊字符
-            const escapedError = matchedError.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-            // 高亮替换
-            response = response.replace(
-              new RegExp(escapedError, 'gi'),
-              '<span class="match-highlight">$&</span>'
-            );
-          } catch (e) {
-            console.error('高亮匹配值出错', e);
-          }
+      // 如果没有找到关键词，尝试提取更多信息
+      if (errorKeywords.length === 0) {
+        const proofMatch = proof.match(/响应中包含SQL错误信息(.+)/);
+        if (proofMatch && proofMatch[1]) {
+          errorKeywords.push(proofMatch[1].trim());
         }
       }
 
-      return response;
+      // 如果还是没有关键词，返回原始响应
+      if (errorKeywords.length === 0) {
+        return response;
+      }
+
+      // 高亮显示错误关键词
+      let highlightedResponse = response;
+      errorKeywords.forEach(keyword => {
+        // 转义特殊字符
+        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 创建正则表达式
+        const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+        // 高亮替换
+        highlightedResponse = highlightedResponse.replace(
+          regex,
+          '<span class="sql-error-highlight">$1</span>'
+        );
+      });
+
+      return highlightedResponse;
+    },
+
+    // 构建SQLmap URL
+    buildSqlmapUrl(result) {
+      if (!result || !result.url) return '';
+
+      if (result.parameter) {
+        // 如果有参数信息，构建带参数的URL
+        const urlObj = new URL(result.url);
+        if (!urlObj.searchParams.has(result.parameter)) {
+          // 如果URL中没有该参数，添加一个占位符
+          urlObj.searchParams.set(result.parameter, '*');
+        } else {
+          // 标记该参数为注入点
+          const paramValue = urlObj.searchParams.get(result.parameter);
+          urlObj.searchParams.set(result.parameter, paramValue + '*');
+        }
+        return urlObj.toString();
+      }
+
+      // 如果没有参数信息，返回原始URL
+      return result.url;
     },
 
     // 格式化日期
@@ -779,11 +829,6 @@ h1 {
   text-align: right;
 }
 
-.operation-buttons {
-  display: flex;
-  justify-content: space-around;
-}
-
 .delete-btn {
   color: #F56C6C;
 }
@@ -816,20 +861,27 @@ h1 {
   overflow-y: auto;
 }
 
-/* 高亮样式 */
-:deep(.payload-highlight) {
-  background-color: #409EFF;
-  color: white;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-weight: bold;
+.highlight-section {
+  margin-bottom: 10px;
+  background-color: #ebeef5;
+  padding: 10px;
+  border-radius: 4px;
 }
 
-:deep(.match-highlight) {
+.highlight-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.highlight-content {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-size: 13px;
+}
+
+:deep(.sql-error-highlight) {
   background-color: #F56C6C;
   color: white;
   padding: 2px 4px;
   border-radius: 3px;
-  font-weight: bold;
 }
 </style>
