@@ -1,4 +1,5 @@
 // frontend/scan_system_frontend/src/views/RulesPage.vue
+
 <template>
   <div class="rules-page">
     <h1>规则管理</h1>
@@ -81,6 +82,10 @@
           <template v-else-if="activeVulnTab === 'file_inclusion'">
             <FileInclusionRules />
           </template>
+          <!-- 命令注入模块显示专用组件 -->
+          <template v-else-if="activeVulnTab === 'command_injection'">
+            <CommandInjectionRules />
+          </template>
           <!-- 其他漏洞类型暂时显示提示信息 -->
           <template v-else>
             <el-alert
@@ -114,9 +119,10 @@ import PortScanRules from '@/components/rules/PortScanRules.vue';
 import PassiveScanRules from '@/components/rules/PassiveScanRules.vue';
 import ActiveScanRules from '@/components/rules/ActiveScanRules.vue';
 import InfoRuleEditDialog from '@/components/rules/InfoRuleEditDialog.vue';
-import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue'; // 导入SQL注入规则组件
-import XssRules from '@/components/rules/XssRules.vue'; // 导入XSS规则组件
-import FileInclusionRules from '@/components/rules/FileInclusionRules.vue'; // 导入文件包含规则组件
+import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue';
+import XssRules from '@/components/rules/XssRules.vue';
+import FileInclusionRules from '@/components/rules/FileInclusionRules.vue';
+import CommandInjectionRules from '@/components/rules/CommandInjectionRules.vue'; // 导入命令注入规则组件
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
@@ -126,9 +132,10 @@ export default {
     PassiveScanRules,
     ActiveScanRules,
     InfoRuleEditDialog,
-    SqlinjectionRules, // 注册SQL注入规则组件
-    XssRules, // 注册XSS规则组件
-    FileInclusionRules // 注册文件包含规则组件
+    SqlinjectionRules,
+    XssRules,
+    FileInclusionRules,
+    CommandInjectionRules // 注册命令注入规则组件
   },
   data() {
     return {
@@ -228,7 +235,7 @@ export default {
 
     handleVulnTabClick() {
       // 漏洞扫描规则标签切换处理
-      // 注意：SQL注入、XSS和文件包含规则已由组件自行加载
+      // 注意：SQL注入、XSS、文件包含、命令注入规则已由组件自行加载
       console.log(`切换到漏洞类型标签: ${this.activeVulnTab}`);
     },
 
