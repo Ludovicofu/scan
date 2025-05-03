@@ -17,29 +17,44 @@ class ComponentInfoScanner:
         self.signatures = {}
 
     def safe_decode(self, value):
-        """安全地解码任何值，处理所有可能的编码错误"""
+        """
+        安全地解码任何值，处理所有可能的编码错误
+        增强处理二进制数据的能力
+        """
         if value is None:
             return ""
 
         if isinstance(value, bytes):
             try:
+                # 首先尝试UTF-8解码
                 return value.decode('utf-8', errors='replace')
             except Exception:
-                # 如果出现任何问题，返回占位符
-                return "[二进制数据]"
+                try:
+                    # 尝试其他编码
+                    for encoding in ['latin1', 'gbk', 'gb2312', 'ascii']:
+                        try:
+                            return value.decode(encoding, errors='replace')
+                        except:
+                            continue
+
+                    # 如果所有解码都失败，转为十六进制表示
+                    return f"[二进制数据: {value.hex()[:30]}...]"
+                except:
+                    # 最后的兜底方案
+                    return "[解码失败的二进制数据]"
 
         if isinstance(value, str):
             # 如果已经是字符串，确保它是有效的UTF-8
             try:
                 return value.encode('utf-8', errors='replace').decode('utf-8')
             except Exception:
-                return "[编码错误]"
+                return "[编码错误的字符串]"
 
         # 处理其他类型
         try:
             return str(value)
         except Exception:
-            return "[无法转换为字符串]"
+            return "[无法转换为字符串的对象]"
 
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
         """
@@ -101,8 +116,14 @@ class ComponentInfoScanner:
                     for key, value in response.headers.items():
                         safe_key = self.safe_decode(key)
                         safe_value = self.safe_decode(value)
-                        if safe_key != "[编码错误]" and safe_value != "[编码错误]":
-                            resp_headers[safe_key] = safe_value
+
+                        # 跳过解码失败的头部
+                        if "[解码失败" in safe_key or "[二进制数据" in safe_key:
+                            continue
+                        if "[解码失败" in safe_value or "[二进制数据" in safe_value:
+                            safe_value = "[二进制内容]"
+
+                        resp_headers[safe_key] = safe_value
 
                     # 获取响应内容
                     resp_content = await response.text(errors='replace')
@@ -133,13 +154,18 @@ class ComponentInfoScanner:
                                     header_value = ''
 
                                 # 检查头名称是否有效
-                                if not header_name or header_name in ["[编码错误]", "[二进制数据]"]:
+                                if not header_name or header_name in ["[编码错误]", "[二进制数据", "[解码失败"]:
                                     print(f"无效的HTTP头名称: {header_name}")
                                     continue
 
                                 # 检查头是否存在
                                 if header_name in resp_headers:
                                     actual_value = resp_headers[header_name]
+
+                                    # 跳过二进制内容
+                                    if actual_value == "[二进制内容]":
+                                        continue
+
                                     # 如果没有指定值，或者值包含在实际值中
                                     if not header_value or (header_value.lower() in actual_value.lower()):
                                         return {'match_value': match_value}
@@ -222,8 +248,14 @@ class ComponentInfoScanner:
                     for key, value in response.headers.items():
                         safe_key = self.safe_decode(key)
                         safe_value = self.safe_decode(value)
-                        if safe_key != "[编码错误]" and safe_value != "[编码错误]":
-                            resp_headers[safe_key] = safe_value
+
+                        # 跳过无法解码的头部
+                        if "[解码失败" in safe_key or "[二进制数据" in safe_key:
+                            continue
+                        if "[解码失败" in safe_value or "[二进制数据" in safe_value:
+                            safe_value = "[二进制内容]"
+
+                        resp_headers[safe_key] = safe_value
 
                     # 获取响应内容
                     resp_content = await response.text(errors='replace')
@@ -248,9 +280,18 @@ class ComponentInfoScanner:
                                         print(f"无效的HTTP头名称: {header_name}")
                                         continue
 
+                                    # 检查头名称是否有效
+                                    if header_name in ["[编码错误]", "[二进制数据", "[解码失败"]:
+                                        continue
+
                                     # 安全检查头部
                                     if header_name in resp_headers:
                                         actual_value = resp_headers[header_name]
+
+                                        # 跳过二进制内容
+                                        if actual_value == "[二进制内容]":
+                                            continue
+
                                         if not header_value or header_value.lower() in actual_value.lower():
                                             if component not in detected_components:
                                                 detected_components.append(component)

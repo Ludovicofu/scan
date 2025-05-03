@@ -39,16 +39,116 @@ class ScanHelpers:
     def format_request_data(self, method, url, headers, content):
         """格式化请求数据"""
         request_data = f"{method} {url}\n"
+
+        # 预处理并过滤无效的头部
+        filtered_headers = {}
         for header, value in headers.items():
+            # 确保键和值都是字符串
+            if isinstance(header, bytes):
+                try:
+                    header = header.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，跳过此头部
+                    continue
+            elif not isinstance(header, str):
+                try:
+                    header = str(header)
+                except Exception:
+                    # 转换失败，跳过此头部
+                    continue
+
+            # 处理值
+            if isinstance(value, bytes):
+                try:
+                    value = value.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，使用占位符
+                    value = "[二进制数据]"
+            elif not isinstance(value, str):
+                try:
+                    value = str(value)
+                except Exception:
+                    # 转换失败，使用占位符
+                    value = "[无法转换为字符串]"
+
+            filtered_headers[header] = value
+
+        # 添加过滤后的头部
+        for header, value in filtered_headers.items():
             request_data += f"{header}: {value}\n"
+
+        # 处理请求内容
+        if content:
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，使用占位符
+                    content = "[二进制请求内容，无法显示]"
+            elif not isinstance(content, str):
+                try:
+                    content = str(content)
+                except Exception:
+                    content = "[无法转换为字符串的请求内容]"
+
         request_data += f"\n{content}"
         return request_data
 
     def format_response_data(self, status_code, headers, content):
         """格式化响应数据"""
         response_data = f"HTTP/1.1 {status_code} {self.get_status_text(status_code)}\n"
+
+        # 预处理并过滤无效的头部
+        filtered_headers = {}
         for header, value in headers.items():
+            # 确保键和值都是字符串
+            if isinstance(header, bytes):
+                try:
+                    header = header.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，跳过此头部
+                    continue
+            elif not isinstance(header, str):
+                try:
+                    header = str(header)
+                except Exception:
+                    # 转换失败，跳过此头部
+                    continue
+
+            # 处理值
+            if isinstance(value, bytes):
+                try:
+                    value = value.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，使用占位符
+                    value = "[二进制数据]"
+            elif not isinstance(value, str):
+                try:
+                    value = str(value)
+                except Exception:
+                    # 转换失败，使用占位符
+                    value = "[无法转换为字符串]"
+
+            filtered_headers[header] = value
+
+        # 添加过滤后的头部
+        for header, value in filtered_headers.items():
             response_data += f"{header}: {value}\n"
+
+        # 处理响应内容
+        if content:
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode('utf-8', errors='replace')
+                except Exception:
+                    # 解码失败，使用占位符
+                    content = "[二进制响应内容，无法显示]"
+            elif not isinstance(content, str):
+                try:
+                    content = str(content)
+                except Exception:
+                    content = "[无法转换为字符串的响应内容]"
+
         response_data += f"\n{content}"
         return response_data
 

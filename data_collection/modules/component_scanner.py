@@ -103,6 +103,58 @@ class ComponentScanner:
         if self.signatures_cache is None:
             self.signatures_cache = await self._load_component_signatures()
 
+        # 预处理请求和响应头，确保所有值都是字符串
+        processed_req_headers = {}
+        processed_resp_headers = {}
+
+        # 预处理请求头
+        for key, value in req_headers.items():
+            try:
+                # 确保键是字符串
+                if isinstance(key, bytes):
+                    key = key.decode('utf-8', errors='replace')
+                elif not isinstance(key, str):
+                    key = str(key)
+
+                # 确保值是字符串
+                if isinstance(value, bytes):
+                    try:
+                        value = value.decode('utf-8', errors='replace')
+                    except UnicodeDecodeError:
+                        value = "[二进制数据]"
+                elif not isinstance(value, str):
+                    value = str(value)
+
+                processed_req_headers[key] = value
+            except Exception as e:
+                print(f"处理请求头时出错: {str(e)}")
+                # 跳过无法处理的头部
+                continue
+
+        # 预处理响应头
+        for key, value in resp_headers.items():
+            try:
+                # 确保键是字符串
+                if isinstance(key, bytes):
+                    key = key.decode('utf-8', errors='replace')
+                elif not isinstance(key, str):
+                    key = str(key)
+
+                # 确保值是字符串
+                if isinstance(value, bytes):
+                    try:
+                        value = value.decode('utf-8', errors='replace')
+                    except UnicodeDecodeError:
+                        value = "[二进制数据]"
+                elif not isinstance(value, str):
+                    value = str(value)
+
+                processed_resp_headers[key] = value
+            except Exception as e:
+                print(f"处理响应头时出错: {str(e)}")
+                # 跳过无法处理的头部
+                continue
+
         # 自动检测组件
         if self.signatures_cache:
             use_proxy = context.get('use_proxy', False)
@@ -223,7 +275,7 @@ class ComponentScanner:
                         match_results.append(match_value)
 
             elif rule_type == 'header':
-                # HTTP头匹配 - 添加更强的安全检查
+                # HTTP头匹配 - 使用预处理后的头部
                 for match_value in match_values:
                     try:
                         # 添加深度检查
@@ -241,46 +293,37 @@ class ComponentScanner:
                         # 检查头部名称是否有效
                         if not header_name:
                             is_valid_header_value = False
+                            continue
 
-                        # 安全获取头部值
+                        # 安全获取头部值 - 使用预处理后的头部
                         if is_valid_header_value:
                             # 检查请求头
-                            req_header_value = None
-                            if header_name in req_headers:
-                                # 安全解码请求头值
-                                if isinstance(req_headers[header_name], bytes):
-                                    try:
-                                        req_header_value = req_headers[header_name].decode('utf-8', errors='replace')
-                                    except Exception as e:
-                                        print(f"请求头 {header_name} 解码失败: {str(e)}")
-                                        req_header_value = None
-                                else:
-                                    req_header_value = req_headers[header_name]
+                            if header_name in processed_req_headers:
+                                req_header_value = processed_req_headers[header_name]
 
-                                if req_header_value:
-                                    if not header_value or header_value.lower() in req_header_value.lower():
-                                        match_results.append(match_value)
-                                        continue
+                                # 跳过标记为二进制数据的值
+                                if req_header_value == "[二进制数据]":
+                                    continue
+
+                                if not header_value or header_value.lower() in req_header_value.lower():
+                                    match_results.append(match_value)
+                                    continue
 
                             # 检查响应头
-                            resp_header_value = None
-                            if header_name in resp_headers:
-                                # 安全解码响应头值
-                                if isinstance(resp_headers[header_name], bytes):
-                                    try:
-                                        resp_header_value = resp_headers[header_name].decode('utf-8', errors='replace')
-                                    except Exception as e:
-                                        print(f"响应头 {header_name} 解码失败: {str(e)}")
-                                        resp_header_value = None
-                                else:
-                                    resp_header_value = resp_headers[header_name]
+                            if header_name in processed_resp_headers:
+                                resp_header_value = processed_resp_headers[header_name]
 
-                                if resp_header_value:
-                                    if not header_value or header_value.lower() in resp_header_value.lower():
-                                        match_results.append(match_value)
-                                        continue
+                                # 跳过标记为二进制数据的值
+                                if resp_header_value == "[二进制数据]":
+                                    continue
+
+                                if not header_value or header_value.lower() in resp_header_value.lower():
+                                    match_results.append(match_value)
+                                    continue
                     except Exception as e:
                         print(f"处理HTTP头匹配值时出错: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
                         continue
 
             # 如果有匹配结果，保存扫描结果
