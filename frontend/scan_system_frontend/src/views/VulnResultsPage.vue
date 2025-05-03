@@ -30,28 +30,12 @@
         <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
         <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
         <el-tab-pane label="其他" name="other"></el-tab-pane>
-        <el-tab-pane label="信息收集" name="info_collection"></el-tab-pane>
       </el-tabs>
     </div>
 
-    <!-- 信息收集结果 -->
-    <InfoCollectionResults
-      v-if="currentVulnType === 'info_collection'"
-      :infoResults="results"
-      :loading="loading"
-      :currentPage="currentPage"
-      :pageSize="pageSize"
-      :total="totalResults"
-      :showPagination="true"
-      @size-change="handleSizeChange"
-      @current-change="handlePageChange"
-      @view-detail="showDetail"
-      @delete-info="deleteResult"
-    />
-
     <!-- SQL注入结果 -->
     <SqlInjectionResults
-      v-else-if="currentVulnType === 'sql_injection'"
+      v-if="currentVulnType === 'sql_injection'"
       :vulnResults="results"
       :loading="loading"
       :currentPage="currentPage"
@@ -131,14 +115,6 @@
       @close="detailDialogVisible = false"
       @verify="verifyVulnerability"
     />
-
-    <!-- 信息收集详情对话框 -->
-    <InfoDetailDialog
-      v-if="currentVulnType === 'info_collection'"
-      :visible="detailDialogVisible"
-      :infoResult="selectedResult"
-      @close="detailDialogVisible = false"
-    />
   </div>
 </template>
 
@@ -151,10 +127,8 @@ import RceResults from '@/components/vuln/RceResults.vue';
 import SsrfResults from '@/components/vuln/SsrfResults.vue';
 import GeneralVulnResults from '@/components/vuln/GeneralVulnResults.vue';
 import VulnDetailDialog from '@/components/vuln/VulnDetailDialog.vue';
-import InfoCollectionResults from '@/components/info/InfoCollectionResults.vue';
-import InfoDetailDialog from '@/components/info/InfoDetailDialog.vue';
-import { vulnScanAPI, infoCollectionAPI } from '@/services/api';
-import { vulnScanWS, dataCollectionWS } from '@/services/websocket';
+import { vulnScanAPI } from '@/services/api';
+import { vulnScanWS } from '@/services/websocket';
 import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
 
 export default {
@@ -167,9 +141,7 @@ export default {
     RceResults,
     SsrfResults,
     GeneralVulnResults,
-    VulnDetailDialog,
-    InfoCollectionResults,
-    InfoDetailDialog
+    VulnDetailDialog
   },
   data() {
     return {
@@ -237,19 +209,11 @@ export default {
 
     // WebSocket相关方法
     initWebSocket() {
-      if (this.currentVulnType === 'info_collection') {
-        this.initInfoCollectionWebSocket();
-      } else {
-        this.initVulnScanWebSocket();
-      }
-    },
-
-    initVulnScanWebSocket() {
       // 连接WebSocket
-      console.log("正在连接漏洞扫描WebSocket...");
+      console.log("正在连接WebSocket...");
       vulnScanWS.connect('ws://localhost:8000/ws/vuln_scan/')
         .then(() => {
-          console.log("漏洞扫描WebSocket连接成功!");
+          console.log("WebSocket连接成功!");
           // 添加事件监听器
           vulnScanWS.addListener('scan_progress', this.handleScanProgress);
           vulnScanWS.addListener('scan_result', this.handleScanResult);
@@ -260,37 +224,12 @@ export default {
           ElMessage.error('连接服务器失败，实时扫描进度将不可用');
         });
     },
-
-    initInfoCollectionWebSocket() {
-      // 连接WebSocket
-      console.log("正在连接信息收集WebSocket...");
-      dataCollectionWS.connect('ws://localhost:8000/ws/data_collection/')
-        .then(() => {
-          console.log("信息收集WebSocket连接成功!");
-          // 添加事件监听器
-          dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
-          dataCollectionWS.addListener('scan_result', this.handleInfoScanResult);
-          dataCollectionWS.addListener('scan_status', this.handleScanStatus);
-        })
-        .catch(error => {
-          console.error('连接WebSocket失败', error);
-          ElMessage.error('连接服务器失败，实时扫描进度将不可用');
-        });
-    },
-
     closeWebSocket() {
       // 移除事件监听器
-      if (this.currentVulnType === 'info_collection') {
-        dataCollectionWS.removeListener('scan_progress', this.handleScanProgress);
-        dataCollectionWS.removeListener('scan_result', this.handleInfoScanResult);
-        dataCollectionWS.removeListener('scan_status', this.handleScanStatus);
-      } else {
-        vulnScanWS.removeListener('scan_progress', this.handleScanProgress);
-        vulnScanWS.removeListener('scan_result', this.handleScanResult);
-        vulnScanWS.removeListener('scan_status', this.handleScanStatus);
-      }
+      vulnScanWS.removeListener('scan_progress', this.handleScanProgress);
+      vulnScanWS.removeListener('scan_result', this.handleScanResult);
+      vulnScanWS.removeListener('scan_status', this.handleScanStatus);
     },
-
     handleScanProgress(data) {
       // 处理扫描进度更新
       this.scanStatus = data.data.status;
@@ -299,7 +238,6 @@ export default {
       this.scanMessage = data.data.message || '';
     },
 
-    // 处理漏洞扫描结果
     handleScanResult(data) {
       // 创建唯一标识符
       const resultKey = `${data.data.vuln_type}-${data.data.name}-${data.data.url}`;
@@ -341,48 +279,6 @@ export default {
       }
     },
 
-    // 处理信息收集结果
-    handleInfoScanResult(data) {
-      // 创建唯一标识符
-      const resultKey = `info-${data.data.module}-${data.data.description}-${data.data.match_value}`;
-
-      // 检查是否已经通知过这个结果
-      if (this.notifiedResults.has(resultKey)) {
-        console.log("忽略重复信息收集结果:", resultKey);
-        return;
-      }
-
-      // 添加到已通知集合
-      this.notifiedResults.add(resultKey);
-
-      console.log("收到新的信息收集结果:", data);
-
-      // 只有当前显示信息收集时
-      if (this.currentVulnType === 'info_collection') {
-        // 检查是否已在显示列表中
-        if (!this.displayedResults.has(resultKey)) {
-          // 保存到显示集合
-          this.displayedResults.set(resultKey, data.data);
-
-          // 添加到显示列表
-          if (this.results.length < this.pageSize) {
-            // 将新结果添加到列表头部
-            this.results.unshift(data.data);
-            this.totalResults++;
-            console.log("添加信息收集结果到列表");
-          }
-
-          // 显示通知
-          ElNotification({
-            title: '信息收集',
-            message: `发现新信息: ${data.data.description}`,
-            type: 'info',
-            duration: 5000
-          });
-        }
-      }
-    },
-
     handleScanStatus(data) {
       // 处理扫描状态更新
       if (data.status === 'started') {
@@ -398,49 +294,27 @@ export default {
 
     // 扫描操作
     startScan() {
-      if (this.currentVulnType === 'info_collection') {
-        if (!dataCollectionWS.isConnected) {
-          ElMessage.error('WebSocket未连接，无法启动扫描');
-          return;
-        }
-        // 发送开始扫描消息
-        dataCollectionWS.send({
-          type: 'start_scan',
-          options: {}
-        });
-      } else {
-        if (!vulnScanWS.isConnected) {
-          ElMessage.error('WebSocket未连接，无法启动扫描');
-          return;
-        }
-        // 发送开始扫描消息
-        vulnScanWS.send({
-          type: 'start_scan',
-          options: {}
-        });
+      if (!vulnScanWS.isConnected) {
+        ElMessage.error('WebSocket未连接，无法启动扫描');
+        return;
       }
-    },
 
+      // 发送开始扫描消息
+      vulnScanWS.send({
+        type: 'start_scan',
+        options: {}
+      });
+    },
     stopScan() {
-      if (this.currentVulnType === 'info_collection') {
-        if (!dataCollectionWS.isConnected) {
-          ElMessage.error('WebSocket未连接，无法停止扫描');
-          return;
-        }
-        // 发送停止扫描消息
-        dataCollectionWS.send({
-          type: 'stop_scan'
-        });
-      } else {
-        if (!vulnScanWS.isConnected) {
-          ElMessage.error('WebSocket未连接，无法停止扫描');
-          return;
-        }
-        // 发送停止扫描消息
-        vulnScanWS.send({
-          type: 'stop_scan'
-        });
+      if (!vulnScanWS.isConnected) {
+        ElMessage.error('WebSocket未连接，无法停止扫描');
+        return;
       }
+
+      // 发送停止扫描消息
+      vulnScanWS.send({
+        type: 'stop_scan'
+      });
     },
 
     // 数据操作方法
@@ -453,17 +327,10 @@ export default {
           page_size: this.pageSize
         };
 
-        console.log("查询参数:", params);
+        console.log("查询漏洞参数:", params);
 
-        let response;
-
-        // 根据当前tab获取不同类型的结果
-        if (this.currentVulnType === 'info_collection') {
-          response = await infoCollectionAPI.getScanResults(params);
-        } else {
-          // 使用按类型查询的API
-          response = await vulnScanAPI.getVulnResultsByType(this.currentVulnType, params);
-        }
+        // 使用按类型查询的API
+        const response = await vulnScanAPI.getVulnResultsByType(this.currentVulnType, params);
 
         console.log("API响应:", response);
 
@@ -473,19 +340,14 @@ export default {
         // 更新已显示结果的集合
         this.displayedResults.clear();
         this.results.forEach(result => {
-          let resultKey;
-          if (this.currentVulnType === 'info_collection') {
-            resultKey = `info-${result.module}-${result.description}-${result.match_value}`;
-          } else {
-            resultKey = `${result.vuln_type}-${result.name}-${result.url}`;
-          }
+          const resultKey = `${result.vuln_type}-${result.name}-${result.url}`;
           this.displayedResults.set(resultKey, result);
         });
 
-        console.log("结果数量:", this.results.length);
+        console.log("漏洞结果数量:", this.results.length);
       } catch (error) {
-        console.error('获取结果失败', error);
-        ElMessage.error('获取结果失败');
+        console.error('获取漏洞扫描结果失败', error);
+        ElMessage.error('获取漏洞扫描结果失败');
       } finally {
         this.loading = false;
       }
@@ -493,29 +355,19 @@ export default {
 
     async deleteResult(id) {
       try {
-        await ElMessageBox.confirm('确认删除此记录?', '提示', {
+        await ElMessageBox.confirm('确认删除此漏洞记录?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         });
 
-        if (this.currentVulnType === 'info_collection') {
-          await infoCollectionAPI.deleteScanResult(id);
-        } else {
-          await vulnScanAPI.deleteScanResult(id);
-        }
-
+        await vulnScanAPI.deleteScanResult(id);
         ElMessage.success('删除成功');
 
         // 找到并从displayedResults中移除
         const resultToRemove = this.results.find(r => r.id === id);
         if (resultToRemove) {
-          let key;
-          if (this.currentVulnType === 'info_collection') {
-            key = `info-${resultToRemove.module}-${resultToRemove.description}-${resultToRemove.match_value}`;
-          } else {
-            key = `${resultToRemove.vuln_type}-${resultToRemove.name}-${resultToRemove.url}`;
-          }
+          const key = `${resultToRemove.vuln_type}-${resultToRemove.name}-${resultToRemove.url}`;
           this.displayedResults.delete(key);
         }
 
@@ -523,8 +375,8 @@ export default {
         this.fetchResults();
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除记录失败', error);
-          ElMessage.error('删除记录失败');
+          console.error('删除漏洞记录失败', error);
+          ElMessage.error('删除漏洞记录失败');
         }
       }
     },
@@ -543,15 +395,9 @@ export default {
       this.currentPage = 1; // 重置为第一页
       this.fetchResults();
     },
-    async handleVulnTypeChange() {
-      // 切换tab时需要断开当前WebSocket并连接新的WebSocket
-      this.closeWebSocket();
-
+    handleVulnTypeChange() {
       this.currentPage = 1; // 重置为第一页
-      await this.fetchResults();
-
-      // 重新连接对应的WebSocket
-      this.initWebSocket();
+      this.fetchResults();
     },
 
     // 查看详情

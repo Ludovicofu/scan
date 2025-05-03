@@ -46,13 +46,13 @@
 
       <el-table-column
         label="匹配值"
-        width="150"
+        width="180"
         show-overflow-tooltip
       >
         <template #default="scope">
-          <el-tooltip 
+          <el-tooltip
             v-if="isSqlErrorMatch(scope.row)"
-            :content="getFullErrorMatchInfo(scope.row)" 
+            :content="getFullErrorMatchInfo(scope.row)"
             placement="top"
             effect="light"
           >
@@ -188,70 +188,69 @@ export default {
       return row.vuln_subtype === 'blind' && (row.proof || '').includes('时间');
     },
 
-    // 从proof中提取完整的匹配值
+    // 从proof中提取匹配值
     getMatchValueFromProof(proof) {
       if (!proof) return '无';
-      
+
       // 尝试从证明中提取匹配信息
       const matchInfo = proof.match(/包含SQL错误信息[:：]\s*(.+?)(?=\s*$|\s*[,，。.])/i);
       if (matchInfo && matchInfo[1]) {
         return matchInfo[1].trim();
       }
-      
+
       // 查找其他可能的匹配模式
       const otherPatterns = [
         /匹配[:：]\s*(.+?)(?=\s*$|\s*[,，。.])/i,
         /发现[:：]\s*(.+?)(?=\s*$|\s*[,，。.])/i,
         /包含[:：]\s*(.+?)(?=\s*$|\s*[,，。.])/i
       ];
-      
+
       for (const pattern of otherPatterns) {
         const match = proof.match(pattern);
         if (match && match[1]) {
           return match[1].trim();
         }
       }
-      
+
       // 如果没有找到明确的匹配模式，返回前30个字符
       return proof.length > 30 ? proof.slice(0, 30) + '...' : proof;
     },
 
-    // 获取错误匹配信息（用于表格显示）
+    // 获取错误匹配信息（用于表格显示）- 修改了字符限制
     getErrorMatchInfo(row) {
-      const proof = row.proof || '';
-      // 尝试提取SQL错误信息
       const fullMatchInfo = this.getFullErrorMatchInfo(row);
-      
-      // 如果匹配值长度超过15个字符，则截断显示
-      if (fullMatchInfo.length > 15) {
-        return fullMatchInfo.slice(0, 15) + '...';
+
+      // 将字符限制从15增加到30，更好地显示SQL语法错误
+      if (fullMatchInfo.length > 30) {
+        return fullMatchInfo.slice(0, 30) + '...';
       }
-      
+
       return fullMatchInfo || '错误匹配';
     },
-    
+
     // 获取完整的错误匹配信息（用于悬停提示）
     getFullErrorMatchInfo(row) {
       const proof = row.proof || '';
-      
+
       // 尝试提取SQL错误信息
       const matchInfo = proof.match(/包含SQL错误信息[:：]\s*(.+?)(?=\s*$|\s*[,，。.])/i);
       if (matchInfo && matchInfo[1]) {
         return matchInfo[1].trim();
       }
-      
+
       // 如果不能从证明中提取，查找常见的SQL错误关键字
       const sqlErrorKeywords = [
         "SQL syntax", "MySQL", "SQL Server", "ORA-", "SQLSTATE",
         "syntax error", "mysqli", "Warning"
       ];
-      
+
       for (const keyword of sqlErrorKeywords) {
         if (proof.includes(keyword)) {
-          // 提取包含关键字的上下文
+          // 提取包含关键字的更完整上下文
           const keywordIndex = proof.indexOf(keyword);
-          const start = Math.max(0, keywordIndex - 10);
-          const end = Math.min(proof.length, keywordIndex + keyword.length + 20);
+          // 扩大上下文范围
+          const start = Math.max(0, keywordIndex - 15);
+          const end = Math.min(proof.length, keywordIndex + keyword.length + 40);
           return proof.substring(start, end);
         }
       }
