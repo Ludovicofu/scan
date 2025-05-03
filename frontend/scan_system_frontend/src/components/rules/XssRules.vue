@@ -272,7 +272,7 @@
               placeholder="请输入XSS上下文匹配模式 (JSON格式)"
             ></el-input>
             <div class="hint">
-              样例: {"html": "&lt;[^&gt;]*&gt;(.*?)&lt;\\/[^&gt;]*&gt;", "attribute": "&lt;[^&gt;]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^&gt;]*&gt;"}
+              样例: {"html": "&lt;[^&gt;]*&gt;(.*?)&lt;/[^&gt;]*&gt;", "attribute": "&lt;[^&gt;]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^&gt;]*&gt;"}
             </div>
           </div>
         </div>
@@ -536,9 +536,9 @@ export default {
           console.log("未找到XSS上下文匹配模式规则，使用默认值");
           // 如果没有找到规则，使用默认值
           this.contextPatterns = {
-            "html": "<[^>]*>(.*?)<\\/[^>]*>",
-            "attribute": "<[^>]*[a-zA-Z0-9]+=(['\"])(.*?)\\1[^>]*>",
-            "javascript": "<script[^>]*>(.*?)<\\/script>",
+            "html": "<[^>]*>(.*?)</[^>]*>",
+            "attribute": "<[^>]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^>]*>",
+            "javascript": "<script[^>]*>(.*?)</script>",
             "url": "(href|src|action|url)\\s*=\\s*(['\"])(.*?)\\2"
           };
           this.contextPatternsText = JSON.stringify(this.contextPatterns, null, 2);
@@ -553,9 +553,9 @@ export default {
 
         // 使用默认值
         this.contextPatterns = {
-          "html": "<[^>]*>(.*?)<\\/[^>]*>",
-          "attribute": "<[^>]*[a-zA-Z0-9]+=(['\"])(.*?)\\1[^>]*>",
-          "javascript": "<script[^>]*>(.*?)<\\/script>",
+          "html": "<[^>]*>(.*?)</[^>]*>",
+          "attribute": "<[^>]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^>]*>",
+          "javascript": "<script[^>]*>(.*?)</script>",
           "url": "(href|src|action|url)\\s*=\\s*(['\"])(.*?)\\2"
         };
         this.contextPatternsText = JSON.stringify(this.contextPatterns, null, 2);
