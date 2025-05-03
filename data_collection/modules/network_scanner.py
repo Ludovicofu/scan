@@ -111,7 +111,9 @@ class NetworkScanner:
             cache_key = (asset.id, 'network', rule_type, description)
 
             # 检查全局缓存
-            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network', description, rule_type, ''):
+            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network',
+                                                                                                 description, rule_type,
+                                                                                                 ''):
                 print(f"跳过全局缓存中已存在的结果: {cache_key}")
                 continue
 
@@ -134,21 +136,65 @@ class NetworkScanner:
                         match_results.append(match_value)
 
             elif rule_type == 'header':
-                # HTTP头匹配
+                # HTTP头匹配 - 增加安全检查
                 for match_value in match_values:
-                    header_name, header_value = match_value.split(':', 1) if ':' in match_value else (match_value, '')
-                    header_name = header_name.strip()
-                    header_value = header_value.strip()
+                    try:
+                        # 添加深度检查
+                        is_valid_header_value = True
 
-                    # 检查请求头
-                    if header_name in req_headers:
-                        if not header_value or header_value.lower() in req_headers[header_name].lower():
-                            match_results.append(match_value)
+                        # 解析头部名称和值
+                        if ':' in match_value:
+                            header_parts = match_value.split(':', 1)
+                            header_name = header_parts[0].strip()
+                            header_value = header_parts[1].strip() if len(header_parts) > 1 else ''
+                        else:
+                            header_name = match_value.strip()
+                            header_value = ''
 
-                    # 检查响应头
-                    if header_name in resp_headers:
-                        if not header_value or header_value.lower() in resp_headers[header_name].lower():
-                            match_results.append(match_value)
+                        # 检查头部名称是否有效
+                        if not header_name:
+                            is_valid_header_value = False
+
+                        # 安全获取头部值
+                        if is_valid_header_value:
+                            # 检查请求头
+                            req_header_value = None
+                            if header_name in req_headers:
+                                # 安全解码请求头值
+                                if isinstance(req_headers[header_name], bytes):
+                                    try:
+                                        req_header_value = req_headers[header_name].decode('utf-8', errors='replace')
+                                    except Exception as e:
+                                        print(f"请求头 {header_name} 解码失败: {str(e)}")
+                                        req_header_value = None
+                                else:
+                                    req_header_value = req_headers[header_name]
+
+                                if req_header_value:
+                                    if not header_value or header_value.lower() in req_header_value.lower():
+                                        match_results.append(match_value)
+                                        continue
+
+                            # 检查响应头
+                            resp_header_value = None
+                            if header_name in resp_headers:
+                                # 安全解码响应头值
+                                if isinstance(resp_headers[header_name], bytes):
+                                    try:
+                                        resp_header_value = resp_headers[header_name].decode('utf-8', errors='replace')
+                                    except Exception as e:
+                                        print(f"响应头 {header_name} 解码失败: {str(e)}")
+                                        resp_header_value = None
+                                else:
+                                    resp_header_value = resp_headers[header_name]
+
+                                if resp_header_value:
+                                    if not header_value or header_value.lower() in resp_header_value.lower():
+                                        match_results.append(match_value)
+                                        continue
+                    except Exception as e:
+                        print(f"处理HTTP头匹配值时出错: {str(e)}")
+                        continue
 
             # 如果有匹配结果，保存扫描结果
             if match_results:
@@ -233,7 +279,9 @@ class NetworkScanner:
             cache_key = (asset.id, 'network', rule_type, description)
 
             # 检查全局缓存
-            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network', description, rule_type, ''):
+            if scanner and hasattr(scanner, 'is_result_in_cache') and scanner.is_result_in_cache(asset.id, 'network',
+                                                                                                 description, rule_type,
+                                                                                                 ''):
                 print(f"跳过全局缓存中已存在的主动扫描结果: {cache_key}")
                 continue
 

@@ -17,6 +17,31 @@ class NetworkInfoScanner:
         # 添加记录已发现的开放端口
         self.discovered_ports = {}  # 格式：{host: set(ports)}
 
+    def safe_decode(self, value):
+        """安全地解码任何值，处理所有可能的编码错误"""
+        if value is None:
+            return ""
+
+        if isinstance(value, bytes):
+            try:
+                return value.decode('utf-8', errors='replace')
+            except Exception:
+                # 如果出现任何问题，返回占位符
+                return "[二进制数据]"
+
+        if isinstance(value, str):
+            # 如果已经是字符串，确保它是有效的UTF-8
+            try:
+                return value.encode('utf-8', errors='replace').decode('utf-8')
+            except Exception:
+                return "[编码错误]"
+
+        # 处理其他类型
+        try:
+            return str(value)
+        except Exception:
+            return "[无法转换为字符串]"
+
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
         """
         根据规则扫描网络信息
@@ -134,11 +159,16 @@ class NetworkInfoScanner:
                     # 获取响应状态码
                     status_code = response.status
 
-                    # 获取响应头
-                    resp_headers = dict(response.headers)
+                    # 获取响应头 - 使用安全解码
+                    resp_headers = {}
+                    for key, value in response.headers.items():
+                        safe_key = self.safe_decode(key)
+                        safe_value = self.safe_decode(value)
+                        if safe_key != "[编码错误]" and safe_value != "[编码错误]":
+                            resp_headers[safe_key] = safe_value
 
                     # 获取响应内容
-                    resp_content = await response.text(errors='ignore')
+                    resp_content = await response.text(errors='replace')
 
                     # 根据规则类型进行匹配
                     if rule_type == 'status_code':
@@ -153,16 +183,35 @@ class NetworkInfoScanner:
                                 return {'match_value': match_value}
 
                     elif rule_type == 'header':
-                        # HTTP头匹配
+                        # HTTP头匹配 - 增加安全检查
                         for match_value in match_values:
-                            header_name, header_value = match_value.split(':', 1) if ':' in match_value else (
-                                match_value, '')
-                            header_name = header_name.strip()
-                            header_value = header_value.strip()
+                            try:
+                                # 添加深度检查
+                                is_valid_header_value = True
 
-                            if header_name in resp_headers:
-                                if not header_value or header_value.lower() in resp_headers[header_name].lower():
-                                    return {'match_value': match_value}
+                                # 解析头部名称和值
+                                if ':' in match_value:
+                                    header_parts = match_value.split(':', 1)
+                                    header_name = header_parts[0].strip()
+                                    header_value = header_parts[1].strip() if len(header_parts) > 1 else ''
+                                else:
+                                    header_name = match_value.strip()
+                                    header_value = ''
+
+                                # 检查头部名称是否有效
+                                if not header_name or header_name in ["[编码错误]", "[二进制数据]"]:
+                                    print(f"无效的HTTP头名称: {header_name}")
+                                    continue
+
+                                # 检查头是否存在
+                                if header_name in resp_headers:
+                                    actual_value = resp_headers[header_name]
+                                    # 如果没有指定值，或者值包含在实际值中
+                                    if not header_value or (header_value.lower() in actual_value.lower()):
+                                        return {'match_value': match_value}
+                            except Exception as e:
+                                print(f"处理HTTP头匹配值时出错: {str(e)}")
+                                continue
 
             # 没有匹配结果
             return None

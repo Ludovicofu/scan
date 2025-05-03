@@ -2,8 +2,12 @@
 组件信息扫描模块：负责扫描网站组件和服务相关信息
 """
 import asyncio
+import json
 from urllib.parse import urlparse, urljoin
+from asgiref.sync import sync_to_async
+from django.utils import timezone
 from ..component_info import ComponentInfoScanner
+from rules.models import InfoCollectionRule
 
 
 class ComponentScanner:
@@ -17,9 +21,13 @@ class ComponentScanner:
         # 格式: (asset_id, module, rule_type, description)
         self.result_cache = set()
 
+        # 添加组件特征签名缓存
+        self.signatures_cache = None
+
     def clear_cache(self):
         """清除缓存"""
         self.result_cache.clear()
+        self.signatures_cache = None
         print("组件扫描器缓存已清除")
 
     async def scan(self, context):
@@ -69,12 +77,10 @@ class ComponentScanner:
         active_rules = await helpers.get_rules('component', 'active')
         print(f"获取到 {len(active_rules)} 条组件模块主动扫描规则")
 
-        # 打印规则详情用于调试
-        for rule in active_rules:
-            print(f"组件规则ID: {rule['id']}, 描述: {rule['description']}, 规则类型: {rule['rule_type']}")
-            print(f"组件行为列表: {rule['behaviors']}")
-            print(f"组件匹配值列表: {rule['match_values']}")
-            print("-" * 50)
+        # 如果没有规则，跳过主动扫描
+        if not active_rules:
+            print("没有组件模块主动扫描规则，跳过主动扫描")
+            return
 
         # 进行主动扫描
         await self._do_active_scan(
@@ -93,6 +99,94 @@ class ComponentScanner:
         resp_content = context['resp_content']
         channel_layer = context['channel_layer']
 
+        # 加载组件特征签名
+        if self.signatures_cache is None:
+            self.signatures_cache = await self._load_component_signatures()
+
+        # 自动检测组件
+        if self.signatures_cache:
+            use_proxy = context.get('use_proxy', False)
+            proxy_address = context.get('proxy_address', None)
+
+            # 使用加载的特征签名进行组件检测
+            detected_components = await self.component_info_scanner.detect_components(
+                url=context['url'],
+                use_proxy=use_proxy,
+                proxy_address=proxy_address,
+                signatures=self.signatures_cache
+            )
+
+            # 如果检测到组件，保存结果
+            if detected_components:
+                for component in detected_components:
+                    # 创建缓存键
+                    cache_key = (asset.id, 'component', 'auto_detect', component)
+
+                    # 检查全局缓存和模块缓存
+                    if (scanner and hasattr(scanner, 'is_result_in_cache') and
+                        scanner.is_result_in_cache(asset.id, 'component', component, 'auto_detect', '')):
+                        print(f"跳过全局缓存中已存在的组件检测结果: {component}")
+                        continue
+
+                    if cache_key in self.result_cache:
+                        print(f"跳过模块缓存中已存在的组件检测结果: {component}")
+                        continue
+
+                    # 添加到模块缓存
+                    self.result_cache.add(cache_key)
+
+                    # 添加到全局缓存
+                    if scanner and hasattr(scanner, 'add_result_to_cache'):
+                        scanner.add_result_to_cache(asset.id, 'component', component, 'auto_detect', component)
+
+                    # 检查是否已存在相同的结果
+                    existing = await helpers.check_existing_result(
+                        asset=asset,
+                        module='component',
+                        description=f"检测到组件: {component}",
+                        rule_type='auto_detect',
+                        match_value=component
+                    )
+
+                    if not existing:
+                        # 保存检测结果
+                        scan_result = await helpers.save_scan_result(
+                            asset=asset,
+                            module='component',
+                            scan_type='passive',
+                            description=f"检测到组件: {component}",
+                            rule_type='auto_detect',
+                            match_value=component,
+                            behavior=None,
+                            request_data=request_data,
+                            response_data=response_data
+                        )
+
+                        # 发送扫描结果事件
+                        if scan_result:
+                            await channel_layer.group_send(
+                                'data_collection_scanner',
+                                {
+                                    'type': 'scan_result',
+                                    'data': {
+                                        'id': scan_result.id,
+                                        'asset': asset.host,
+                                        'module': 'component',
+                                        'module_display': '组件与服务信息',
+                                        'scan_type': 'passive',
+                                        'scan_type_display': '被动扫描',
+                                        'description': f"检测到组件: {component}",
+                                        'rule_type': 'auto_detect',
+                                        'match_value': component,
+                                        'behavior': None,
+                                        'request_data': request_data,
+                                        'response_data': response_data,
+                                        'scan_date': None  # 由Django生成
+                                    }
+                                }
+                            )
+
+        # 手动规则扫描
         for rule in passive_rules:
             # 获取规则详情
             rule_id = rule['id']
@@ -129,21 +223,65 @@ class ComponentScanner:
                         match_results.append(match_value)
 
             elif rule_type == 'header':
-                # HTTP头匹配
+                # HTTP头匹配 - 添加更强的安全检查
                 for match_value in match_values:
-                    header_name, header_value = match_value.split(':', 1) if ':' in match_value else (match_value, '')
-                    header_name = header_name.strip()
-                    header_value = header_value.strip()
+                    try:
+                        # 添加深度检查
+                        is_valid_header_value = True
 
-                    # 检查请求头
-                    if header_name in req_headers:
-                        if not header_value or header_value.lower() in req_headers[header_name].lower():
-                            match_results.append(match_value)
+                        # 解析头部名称和值
+                        if ':' in match_value:
+                            header_parts = match_value.split(':', 1)
+                            header_name = header_parts[0].strip()
+                            header_value = header_parts[1].strip() if len(header_parts) > 1 else ''
+                        else:
+                            header_name = match_value.strip()
+                            header_value = ''
 
-                    # 检查响应头
-                    if header_name in resp_headers:
-                        if not header_value or header_value.lower() in resp_headers[header_name].lower():
-                            match_results.append(match_value)
+                        # 检查头部名称是否有效
+                        if not header_name:
+                            is_valid_header_value = False
+
+                        # 安全获取头部值
+                        if is_valid_header_value:
+                            # 检查请求头
+                            req_header_value = None
+                            if header_name in req_headers:
+                                # 安全解码请求头值
+                                if isinstance(req_headers[header_name], bytes):
+                                    try:
+                                        req_header_value = req_headers[header_name].decode('utf-8', errors='replace')
+                                    except Exception as e:
+                                        print(f"请求头 {header_name} 解码失败: {str(e)}")
+                                        req_header_value = None
+                                else:
+                                    req_header_value = req_headers[header_name]
+
+                                if req_header_value:
+                                    if not header_value or header_value.lower() in req_header_value.lower():
+                                        match_results.append(match_value)
+                                        continue
+
+                            # 检查响应头
+                            resp_header_value = None
+                            if header_name in resp_headers:
+                                # 安全解码响应头值
+                                if isinstance(resp_headers[header_name], bytes):
+                                    try:
+                                        resp_header_value = resp_headers[header_name].decode('utf-8', errors='replace')
+                                    except Exception as e:
+                                        print(f"响应头 {header_name} 解码失败: {str(e)}")
+                                        resp_header_value = None
+                                else:
+                                    resp_header_value = resp_headers[header_name]
+
+                                if resp_header_value:
+                                    if not header_value or header_value.lower() in resp_header_value.lower():
+                                        match_results.append(match_value)
+                                        continue
+                    except Exception as e:
+                        print(f"处理HTTP头匹配值时出错: {str(e)}")
+                        continue
 
             # 如果有匹配结果，保存扫描结果
             if match_results:
@@ -350,3 +488,33 @@ class ComponentScanner:
                     import traceback
                     traceback.print_exc()
                     continue
+
+    @sync_to_async
+    def _load_component_signatures(self):
+        """从数据库加载组件特征签名"""
+        try:
+            # 查找名为"组件特征签名"的规则
+            rules = InfoCollectionRule.objects.filter(
+                module='component',
+                description__contains='组件特征签名',
+                is_enabled=True
+            ).first()
+
+            if not rules:
+                print("未找到组件特征签名规则")
+                return {}
+
+            # 解析规则内容
+            try:
+                signatures = json.loads(rules.match_values)
+                print(f"成功加载组件特征签名: {len(signatures)} 个组件")
+                return signatures
+            except json.JSONDecodeError:
+                print(f"组件特征签名格式错误，无法解析JSON")
+                return {}
+
+        except Exception as e:
+            print(f"加载组件特征签名失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {}

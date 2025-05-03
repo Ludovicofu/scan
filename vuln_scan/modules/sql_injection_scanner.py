@@ -29,9 +29,6 @@ class SqlInjectionScanner:
         # 默认延时时间(用于基于时间的盲注)
         self.time_delay = 5
 
-        # 不再设置永久禁用的头部
-        # self.permanently_disabled_headers = ["User-Agent", "Referer"]
-
     def safe_decode(self, value):
         """安全地解码任何值，处理所有可能的编码错误"""
         if value is None:
@@ -120,8 +117,9 @@ class SqlInjectionScanner:
             )
             results.extend(post_results)
 
-        # 3. 检查HTTP头中的SQL注入
+        # 3. 检查HTTP头中的SQL注入 - 只有当明确配置了HTTP头规则时才执行
         if http_headers and len(http_headers) > 0:
+            print(f"执行HTTP头扫描，配置的头部: {http_headers}")
             header_results = await self.scan_http_headers(
                 context,
                 url,
@@ -132,6 +130,8 @@ class SqlInjectionScanner:
                 error_patterns
             )
             results.extend(header_results)
+        else:
+            print("没有配置HTTP头规则，跳过HTTP头扫描")
 
         return results
 
@@ -175,7 +175,7 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回空列表，而不是默认值
+        # 如果没有找到规则，返回空列表
         print("未找到回显型SQL注入规则，跳过此类检测")
         return []
 
@@ -188,7 +188,7 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回空列表，而不是默认值
+        # 如果没有找到规则，返回空列表
         print("未找到盲注型SQL注入规则，跳过此类检测")
         return []
 
@@ -201,10 +201,11 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             # 从规则中获取要测试的HTTP头列表
             headers = rule_content['payloads']
+            print(f"从数据库获取到HTTP头规则: {headers}")
             return headers
 
-        # 如果没有找到规则，返回空列表，而不是默认值
-        print("未找到HTTP头注入规则，跳过此类检测")
+        # 如果没有找到规则，返回空列表，不使用默认值
+        print("未找到HTTP头注入规则，跳过HTTP头检测")
         return []
 
     async def get_error_patterns(self, context):
@@ -216,7 +217,7 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回空列表，而不是默认值
+        # 如果没有找到规则，返回简单的默认匹配模式
         print("未找到SQL错误匹配模式规则，使用简化匹配")
         return [
             r"SQL syntax.*error",
@@ -618,19 +619,21 @@ class SqlInjectionScanner:
         """扫描HTTP头中的SQL注入漏洞"""
         results = []
 
-        # 如果没有载荷，直接返回
+        # 如果没有载荷或要测试的头部，直接返回
         if not error_payloads and not blind_payloads:
+            print("没有SQL注入载荷，跳过HTTP头扫描")
+            return results
+
+        if not headers_to_test or len(headers_to_test) == 0:
+            print("没有要测试的HTTP头列表，跳过HTTP头扫描")
             return results
 
         try:
             # 解析URL获取主机信息
             parsed_url = urlparse(url)
 
-            # 如果没有要测试的头部，直接返回
-            if not headers_to_test:
-                return results
-
-            print(f"测试HTTP头: {headers_to_test}")
+            # 打印所有要测试的HTTP头
+            print(f"测试以下HTTP头: {headers_to_test}")
 
             # 测试每个HTTP头
             for header in headers_to_test:
@@ -664,7 +667,8 @@ class SqlInjectionScanner:
                             else:
                                 # 对其他头部使用安全解码
                                 decoded_value = self.safe_decode(v)
-                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
+                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]",
+                                                                           "[无法转换为字符串]"]:
                                     test_headers[k] = decoded_value
 
                         # 确保Host头存在
@@ -726,7 +730,8 @@ class SqlInjectionScanner:
                             else:
                                 # 对其他头部使用安全解码
                                 decoded_value = self.safe_decode(v)
-                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
+                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]",
+                                                                           "[无法转换为字符串]"]:
                                     test_headers[k] = decoded_value
 
                         # 确保Host头存在
