@@ -3,205 +3,69 @@
   <div class="xss-rules">
     <h3>XSS跨站脚本扫描设置</h3>
     <div class="rules-container">
-      <!-- 反射型XSS载荷 -->
+      <!-- XSS载荷 -->
       <div class="rule-section">
         <div class="rules-header">
           <div class="rule-info">
-            <span class="rule-title">反射型XSS载荷</span>
-            <span class="rule-desc">添加用于检测反射型XSS漏洞的测试载荷</span>
+            <span class="rule-title">XSS载荷</span>
+            <span class="rule-desc">添加用于检测XSS漏洞的测试载荷</span>
           </div>
           <div class="rule-actions">
             <el-button
               type="primary"
               size="small"
-              @click="editReflectedPayloads"
-              v-if="!isEditingReflected">
+              @click="editPayloads"
+              v-if="!isEditingPayloads">
               修改
             </el-button>
             <template v-else>
               <el-button
                 type="success"
                 size="small"
-                @click="saveReflectedPayloads">
+                @click="savePayloads">
                 保存
               </el-button>
               <el-button
                 type="info"
                 size="small"
-                @click="cancelEditReflected">
+                @click="cancelEditPayloads">
                 取消
               </el-button>
             </template>
           </div>
         </div>
 
-        <div v-if="isLoadingReflected" class="loading-state">
+        <div v-if="isLoadingPayloads" class="loading-state">
           <el-skeleton :rows="3" animated />
         </div>
-        <div v-else-if="loadReflectedFailed" class="error-state">
+        <div v-else-if="loadPayloadsFailed" class="error-state">
           <el-alert
-            title="加载反射型XSS规则失败"
+            title="加载XSS规则失败"
             type="error"
-            description="使用默认配置"
+            description="无法获取规则配置"
             :closable="false"
             show-icon
           />
         </div>
 
         <div v-else class="rules-content">
-          <div v-if="!isEditingReflected" class="payloads-list">
-            <div v-for="(payload, index) in reflectedPayloads" :key="index" class="payload-item">
+          <div v-if="!isEditingPayloads" class="payloads-list">
+            <div v-for="(payload, index) in payloads" :key="index" class="payload-item">
               {{ payload }}
             </div>
-            <div v-if="reflectedPayloads.length === 0" class="no-payload">
-              没有配置反射型XSS载荷，点击"修改"添加载荷
+            <div v-if="payloads.length === 0" class="no-payload">
+              没有配置XSS载荷，点击"修改"添加载荷
             </div>
           </div>
           <div v-else class="payloads-edit">
             <el-input
               type="textarea"
-              v-model="reflectedPayloadsText"
+              v-model="payloadsText"
               :rows="8"
-              placeholder="请输入反射型XSS载荷，每行一个"
+              placeholder="请输入XSS载荷，每行一个"
             ></el-input>
             <div class="hint">
               样例: &lt;script&gt;alert(1)&lt;/script&gt;, &lt;img src=x onerror=alert(1)&gt;
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 存储型XSS载荷 -->
-      <div class="rule-section">
-        <div class="rules-header">
-          <div class="rule-info">
-            <span class="rule-title">存储型XSS载荷</span>
-            <span class="rule-desc">添加用于检测存储型XSS漏洞的测试载荷</span>
-          </div>
-          <div class="rule-actions">
-            <el-button
-              type="primary"
-              size="small"
-              @click="editStoredPayloads"
-              v-if="!isEditingStored">
-              修改
-            </el-button>
-            <template v-else>
-              <el-button
-                type="success"
-                size="small"
-                @click="saveStoredPayloads">
-                保存
-              </el-button>
-              <el-button
-                type="info"
-                size="small"
-                @click="cancelEditStored">
-                取消
-              </el-button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="isLoadingStored" class="loading-state">
-          <el-skeleton :rows="3" animated />
-        </div>
-        <div v-else-if="loadStoredFailed" class="error-state">
-          <el-alert
-            title="加载存储型XSS规则失败"
-            type="error"
-            description="使用默认配置"
-            :closable="false"
-            show-icon
-          />
-        </div>
-
-        <div v-else class="rules-content">
-          <div v-if="!isEditingStored" class="payloads-list">
-            <div v-for="(payload, index) in storedPayloads" :key="index" class="payload-item">
-              {{ payload }}
-            </div>
-            <div v-if="storedPayloads.length === 0" class="no-payload">
-              没有配置存储型XSS载荷，点击"修改"添加载荷
-            </div>
-          </div>
-          <div v-else class="payloads-edit">
-            <el-input
-              type="textarea"
-              v-model="storedPayloadsText"
-              :rows="8"
-              placeholder="请输入存储型XSS载荷，每行一个"
-            ></el-input>
-            <div class="hint">
-              样例: &lt;script&gt;alert('stored1')&lt;/script&gt;, &lt;img src=x onerror=alert('stored2')&gt;
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- DOM型XSS载荷 -->
-      <div class="rule-section">
-        <div class="rules-header">
-          <div class="rule-info">
-            <span class="rule-title">DOM型XSS载荷</span>
-            <span class="rule-desc">添加用于检测DOM型XSS漏洞的测试载荷</span>
-          </div>
-          <div class="rule-actions">
-            <el-button
-              type="primary"
-              size="small"
-              @click="editDomPayloads"
-              v-if="!isEditingDom">
-              修改
-            </el-button>
-            <template v-else>
-              <el-button
-                type="success"
-                size="small"
-                @click="saveDomPayloads">
-                保存
-              </el-button>
-              <el-button
-                type="info"
-                size="small"
-                @click="cancelEditDom">
-                取消
-              </el-button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="isLoadingDom" class="loading-state">
-          <el-skeleton :rows="3" animated />
-        </div>
-        <div v-else-if="loadDomFailed" class="error-state">
-          <el-alert
-            title="加载DOM型XSS规则失败"
-            type="error"
-            description="使用默认配置"
-            :closable="false"
-            show-icon
-          />
-        </div>
-
-        <div v-else class="rules-content">
-          <div v-if="!isEditingDom" class="payloads-list">
-            <div v-for="(payload, index) in domPayloads" :key="index" class="payload-item">
-              {{ payload }}
-            </div>
-            <div v-if="domPayloads.length === 0" class="no-payload">
-              没有配置DOM型XSS载荷，点击"修改"添加载荷
-            </div>
-          </div>
-          <div v-else class="payloads-edit">
-            <el-input
-              type="textarea"
-              v-model="domPayloadsText"
-              :rows="8"
-              placeholder="请输入DOM型XSS载荷，每行一个"
-            ></el-input>
-            <div class="hint">
-              样例: javascript:alert(1), #&lt;script&gt;alert(1)&lt;/script&gt;
             </div>
           </div>
         </div>
@@ -246,7 +110,7 @@
           <el-alert
             title="加载XSS上下文匹配模式失败"
             type="error"
-            description="使用默认配置"
+            description="无法获取规则配置"
             :closable="false"
             show-icon
           />
@@ -289,29 +153,13 @@ export default {
   name: 'XssRules',
   data() {
     return {
-      // 反射型XSS载荷
-      isEditingReflected: false,
-      isLoadingReflected: false,
-      loadReflectedFailed: false,
-      reflectedPayloads: [],
-      reflectedPayloadsText: '',
-      reflectedRuleId: null,  // 用于存储规则ID，便于更新
-
-      // 存储型XSS载荷
-      isEditingStored: false,
-      isLoadingStored: false,
-      loadStoredFailed: false,
-      storedPayloads: [],
-      storedPayloadsText: '',
-      storedRuleId: null,  // 用于存储规则ID，便于更新
-
-      // DOM型XSS载荷
-      isEditingDom: false,
-      isLoadingDom: false,
-      loadDomFailed: false,
-      domPayloads: [],
-      domPayloadsText: '',
-      domRuleId: null,  // 用于存储规则ID，便于更新
+      // XSS载荷
+      isEditingPayloads: false,
+      isLoadingPayloads: false,
+      loadPayloadsFailed: false,
+      payloads: [],
+      payloadsText: '',
+      payloadRuleId: null,  // 用于存储规则ID，便于更新
 
       // XSS上下文匹配模式
       isEditingContext: false,
@@ -327,180 +175,46 @@ export default {
   },
   methods: {
     async fetchXssRules() {
-      // 获取所有XSS规则
-      this.fetchReflectedXssRules();
-      this.fetchStoredXssRules();
-      this.fetchDomXssRules();
+      // 获取XSS规则
+      this.fetchXssPayloads();
       this.fetchContextPatternRules();
     },
 
-    async fetchReflectedXssRules() {
-      this.isLoadingReflected = true;
-      this.loadReflectedFailed = false;
+    async fetchXssPayloads() {
+      this.isLoadingPayloads = true;
+      this.loadPayloadsFailed = false;
 
       try {
-        // 获取反射型XSS规则
-        const rules = await this.fetchVulnScanRulesByType('xss', 'reflected');
+        // 获取XSS载荷规则
+        const rules = await this.fetchVulnScanRulesByType('xss', 'payload');
 
         if (rules.length > 0) {
-          // 找到反射型规则
+          // 找到XSS载荷规则
           const rule = rules[0];  // 使用第一条规则
-          this.reflectedRuleId = rule.id;
+          this.payloadRuleId = rule.id;
 
           // 解析载荷
-          this.reflectedPayloads = this.parseRuleContent(rule.rule_content);
-          this.reflectedPayloadsText = this.reflectedPayloads.join('\n');
+          this.payloads = this.parseRuleContent(rule.rule_content);
+          this.payloadsText = this.payloads.join('\n');
 
-          console.log("找到反射型XSS规则:", rule);
+          console.log("找到XSS载荷规则:", rule);
         } else {
-          console.log("未找到反射型XSS规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.reflectedPayloads = [
-            "<script>alert(1)</script>",
-            "<img src=x onerror=alert(1)>",
-            "';alert(1);//",
-            "\"><script>alert(1)</script>",
-            "<svg/onload=alert(1)>",
-            "<iframe src=\"javascript:alert(1)\"></iframe>",
-            "<body onload=alert(1)>",
-            "javascript:alert(1)",
-            "\"onmouseover=\"alert(1)",
-            "'-alert(1)-'"
-          ];
-          this.reflectedPayloadsText = this.reflectedPayloads.join('\n');
-          this.reflectedRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultReflectedRule();
+          console.log("未找到XSS载荷规则，不进行扫描");
+          // 不设置默认值，保持数组为空
+          this.payloads = [];
+          this.payloadsText = '';
+          this.payloadRuleId = null;
         }
       } catch (error) {
-        console.error('获取反射型XSS规则失败', error);
-        this.loadReflectedFailed = true;
+        console.error('获取XSS载荷规则失败', error);
+        this.loadPayloadsFailed = true;
+        // 出错时不设置默认值
+        this.payloads = [];
+        this.payloadsText = '';
 
-        // 使用默认值
-        this.reflectedPayloads = [
-          "<script>alert(1)</script>",
-          "<img src=x onerror=alert(1)>",
-          "';alert(1);//",
-          "\"><script>alert(1)</script>",
-          "<svg/onload=alert(1)>",
-          "<iframe src=\"javascript:alert(1)\"></iframe>",
-          "<body onload=alert(1)>",
-          "javascript:alert(1)",
-          "\"onmouseover=\"alert(1)",
-          "'-alert(1)-'"
-        ];
-        this.reflectedPayloadsText = this.reflectedPayloads.join('\n');
-
-        ElMessage.error('获取反射型XSS规则失败，使用默认配置');
+        ElMessage.error('获取XSS载荷规则失败');
       } finally {
-        this.isLoadingReflected = false;
-      }
-    },
-
-    async fetchStoredXssRules() {
-      this.isLoadingStored = true;
-      this.loadStoredFailed = false;
-
-      try {
-        // 获取存储型XSS规则
-        const rules = await this.fetchVulnScanRulesByType('xss', 'stored');
-
-        if (rules.length > 0) {
-          // 找到存储型规则
-          const rule = rules[0];  // 使用第一条规则
-          this.storedRuleId = rule.id;
-
-          // 解析载荷
-          this.storedPayloads = this.parseRuleContent(rule.rule_content);
-          this.storedPayloadsText = this.storedPayloads.join('\n');
-
-          console.log("找到存储型XSS规则:", rule);
-        } else {
-          console.log("未找到存储型XSS规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.storedPayloads = [
-            "<script>alert('stored_xss_1')</script>",
-            "<img src=x onerror=alert('stored_xss_2')>",
-            "<svg/onload=alert('stored_xss_3')>",
-            "<iframe src=\"javascript:alert('stored_xss_4')\"></iframe>"
-          ];
-          this.storedPayloadsText = this.storedPayloads.join('\n');
-          this.storedRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultStoredRule();
-        }
-      } catch (error) {
-        console.error('获取存储型XSS规则失败', error);
-        this.loadStoredFailed = true;
-
-        // 使用默认值
-        this.storedPayloads = [
-          "<script>alert('stored_xss_1')</script>",
-          "<img src=x onerror=alert('stored_xss_2')>",
-          "<svg/onload=alert('stored_xss_3')>",
-          "<iframe src=\"javascript:alert('stored_xss_4')\"></iframe>"
-        ];
-        this.storedPayloadsText = this.storedPayloads.join('\n');
-
-        ElMessage.error('获取存储型XSS规则失败，使用默认配置');
-      } finally {
-        this.isLoadingStored = false;
-      }
-    },
-
-    async fetchDomXssRules() {
-      this.isLoadingDom = true;
-      this.loadDomFailed = false;
-
-      try {
-        // 获取DOM型XSS规则
-        const rules = await this.fetchVulnScanRulesByType('xss', 'dom');
-
-        if (rules.length > 0) {
-          // 找到DOM型规则
-          const rule = rules[0];  // 使用第一条规则
-          this.domRuleId = rule.id;
-
-          // 解析载荷
-          this.domPayloads = this.parseRuleContent(rule.rule_content);
-          this.domPayloadsText = this.domPayloads.join('\n');
-
-          console.log("找到DOM型XSS规则:", rule);
-        } else {
-          console.log("未找到DOM型XSS规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.domPayloads = [
-            "javascript:alert(1)",
-            "#<script>alert(1)</script>",
-            "?q=<script>alert(1)</script>",
-            "?param=';alert(1);//",
-            "#javascript:alert(1)"
-          ];
-          this.domPayloadsText = this.domPayloads.join('\n');
-          this.domRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultDomRule();
-        }
-      } catch (error) {
-        console.error('获取DOM型XSS规则失败', error);
-        this.loadDomFailed = true;
-
-        // 使用默认值
-        this.domPayloads = [
-          "javascript:alert(1)",
-          "#<script>alert(1)</script>",
-          "?q=<script>alert(1)</script>",
-          "?param=';alert(1);//",
-          "#javascript:alert(1)"
-        ];
-        this.domPayloadsText = this.domPayloads.join('\n');
-
-        ElMessage.error('获取DOM型XSS规则失败，使用默认配置');
-      } finally {
-        this.isLoadingDom = false;
+        this.isLoadingPayloads = false;
       }
     },
 
@@ -533,34 +247,20 @@ export default {
 
           console.log("找到XSS上下文匹配模式规则:", rule);
         } else {
-          console.log("未找到XSS上下文匹配模式规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.contextPatterns = {
-            "html": "<[^>]*>(.*?)</[^>]*>",
-            "attribute": "<[^>]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^>]*>",
-            "javascript": "<script[^>]*>(.*?)</script>",
-            "url": "(href|src|action|url)\\s*=\\s*(['\"])(.*?)\\2"
-          };
-          this.contextPatternsText = JSON.stringify(this.contextPatterns, null, 2);
+          console.log("未找到XSS上下文匹配模式规则，不进行扫描");
+          // 不设置默认值，保持对象为空
+          this.contextPatterns = {};
+          this.contextPatternsText = '';
           this.contextRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultContextPatternRule();
         }
       } catch (error) {
         console.error('获取XSS上下文匹配模式规则失败', error);
         this.loadContextFailed = true;
+        // 出错时不设置默认值
+        this.contextPatterns = {};
+        this.contextPatternsText = '';
 
-        // 使用默认值
-        this.contextPatterns = {
-          "html": "<[^>]*>(.*?)</[^>]*>",
-          "attribute": "<[^>]*[a-zA-Z0-9]+=([\'\"])(.*?)\\1[^>]*>",
-          "javascript": "<script[^>]*>(.*?)</script>",
-          "url": "(href|src|action|url)\\s*=\\s*(['\"])(.*?)\\2"
-        };
-        this.contextPatternsText = JSON.stringify(this.contextPatterns, null, 2);
-
-        ElMessage.error('获取XSS上下文匹配模式规则失败，使用默认配置');
+        ElMessage.error('获取XSS上下文匹配模式规则失败');
       } finally {
         this.isLoadingContext = false;
       }
@@ -609,31 +309,13 @@ export default {
     },
 
     // 编辑方法
-    editReflectedPayloads() {
-      this.isEditingReflected = true;
+    editPayloads() {
+      this.isEditingPayloads = true;
     },
 
-    cancelEditReflected() {
-      this.isEditingReflected = false;
-      this.reflectedPayloadsText = this.reflectedPayloads.join('\n');
-    },
-
-    editStoredPayloads() {
-      this.isEditingStored = true;
-    },
-
-    cancelEditStored() {
-      this.isEditingStored = false;
-      this.storedPayloadsText = this.storedPayloads.join('\n');
-    },
-
-    editDomPayloads() {
-      this.isEditingDom = true;
-    },
-
-    cancelEditDom() {
-      this.isEditingDom = false;
-      this.domPayloadsText = this.domPayloads.join('\n');
+    cancelEditPayloads() {
+      this.isEditingPayloads = false;
+      this.payloadsText = this.payloads.join('\n');
     },
 
     editContextPatterns() {
@@ -656,120 +338,11 @@ export default {
       return contextLabels[context] || context;
     },
 
-    // 创建默认规则方法
-    async createDefaultReflectedRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: '反射型XSS规则',
-          description: '用于检测反射型XSS漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'reflected',
-            payloads: this.reflectedPayloads
-          })
-        };
-
-        console.log("创建默认反射型XSS规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认反射型XSS规则创建成功:", response);
-        this.reflectedRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认反射型XSS规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultStoredRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: '存储型XSS规则',
-          description: '用于检测存储型XSS漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'stored',
-            payloads: this.storedPayloads
-          })
-        };
-
-        console.log("创建默认存储型XSS规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认存储型XSS规则创建成功:", response);
-        this.storedRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认存储型XSS规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultDomRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: 'DOM型XSS规则',
-          description: '用于检测DOM型XSS漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'dom',
-            payloads: this.domPayloads
-          })
-        };
-
-        console.log("创建默认DOM型XSS规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认DOM型XSS规则创建成功:", response);
-        this.domRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认DOM型XSS规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultContextPatternRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: 'XSS上下文匹配模式规则',
-          description: '用于检测XSS漏洞的不同上下文的匹配模式',
-          rule_content: JSON.stringify({
-            subType: 'context_pattern',
-            patterns: this.contextPatterns
-          })
-        };
-
-        console.log("创建默认XSS上下文匹配模式规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认XSS上下文匹配模式规则创建成功:", response);
-        this.contextRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认XSS上下文匹配模式规则失败', error);
-        return null;
-      }
-    },
-
     // 保存方法
-    async saveReflectedPayloads() {
+    async savePayloads() {
       try {
         // 处理文本框中的内容，分割为载荷数组
-        const payloads = this.reflectedPayloadsText
+        const payloads = this.payloadsText
           .split('\n')
           .map(line => line.trim())
           .filter(line => line);
@@ -777,115 +350,33 @@ export default {
         // 准备规则数据
         const ruleData = {
           vuln_type: 'xss',
-          name: '反射型XSS规则',
-          description: '用于检测反射型XSS漏洞的规则',
+          name: 'XSS载荷规则',
+          description: '用于检测XSS漏洞的测试载荷',
           rule_content: JSON.stringify({
-            subType: 'reflected',
+            subType: 'payload',
             payloads: payloads
           })
         };
 
-        console.log("准备保存反射型XSS规则:", ruleData);
+        console.log("准备保存XSS载荷规则:", ruleData);
 
-        if (this.reflectedRuleId) {
+        if (this.payloadRuleId) {
           // 如果已有规则，则更新
-          await rulesAPI.updateVulnScanRule(this.reflectedRuleId, ruleData);
-          ElMessage.success('反射型XSS规则更新成功');
+          await rulesAPI.updateVulnScanRule(this.payloadRuleId, ruleData);
+          ElMessage.success('XSS载荷规则更新成功');
         } else {
           // 如果没有规则，则创建
           const response = await rulesAPI.createVulnScanRule(ruleData);
-          this.reflectedRuleId = response.id;
-          ElMessage.success('反射型XSS规则创建成功');
+          this.payloadRuleId = response.id;
+          ElMessage.success('XSS载荷规则创建成功');
         }
 
         // 更新显示
-        this.reflectedPayloads = payloads;
-        this.isEditingReflected = false;
+        this.payloads = payloads;
+        this.isEditingPayloads = false;
       } catch (error) {
-        console.error('保存反射型XSS规则失败', error);
-        ElMessage.error('保存反射型XSS规则失败');
-      }
-    },
-
-    async saveStoredPayloads() {
-      try {
-        // 处理文本框中的内容，分割为载荷数组
-        const payloads = this.storedPayloadsText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line);
-
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: '存储型XSS规则',
-          description: '用于检测存储型XSS漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'stored',
-            payloads: payloads
-          })
-        };
-
-        console.log("准备保存存储型XSS规则:", ruleData);
-
-        if (this.storedRuleId) {
-          // 如果已有规则，则更新
-          await rulesAPI.updateVulnScanRule(this.storedRuleId, ruleData);
-          ElMessage.success('存储型XSS规则更新成功');
-        } else {
-          // 如果没有规则，则创建
-          const response = await rulesAPI.createVulnScanRule(ruleData);
-          this.storedRuleId = response.id;
-          ElMessage.success('存储型XSS规则创建成功');
-        }
-
-        // 更新显示
-        this.storedPayloads = payloads;
-        this.isEditingStored = false;
-      } catch (error) {
-        console.error('保存存储型XSS规则失败', error);
-        ElMessage.error('保存存储型XSS规则失败');
-      }
-    },
-
-    async saveDomPayloads() {
-      try {
-        // 处理文本框中的内容，分割为载荷数组
-        const payloads = this.domPayloadsText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line);
-
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'xss',
-          name: 'DOM型XSS规则',
-          description: '用于检测DOM型XSS漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'dom',
-            payloads: payloads
-          })
-        };
-
-        console.log("准备保存DOM型XSS规则:", ruleData);
-
-        if (this.domRuleId) {
-          // 如果已有规则，则更新
-          await rulesAPI.updateVulnScanRule(this.domRuleId, ruleData);
-          ElMessage.success('DOM型XSS规则更新成功');
-        } else {
-          // 如果没有规则，则创建
-          const response = await rulesAPI.createVulnScanRule(ruleData);
-          this.domRuleId = response.id;
-          ElMessage.success('DOM型XSS规则创建成功');
-        }
-
-        // 更新显示
-        this.domPayloads = payloads;
-        this.isEditingDom = false;
-      } catch (error) {
-        console.error('保存DOM型XSS规则失败', error);
-        ElMessage.error('保存DOM型XSS规则失败');
+        console.error('保存XSS载荷规则失败', error);
+        ElMessage.error('保存XSS载荷规则失败');
       }
     },
 
