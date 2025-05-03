@@ -38,21 +38,31 @@ class SqlInjectionScanner:
             try:
                 return value.decode('utf-8', errors='replace')
             except Exception:
-                # 如果出现任何问题，返回占位符
-                return "[二进制数据]"
+                # 尝试其他编码格式
+                for encoding in ['latin1', 'cp1252', 'iso-8859-1', 'gbk']:
+                    try:
+                        return value.decode(encoding, errors='replace')
+                    except:
+                        continue
+
+                # 如果所有解码尝试都失败，返回十六进制表示
+                try:
+                    return f"[二进制数据: {value[:20].hex()}...]"
+                except:
+                    return "[二进制数据]"
 
         if isinstance(value, str):
             # 如果已经是字符串，确保它是有效的UTF-8
             try:
                 return value.encode('utf-8', errors='replace').decode('utf-8')
             except Exception:
-                return "[编码错误]"
+                return "[编码错误的字符串]"
 
         # 处理其他类型
         try:
             return str(value)
         except Exception:
-            return "[无法转换为字符串]"
+            return "[无法转换为字符串的对象]"
 
     async def scan(self, context):
         """
@@ -643,8 +653,32 @@ class SqlInjectionScanner:
                     continue
 
                 try:
-                    # 安全获取原始值
-                    original_value = self.safe_decode(req_headers[header])
+                    # 安全解码头部值
+                    try:
+                        # 安全解码头部值
+                        if isinstance(req_headers[header], bytes):
+                            try:
+                                original_value = req_headers[header].decode('utf-8', errors='replace')
+                            except UnicodeDecodeError:
+                                # 尝试其他编码
+                                encodings = ['latin1', 'iso-8859-1', 'cp1252', 'gbk']
+                                decoded = False
+                                for encoding in encodings:
+                                    try:
+                                        original_value = req_headers[header].decode(encoding, errors='replace')
+                                        decoded = True
+                                        break
+                                    except:
+                                        continue
+
+                                if not decoded:
+                                    # 所有编码尝试都失败，使用十六进制表示
+                                    original_value = f"[二进制数据: {req_headers[header][:10].hex()}...]"
+                        else:
+                            original_value = self.safe_decode(req_headers[header])
+                    except Exception as e:
+                        print(f"安全解码HTTP头 {header} 时出错: {str(e)}")
+                        original_value = "[编码错误]"
 
                     # 如果值为空或只有占位符，跳过
                     if not original_value or original_value in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:

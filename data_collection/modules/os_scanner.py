@@ -276,7 +276,7 @@ class OSScanner:
                         # 构建主动扫描的请求和响应数据
                         parsed_url = urlparse(url)
                         active_url = urljoin(url, behavior)
-                        active_request_data = f"GET {active_url}\nHost: {parsed_url.netloc}\nUser-Agent: Mozilla/5.0...\nAccept: */*"
+                        active_request_data = f"GET {active_url}\nHost: {parsed_url.netloc}\nUser-Agent: Mozilla/5.0 (Safe Version)...\nAccept: */*"
                         active_response_data = f"HTTP/1.1 200 OK\nContent-Type: text/html\n\n<os active scan result containing: {match_value}>"
 
                         # 检查是否已存在相同的结果

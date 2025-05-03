@@ -1,0 +1,179 @@
+{
+  "summary": {
+    "total_files_analyzed": 9,
+    "files_with_issues": 0,
+    "total_issues": 0,
+    "unsafe_header_handling": 5
+  },
+  "unsafe_header_processing": {
+    "data_collection/component_info.py": {
+      "User-Agent": [
+        {
+          "line_number": 94,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "scan",
+          "is_safe": false
+        },
+        {
+          "line_number": 227,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "detect_components",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/os_info.py": {
+      "User-Agent": [
+        {
+          "line_number": 45,
+          "context": "xy_address\n            print(f\"OS扫描使用代理: {proxy}\")\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "scan",
+          "is_safe": false
+        },
+        {
+          "line_number": 152,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "detect_os_by_case_sensitivity",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/network_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 445,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<active scan result containing: {match_value}>\"\n\n                        # 创",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/os_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 279,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<os active scan result containing: {match_value}>\"\n\n                        ",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/component_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 464,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<component active scan result containing: {match_value}>\"\n\n                 ",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    }
+  },
+  "issues": [],
+  "header_analysis": {
+    "data_collection/component_info.py": {
+      "User-Agent": [
+        {
+          "line_number": 94,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "scan",
+          "is_safe": false
+        },
+        {
+          "line_number": 227,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "detect_components",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/os_info.py": {
+      "User-Agent": [
+        {
+          "line_number": 45,
+          "context": "xy_address\n            print(f\"OS扫描使用代理: {proxy}\")\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "scan",
+          "is_safe": false
+        },
+        {
+          "line_number": 152,
+          "context": "d proxy_address:\n            proxy = proxy_address\n\n        # 构建请求头\n        headers = {\n            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',\n            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,im",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "detect_os_by_case_sensitivity",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/network_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 445,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<active scan result containing: {match_value}>\"\n\n                        # 创",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/os_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 279,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<os active scan result containing: {match_value}>\"\n\n                        ",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    },
+    "data_collection/modules/component_scanner.py": {
+      "User-Agent": [
+        {
+          "line_number": 464,
+          "context": "avior)\n                        active_request_data = f\"GET {active_url}\\nHost: {parsed_url.netloc}\\nUser-Agent: Mozilla/5.0...\\nAccept: */*\"\n                        active_response_data = f\"HTTP/1.1 200 OK\\nContent-Type: text/html\\n\\n<component active scan result containing: {match_value}>\"\n\n                 ",
+          "has_decode": false,
+          "has_safe_decode": false,
+          "has_binary_check": false,
+          "method": "_do_active_scan",
+          "is_safe": false
+        }
+      ]
+    }
+  }
+}

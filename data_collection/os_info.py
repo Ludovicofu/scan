@@ -1,4 +1,6 @@
 import asyncio
+import socket
+import binascii
 import aiohttp
 from urllib.parse import urlparse, urljoin
 
@@ -7,6 +9,51 @@ class OSInfoScanner:
     """
     操作系统信息扫描模块：负责扫描操作系统相关信息
     """
+
+    def __init__(self):
+        """初始化扫描器"""
+        # 添加缓存来记录已扫描过的资产和端口组合
+        self.port_scan_cache = set()  # 缓存格式：(host, port1,port2,...)
+        # 添加记录已发现的开放端口
+        self.discovered_ports = {}  # 格式：{host: set(ports)}
+
+    def safe_decode(self, value):
+        """
+        安全地解码任何值，处理所有可能的编码错误
+        """
+        if value is None:
+            return ""
+
+        if isinstance(value, bytes):
+            try:
+                # 首先尝试UTF-8
+                return value.decode('utf-8', errors='replace')
+            except Exception:
+                # 尝试各种编码一个一个
+                for encoding in ['latin1', 'cp1252', 'iso-8859-1', 'ascii']:
+                    try:
+                        return value.decode(encoding, errors='replace')
+                    except:
+                        continue
+
+                # 如果所有尝试都失败，返回十六进制表示
+                try:
+                    return f"[二进制数据: {value[:20].hex()}...]"
+                except:
+                    return "[二进制数据]"
+
+        if isinstance(value, str):
+            # 确保有效的UTF-8如果它已经是字符串
+            try:
+                return value.encode('utf-8', errors='replace').decode('utf-8')
+            except Exception:
+                return value.replace('\ufffd', '?')  # 替换替换字符为?
+
+        # 处理其他类型
+        try:
+            return str(value)
+        except Exception:
+            return "[非字符串数据]"
 
     async def scan(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
         """
@@ -63,7 +110,11 @@ class OSInfoScanner:
                     print(f"收到响应，状态码: {status_code}")
 
                     # 获取响应头
-                    resp_headers = dict(response.headers)
+                    resp_headers = {}
+                    for key, value in response.headers.items():
+                        safe_key = self.safe_decode(key)
+                        safe_value = self.safe_decode(value)
+                        resp_headers[safe_key] = safe_value
 
                     # 获取响应内容
                     resp_content = await response.text(errors='ignore')
