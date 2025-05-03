@@ -63,6 +63,21 @@
       @delete-vuln="deleteResult"
     />
 
+    <!-- 文件包含结果 -->
+    <FileInclusionResults
+      v-else-if="currentVulnType === 'file_inclusion'"
+      :vulnResults="results"
+      :loading="loading"
+      :currentPage="currentPage"
+      :pageSize="pageSize"
+      :total="totalResults"
+      :showPagination="true"
+      @size-change="handleSizeChange"
+      @current-change="handlePageChange"
+      @view-detail="showDetail"
+      @delete-vuln="deleteResult"
+    />
+
     <!-- 命令注入结果 -->
     <RceResults
       v-else-if="currentVulnType === 'command_injection'"
@@ -123,6 +138,7 @@ import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
 import SqlInjectionResults from '@/components/vuln/SqlInjectionResults.vue';
 import XssResults from '@/components/vuln/XssResults.vue';
+import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue'; // 导入文件包含结果组件
 import RceResults from '@/components/vuln/RceResults.vue';
 import SsrfResults from '@/components/vuln/SsrfResults.vue';
 import GeneralVulnResults from '@/components/vuln/GeneralVulnResults.vue';
@@ -138,6 +154,7 @@ export default {
     ResultFilters,
     SqlInjectionResults,
     XssResults,
+    FileInclusionResults, // 注册文件包含结果组件
     RceResults,
     SsrfResults,
     GeneralVulnResults,
