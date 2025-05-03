@@ -1,9 +1,13 @@
 # vuln_scan/modules/sql_injection_scanner.py
 import re
+import json
 import asyncio
 import aiohttp
 import urllib.parse
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from asgiref.sync import sync_to_async
+from django.utils import timezone
+from rules.models import VulnScanRule
 
 
 class SqlInjectionScanner:
@@ -24,6 +28,34 @@ class SqlInjectionScanner:
 
         # 默认延时时间(用于基于时间的盲注)
         self.time_delay = 5
+
+        # 永久禁用的HTTP头 - 不管数据库规则如何，这些头一定不会被测试
+        self.permanently_disabled_headers = ["User-Agent", "Referer"]
+
+    def safe_decode(self, value):
+        """安全地解码任何值，处理所有可能的编码错误"""
+        if value is None:
+            return ""
+
+        if isinstance(value, bytes):
+            try:
+                return value.decode('utf-8', errors='replace')
+            except Exception:
+                # 如果出现任何问题，返回占位符
+                return "[二进制数据]"
+
+        if isinstance(value, str):
+            # 如果已经是字符串，确保它是有效的UTF-8
+            try:
+                return value.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+            except Exception:
+                return "[编码错误]"
+
+        # 处理其他类型
+        try:
+            return str(value)
+        except Exception:
+            return "[无法转换为字符串]"
 
     async def scan(self, context):
         """
@@ -56,6 +88,12 @@ class SqlInjectionScanner:
         error_based_payloads = await self.get_error_based_payloads(context)
         blind_payloads = await self.get_blind_payloads(context)
         http_headers = await self.get_http_headers_to_test(context)
+        error_patterns = await self.get_error_patterns(context)
+
+        # 检查是否有规则可用
+        if not error_based_payloads and not blind_payloads:
+            print("警告: 没有可用的SQL注入载荷规则，跳过SQL注入扫描")
+            return []
 
         results = []
 
@@ -65,7 +103,8 @@ class SqlInjectionScanner:
                 context,
                 url,
                 error_based_payloads,
-                blind_payloads
+                blind_payloads,
+                error_patterns
             )
             results.extend(url_results)
 
@@ -76,7 +115,8 @@ class SqlInjectionScanner:
                 url,
                 req_content,
                 error_based_payloads,
-                blind_payloads
+                blind_payloads,
+                error_patterns
             )
             results.extend(post_results)
 
@@ -88,53 +128,115 @@ class SqlInjectionScanner:
                 req_headers,
                 http_headers,
                 error_based_payloads,
-                blind_payloads
+                blind_payloads,
+                error_patterns
             )
             results.extend(header_results)
 
         return results
 
+    @sync_to_async
+    def _get_rule_from_db(self, vuln_type, subtype):
+        """从数据库获取规则"""
+        try:
+            # 获取指定类型和子类型的漏洞扫描规则
+            rules = VulnScanRule.objects.filter(
+                vuln_type=vuln_type,
+                is_enabled=True
+            )
+
+            # 遍历规则找到匹配的子类型
+            for rule in rules:
+                try:
+                    rule_content = json.loads(rule.rule_content)
+                    if rule_content.get('subType') == subtype:
+                        return rule_content
+                except (json.JSONDecodeError, AttributeError):
+                    # 如果JSON解析失败，检查rule_content中是否包含子类型标识
+                    if f'"subType": "{subtype}"' in rule.rule_content or f'"subType":"{subtype}"' in rule.rule_content:
+                        try:
+                            # 尝试重新解析，如果失败则返回默认值
+                            return json.loads(rule.rule_content)
+                        except:
+                            pass
+
+            # 如果没有找到匹配的规则，返回None
+            return None
+        except Exception as e:
+            print(f"从数据库获取规则时出错: {str(e)}")
+            return None
+
     async def get_error_based_payloads(self, context):
         """获取回显型SQL注入测试载荷"""
-        # 这里实际应该从数据库或配置中获取
-        # 现在先使用默认值
-        return [
-            "'",
-            "\"",
-            "')",
-            "\";",
-            "' UNION SELECT 1,2,3--",
-            "\" UNION SELECT @@version,2,3--",
-            "' OR '1'='1"
-        ]
+        # 从数据库获取规则
+        rule_content = await self._get_rule_from_db('sql_injection', 'error_based')
+
+        # 如果找到规则并且有payload字段，返回规则中的payload
+        if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
+            return rule_content['payloads']
+
+        # 如果没有找到规则，返回空列表，而不是默认值
+        print("未找到回显型SQL注入规则，跳过此类检测")
+        return []
 
     async def get_blind_payloads(self, context):
         """获取盲注型SQL注入测试载荷"""
-        # 这里实际应该从数据库或配置中获取
-        # 现在先使用默认值
-        return [
-            "' OR (SELECT SLEEP(5))--",
-            "'; SELECT SLEEP(5)--",
-            "'; WAITFOR DELAY '0:0:5'--",
-            "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
-            "' AND 1=dbms_pipe.receive_message('RDS',10)--"
-        ]
+        # 从数据库获取规则
+        rule_content = await self._get_rule_from_db('sql_injection', 'blind')
+
+        # 如果找到规则并且有payload字段，返回规则中的payload
+        if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
+            return rule_content['payloads']
+
+        # 如果没有找到规则，返回空列表，而不是默认值
+        print("未找到盲注型SQL注入规则，跳过此类检测")
+        return []
 
     async def get_http_headers_to_test(self, context):
         """获取要测试的HTTP头列表"""
-        # 这里实际应该从数据库或配置中获取
-        # 现在先使用默认值
+        # 从数据库获取规则
+        rule_content = await self._get_rule_from_db('sql_injection', 'http_header')
+
+        # 如果找到规则并且有payload字段，返回规则中的payload
+        if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
+            # 从规则中获取要测试的HTTP头列表
+            headers = rule_content['payloads']
+
+            # 永久排除指定的头部
+            headers = [h for h in headers if h not in self.permanently_disabled_headers]
+
+            return headers
+
+        # 如果没有找到规则，返回空列表，而不是默认值
+        print("未找到HTTP头注入规则，跳过此类检测")
+        return []
+
+    async def get_error_patterns(self, context):
+        """获取SQL错误匹配模式"""
+        # 从数据库获取规则
+        rule_content = await self._get_rule_from_db('sql_injection', 'error_pattern')
+
+        # 如果找到规则并且有payload字段，返回规则中的payload
+        if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
+            return rule_content['payloads']
+
+        # 如果没有找到规则，返回空列表，而不是默认值
+        print("未找到SQL错误匹配模式规则，使用简化匹配")
         return [
-            "Cookie",
-            "X-Forwarded-For",
-            "Referer",
-            "User-Agent",
-            "Authorization"
+            r"SQL syntax.*error",
+            r"MySQL.*error",
+            r"ORA-[0-9]",
+            r"SQL Server.*error",
+            r"PostgreSQL.*error"
         ]
 
-    async def scan_url_parameters(self, context, url, error_payloads, blind_payloads):
+    async def scan_url_parameters(self, context, url, error_payloads, blind_payloads, error_patterns):
         """扫描URL参数中的SQL注入漏洞"""
         results = []
+
+        # 如果没有载荷，直接返回
+        if not error_payloads and not blind_payloads:
+            return results
 
         try:
             # 解析URL
@@ -180,10 +282,10 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
-                                response_text = await response.text()
+                                response_text = await response.text(errors='replace')
 
                                 # 检查是否有SQL错误信息
-                                if self.check_sql_error(response_text):
+                                if self.check_sql_error(response_text, error_patterns):
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
@@ -212,6 +314,11 @@ class SqlInjectionScanner:
 
                 # 测试盲注型注入
                 for payload in blind_payloads:
+                    # 检测是否已存在相同漏洞
+                    vuln_key = f"blind_url_{param}_{url}"
+                    if vuln_key in self.found_vulnerabilities:
+                        continue
+
                     # 创建测试URL
                     test_params = query_params.copy()
                     test_params[param] = [original_value + payload]
@@ -225,11 +332,6 @@ class SqlInjectionScanner:
                         parsed_url.fragment
                     ))
 
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"blind_url_{param}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
-
                     # 开始时间
                     start_time = asyncio.get_event_loop().time()
 
@@ -242,7 +344,7 @@ class SqlInjectionScanner:
                                     ssl=False
                             ) as response:
                                 # 忽略响应内容，只关注时间
-                                _ = await response.text()
+                                _ = await response.text(errors='replace')
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -305,9 +407,13 @@ class SqlInjectionScanner:
 
         return results
 
-    async def scan_post_parameters(self, context, url, req_content, error_payloads, blind_payloads):
+    async def scan_post_parameters(self, context, url, req_content, error_payloads, blind_payloads, error_patterns):
         """扫描POST请求参数中的SQL注入漏洞"""
         results = []
+
+        # 如果没有载荷，直接返回
+        if not error_payloads and not blind_payloads:
+            return results
 
         try:
             # 解析POST内容
@@ -382,10 +488,10 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
-                                response_text = await response.text()
+                                response_text = await response.text(errors='replace')
 
                                 # 检查是否有SQL错误信息
-                                if self.check_sql_error(response_text):
+                                if self.check_sql_error(response_text, error_patterns):
                                     # 记录漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
@@ -448,7 +554,7 @@ class SqlInjectionScanner:
                                     ssl=False
                             ) as response:
                                 # 忽略响应内容，只关注时间
-                                _ = await response.text()
+                                _ = await response.text(errors='replace')
 
                                 # 计算响应时间
                                 end_time = asyncio.get_event_loop().time()
@@ -511,227 +617,233 @@ class SqlInjectionScanner:
 
         return results
 
-    async def scan_http_headers(self, context, url, req_headers, headers_to_test, error_payloads, blind_payloads):
+    async def scan_http_headers(self, context, url, req_headers, headers_to_test, error_payloads, blind_payloads,
+                                error_patterns):
         """扫描HTTP头中的SQL注入漏洞"""
         results = []
+
+        # 如果没有载荷，直接返回
+        if not error_payloads and not blind_payloads:
+            return results
 
         try:
             # 解析URL获取主机信息
             parsed_url = urlparse(url)
 
+            # 再次过滤永久禁用的头部
+            filtered_headers = [h for h in headers_to_test if h not in self.permanently_disabled_headers]
+
+            # 如果没有要测试的头部，直接返回
+            if not filtered_headers:
+                return results
+
+            print(f"测试HTTP头: {filtered_headers}")
+
             # 测试每个HTTP头
-            for header in headers_to_test:
+            for header in filtered_headers:
                 # 如果请求中不包含该头部，跳过
                 if header not in req_headers:
                     continue
 
-                # 安全获取原始值，处理可能的编码问题
                 try:
-                    original_value = req_headers[header]
+                    # 安全获取原始值，处理可能的编码问题
+                    original_value = self.safe_decode(req_headers[header])
 
-                    # 处理二进制数据或非UTF-8编码的字符串
-                    if isinstance(original_value, bytes):
-                        original_value = original_value.decode('utf-8', errors='replace')
-                    else:
-                        # 确保字符串值是有效的UTF-8
-                        if isinstance(original_value, str):
-                            original_value = original_value.encode('utf-8', errors='replace').decode('utf-8',
-                                                                                                     errors='replace')
-                        else:
-                            # 处理其他类型，如None或非字符串类型
-                            original_value = str(original_value)
+                    # 如果值为空或只有占位符，跳过
+                    if not original_value or original_value in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
+                        print(f"跳过HTTP头 {header} 因为值无法正确解码")
+                        continue
+
+                    # 测试回显型注入
+                    for payload in error_payloads:
+                        # 检测是否已存在相同漏洞
+                        vuln_key = f"error_based_header_{header}_{url}"
+                        if vuln_key in self.found_vulnerabilities:
+                            continue
+
+                        # 创建测试头部
+                        test_headers = {}
+                        for k, v in req_headers.items():
+                            if k != header and k not in self.permanently_disabled_headers:
+                                # 对其他头部使用安全解码
+                                test_headers[k] = self.safe_decode(v)
+                            elif k == header:
+                                # 对目标头部添加payload
+                                test_headers[k] = original_value + payload
+
+                        # 确保Host头存在
+                        if 'Host' not in test_headers:
+                            test_headers['Host'] = parsed_url.netloc
+
+                        # 发送请求
+                        async with aiohttp.ClientSession() as session:
+                            try:
+                                async with session.get(
+                                        url,
+                                        headers=test_headers,
+                                        timeout=self.timeout,
+                                        ssl=False
+                                ) as response:
+                                    response_text = await response.text(errors='replace')
+
+                                    # 检查是否有SQL错误信息
+                                    if self.check_sql_error(response_text, error_patterns):
+                                        # 记录漏洞
+                                        self.found_vulnerabilities.add(vuln_key)
+
+                                        # 创建漏洞结果
+                                        result = {
+                                            'vuln_type': 'sql_injection',
+                                            'vuln_subtype': 'error_based',
+                                            'name': f'HTTP头 {header} 中的SQL注入漏洞',
+                                            'description': f'在HTTP头 {header} 中发现回显型SQL注入漏洞',
+                                            'severity': 'high',
+                                            'url': url,
+                                            'parameter': header,
+                                            'payload': payload,
+                                            'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
+                                            'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:500]}...",
+                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应中包含SQL错误信息"
+                                        }
+
+                                        results.append(result)
+
+                                        # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
+                                        break
+                            except Exception as e:
+                                print(f"测试HTTP头 {header} 时出错: {str(e)}")
+                                continue
+
+                    # 测试盲注型注入
+                    for payload in blind_payloads:
+                        # 检测是否已存在相同漏洞
+                        vuln_key = f"blind_header_{header}_{url}"
+                        if vuln_key in self.found_vulnerabilities:
+                            continue
+
+                        # 创建测试头部
+                        test_headers = {}
+                        for k, v in req_headers.items():
+                            if k != header and k not in self.permanently_disabled_headers:
+                                # 对其他头部使用安全解码
+                                test_headers[k] = self.safe_decode(v)
+                            elif k == header:
+                                # 对目标头部添加payload
+                                test_headers[k] = original_value + payload
+
+                        # 确保Host头存在
+                        if 'Host' not in test_headers:
+                            test_headers['Host'] = parsed_url.netloc
+
+                        # 开始时间
+                        start_time = asyncio.get_event_loop().time()
+
+                        # 发送请求
+                        async with aiohttp.ClientSession() as session:
+                            try:
+                                async with session.get(
+                                        url,
+                                        headers=test_headers,
+                                        timeout=self.timeout * 2,  # 增加超时时间以容纳延时
+                                        ssl=False
+                                ) as response:
+                                    # 忽略响应内容，只关注时间
+                                    _ = await response.text(errors='replace')
+
+                                    # 计算响应时间
+                                    end_time = asyncio.get_event_loop().time()
+                                    response_time = end_time - start_time
+
+                                    # 如果响应时间超过预期延时，可能存在基于时间的盲注
+                                    if response_time >= self.time_delay * 0.8:
+                                        # 记录漏洞
+                                        self.found_vulnerabilities.add(vuln_key)
+
+                                        # 创建漏洞结果
+                                        result = {
+                                            'vuln_type': 'sql_injection',
+                                            'vuln_subtype': 'blind',
+                                            'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
+                                            'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
+                                            'severity': 'high',
+                                            'url': url,
+                                            'parameter': header,
+                                            'payload': payload,
+                                            'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
+                                            'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒",
+                                            'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time} 秒，超过了预期的 {self.time_delay} 秒"
+                                        }
+
+                                        results.append(result)
+
+                                        # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
+                                        break
+                            except asyncio.TimeoutError:
+                                # 超时也可能是基于时间的盲注的证据
+                                # 记录漏洞
+                                self.found_vulnerabilities.add(vuln_key)
+
+                                # 创建漏洞结果
+                                result = {
+                                    'vuln_type': 'sql_injection',
+                                    'vuln_subtype': 'blind',
+                                    'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
+                                    'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
+                                    'severity': 'high',
+                                    'url': url,
+                                    'parameter': header,
+                                    'payload': payload,
+                                    'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
+                                    'response': f"请求超时",
+                                    'proof': f"在HTTP头 {header} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
+                                }
+
+                                results.append(result)
+
+                                # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
+                                break
+                            except Exception as e:
+                                print(f"测试HTTP头 {header} 时出错: {str(e)}")
+                                continue
                 except Exception as e:
-                    print(f"处理HTTP头 {header} 的值时出错: {str(e)}")
-                    continue  # 跳过这个头部
-
-                # 测试回显型注入
-                for payload in error_payloads:
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"error_based_header_{header}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
-
-                    # 创建测试头部
-                    test_headers = req_headers.copy()
-                    test_headers[header] = original_value + payload
-
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.get(
-                                    url,
-                                    headers=test_headers,
-                                    timeout=self.timeout,
-                                    ssl=False
-                            ) as response:
-                                response_text = await response.text(errors='replace')  # 使用errors='replace'处理响应编码问题
-
-                                # 检查是否有SQL错误信息
-                                if self.check_sql_error(response_text):
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'error_based',
-                                        'name': f'HTTP头 {header} 中的SQL注入漏洞',
-                                        'description': f'在HTTP头 {header} 中发现回显型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': header,
-                                        'payload': payload,
-                                        'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n{response_text[:500]}...",
-                                        'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应中包含SQL错误信息"
-                                    }
-
-                                    results.append(result)
-
-                                    # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
-                                    break
-                        except Exception as e:
-                            print(f"测试HTTP头 {header} 时出错: {str(e)}")
-                            continue
-
-                # 测试盲注型注入
-                for payload in blind_payloads:
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"blind_header_{header}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
-
-                    # 创建测试头部
-                    test_headers = req_headers.copy()
-                    test_headers[header] = original_value + payload
-
-                    # 开始时间
-                    start_time = asyncio.get_event_loop().time()
-
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.get(
-                                    url,
-                                    headers=test_headers,
-                                    timeout=self.timeout * 2,  # 增加超时时间以容纳延时
-                                    ssl=False
-                            ) as response:
-                                # 忽略响应内容，只关注时间
-                                _ = await response.text(errors='replace')  # 使用errors='replace'处理响应编码问题
-
-                                # 计算响应时间
-                                end_time = asyncio.get_event_loop().time()
-                                response_time = end_time - start_time
-
-                                # 如果响应时间超过预期延时，可能存在基于时间的盲注
-                                if response_time >= self.time_delay * 0.8:
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'blind',
-                                        'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
-                                        'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': header,
-                                        'payload': payload,
-                                        'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
-                                        'response': f"HTTP/1.1 {response.status} {response.reason}\n响应时间: {response_time}秒",
-                                        'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time} 秒，超过了预期的 {self.time_delay} 秒"
-                                    }
-
-                                    results.append(result)
-
-                                    # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
-                                    break
-                        except asyncio.TimeoutError:
-                            # 超时也可能是基于时间的盲注的证据
-                            # 记录漏洞
-                            self.found_vulnerabilities.add(vuln_key)
-
-                            # 创建漏洞结果
-                            result = {
-                                'vuln_type': 'sql_injection',
-                                'vuln_subtype': 'blind',
-                                'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
-                                'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
-                                'severity': 'high',
-                                'url': url,
-                                'parameter': header,
-                                'payload': payload,
-                                'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {test_headers[header]}",
-                                'response': f"请求超时",
-                                'proof': f"在HTTP头 {header} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
-                            }
-
-                            results.append(result)
-
-                            # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
-                            break
-                        except Exception as e:
-                            print(f"测试HTTP头 {header} 时出错: {str(e)}")
-                            continue
+                    print(f"处理HTTP头 {header} 时发生未捕获的异常: {str(e)}")
+                    continue  # 跳过此头部
 
         except Exception as e:
-            print(f"扫描HTTP头时出错: {str(e)}")
+            print(f"扫描HTTP头时发生未捕获的异常: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         return results
 
-    def check_sql_error(self, response_text):
-        """检查响应中是否包含SQL错误信息"""
-        # 常见的SQL错误信息模式
-        error_patterns = [
-            r"SQL syntax.*?MySQL",
-            r"Warning.*?mysqli",
-            r"MySQLSyntaxErrorException",
-            r"valid MySQL result",
-            r"check the manual that (corresponds to|fits) your MySQL server version",
-            r"MySqlClient\.",
-            r"com\.mysql\.jdbc\.exceptions",
-            r"SQLite3::query",
-            r"SQLite3::exec",
-            r"ORA-[0-9][0-9][0-9][0-9]",
-            r"Oracle error",
-            r"Oracle.*?Driver",
-            r"PLS-[0-9][0-9][0-9][0-9]",
-            r"Npgsql\.",
-            r"PostgreSQL.*?ERROR",
-            r"Warning.*?\Wpg_",
-            r"valid PostgreSQL result",
-            r"Unclosed quotation mark after the character string",
-            r"ODBC SQL Server Driver",
-            r"Microsoft SQL Native Client error",
-            r"SQLSTATE[",
-            r"SQL Server message",
-            r"Warning.*?mssql_",
-            r"Driver.*? SQL[\-\_\ ]*Server",
-            r"JET Database Engine",
-            r"Access Database Engine",
-            r"ADODB\.Command",
-            r"ADODB\.Field error",
-            r"Microsoft Access Driver",
-            r"ODBC Microsoft Access",
-            r"OLE DB.*? 'Microsoft\\.Jet\\.OLEDB",
-            r"Microsoft Access",
-            r"Syntax error \(missing operator\) in query expression",
-            r"ODBC.*?Driver.*?SQL",
-            r"DB2 SQL error",
-            r"Informix\s+ODBC",
-            r"DM_QUERY_E_SYNTAX",
-            r"SybSQLException",
-            r"Warning.*?ingres_",
-            r"Ingres SQLSTATE",
-            r"CLI Driver.*?DB2",
-            r"SQLiteException",
-            r"sqlite3.OperationalError:",
-        ]
+    def check_sql_error(self, response_text, error_patterns=None):
+        """
+        检查响应中是否包含SQL错误信息
+
+        参数:
+            response_text: 响应文本
+            error_patterns: 错误模式列表，如果为None则不检查
+        """
+        if not response_text:
+            return False
+
+        # 如果没有提供错误模式，无法检查
+        if not error_patterns:
+            print("警告: check_sql_error被调用时没有提供错误模式")
+            return False
 
         # 编译正则表达式以提高性能
-        compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in error_patterns]
+        compiled_patterns = []
+        for pattern in error_patterns:
+            try:
+                compiled_patterns.append(re.compile(pattern, re.IGNORECASE))
+            except Exception as e:
+                print(f"编译正则表达式 '{pattern}' 时出错: {str(e)}")
+                continue
+
+        # 如果没有编译成功的模式，无法检查
+        if not compiled_patterns:
+            return False
 
         # 检查响应是否包含任何SQL错误信息
         for pattern in compiled_patterns:
