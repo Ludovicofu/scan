@@ -8,10 +8,10 @@ from .models import VulnScanResult
 
 # 导入各个漏洞扫描模块
 from .modules.sql_injection_scanner import SqlInjectionScanner
+from .modules.xss_scanner import XssScanner  # 引入XSS扫描模块
 
 
 # 以后可以添加其他类型的扫描器
-# from .modules.xss_scanner import XssScanner
 # from .modules.file_inclusion_scanner import FileInclusionScanner
 # 等等...
 
@@ -33,8 +33,8 @@ class VulnScanner:
 
         # 初始化各个漏洞扫描模块
         self.sql_injection_scanner = SqlInjectionScanner()
+        self.xss_scanner = XssScanner()  # 初始化XSS扫描器
         # 以后可以添加其他类型的扫描器
-        # self.xss_scanner = XssScanner()
         # self.file_inclusion_scanner = FileInclusionScanner()
         # 等等...
 
@@ -49,9 +49,13 @@ class VulnScanner:
         if hasattr(self.sql_injection_scanner, 'clear_cache'):
             self.sql_injection_scanner.clear_cache()
 
+        # 重置XSS扫描模块的缓存
+        if hasattr(self.xss_scanner, 'clear_cache'):
+            self.xss_scanner.clear_cache()
+
         # 以后可以添加其他类型的扫描器缓存清理
-        # if hasattr(self.xss_scanner, 'clear_cache'):
-        #     self.xss_scanner.clear_cache()
+        # if hasattr(self.file_inclusion_scanner, 'clear_cache'):
+        #     self.file_inclusion_scanner.clear_cache()
         # 等等...
 
         print("漏洞扫描器状态已重置")
@@ -135,8 +139,8 @@ class VulnScanner:
                 # 并行执行各个漏洞类型的扫描
                 tasks = [
                     self.sql_injection_scanner.scan(context),
+                    self.xss_scanner.scan(context),  # 添加XSS扫描任务
                     # 以后可以添加其他类型的扫描
-                    # self.xss_scanner.scan(context),
                     # self.file_inclusion_scanner.scan(context),
                     # 等等...
                 ]
@@ -153,11 +157,17 @@ class VulnScanner:
                 else:
                     print(f"SQL注入扫描出错: {str(scan_results[0])}")
 
+                # 处理XSS扫描结果
+                if not isinstance(scan_results[1], Exception):
+                    vuln_results.extend(scan_results[1])
+                else:
+                    print(f"XSS扫描出错: {str(scan_results[1])}")
+
                 # 以后可以添加其他类型的扫描结果处理
-                # if not isinstance(scan_results[1], Exception):
-                #     vuln_results.extend(scan_results[1])
+                # if not isinstance(scan_results[2], Exception):
+                #     vuln_results.extend(scan_results[2])
                 # else:
-                #     print(f"XSS扫描出错: {str(scan_results[1])}")
+                #     print(f"文件包含扫描出错: {str(scan_results[2])}")
                 # 等等...
 
                 # 保存漏洞结果
