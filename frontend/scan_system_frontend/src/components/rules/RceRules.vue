@@ -1,14 +1,14 @@
-<!-- frontend/scan_system_frontend/src/components/rules/CommandInjectionRules.vue -->
+<!-- frontend/scan_system_frontend/src/components/rules/RceRules.vue -->
 <template>
-  <div class="command-injection-rules">
-    <h3>命令注入扫描设置</h3>
+  <div class="rce-rules">
+    <h3>RCE命令执行设置</h3>
     <div class="rules-container">
-      <!-- 系统命令注入载荷 -->
+      <!-- 系统命令执行载荷 -->
       <div class="rule-section">
         <div class="rules-header">
           <div class="rule-info">
-            <span class="rule-title">系统命令注入载荷</span>
-            <span class="rule-desc">添加用于检测系统命令注入的测试载荷</span>
+            <span class="rule-title">系统命令执行载荷</span>
+            <span class="rule-desc">添加用于检测系统命令执行的测试载荷</span>
           </div>
           <div class="rule-actions">
             <el-button
@@ -40,7 +40,7 @@
         </div>
         <div v-else-if="loadOsCommandFailed" class="error-state">
           <el-alert
-            title="加载系统命令注入规则失败"
+            title="加载系统命令执行规则失败"
             type="error"
             description="请添加规则"
             :closable="false"
@@ -54,7 +54,7 @@
               {{ payload }}
             </div>
             <div v-if="osCommandPayloads.length === 0" class="no-payload">
-              没有配置系统命令注入载荷，点击"修改"添加载荷
+              没有配置系统命令执行载荷，点击"修改"添加载荷
             </div>
           </div>
           <div v-else class="payloads-edit">
@@ -62,7 +62,7 @@
               type="textarea"
               v-model="osCommandPayloadsText"
               :rows="8"
-              placeholder="请输入系统命令注入载荷，每行一个"
+              placeholder="请输入系统命令执行载荷，每行一个"
             ></el-input>
             <div class="hint">
               样例: |echo cmd_inj_test, ;cat /etc/passwd, `id`, $(whoami)
@@ -71,80 +71,12 @@
         </div>
       </div>
 
-      <!-- 盲命令注入载荷 -->
+      <!-- 代码执行载荷 -->
       <div class="rule-section">
         <div class="rules-header">
           <div class="rule-info">
-            <span class="rule-title">盲命令注入载荷</span>
-            <span class="rule-desc">添加用于检测无回显的盲命令注入测试载荷</span>
-          </div>
-          <div class="rule-actions">
-            <el-button
-              type="primary"
-              size="small"
-              @click="editBlindCommandPayloads"
-              v-if="!isEditingBlindCommand">
-              修改
-            </el-button>
-            <template v-else>
-              <el-button
-                type="success"
-                size="small"
-                @click="saveBlindCommandPayloads">
-                保存
-              </el-button>
-              <el-button
-                type="info"
-                size="small"
-                @click="cancelEditBlindCommand">
-                取消
-              </el-button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="isLoadingBlindCommand" class="loading-state">
-          <el-skeleton :rows="3" animated />
-        </div>
-        <div v-else-if="loadBlindCommandFailed" class="error-state">
-          <el-alert
-            title="加载盲命令注入规则失败"
-            type="error"
-            description="请添加规则"
-            :closable="false"
-            show-icon
-          />
-        </div>
-
-        <div v-else class="rules-content">
-          <div v-if="!isEditingBlindCommand" class="payloads-list">
-            <div v-for="(payload, index) in blindCommandPayloads" :key="index" class="payload-item">
-              {{ payload }}
-            </div>
-            <div v-if="blindCommandPayloads.length === 0" class="no-payload">
-              没有配置盲命令注入载荷，点击"修改"添加载荷
-            </div>
-          </div>
-          <div v-else class="payloads-edit">
-            <el-input
-              type="textarea"
-              v-model="blindCommandPayloadsText"
-              :rows="8"
-              placeholder="请输入盲命令注入载荷，每行一个"
-            ></el-input>
-            <div class="hint">
-              样例: |sleep 5, ;ping -c 5 127.0.0.1, `sleep 5`, $(sleep 5)
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 代码注入载荷 -->
-      <div class="rule-section">
-        <div class="rules-header">
-          <div class="rule-info">
-            <span class="rule-title">代码注入载荷</span>
-            <span class="rule-desc">添加用于检测PHP、Java、Python等代码注入的测试载荷</span>
+            <span class="rule-title">代码执行载荷</span>
+            <span class="rule-desc">添加用于检测PHP、Java、Python等代码执行的测试载荷</span>
           </div>
           <div class="rule-actions">
             <el-button
@@ -176,7 +108,7 @@
         </div>
         <div v-else-if="loadCodeFailed" class="error-state">
           <el-alert
-            title="加载代码注入规则失败"
+            title="加载代码执行规则失败"
             type="error"
             description="请添加规则"
             :closable="false"
@@ -190,7 +122,7 @@
               {{ payload }}
             </div>
             <div v-if="codePayloads.length === 0" class="no-payload">
-              没有配置代码注入载荷，点击"修改"添加载荷
+              没有配置代码执行载荷，点击"修改"添加载荷
             </div>
           </div>
           <div v-else class="payloads-edit">
@@ -198,7 +130,7 @@
               type="textarea"
               v-model="codePayloadsText"
               :rows="8"
-              placeholder="请输入代码注入载荷，每行一个"
+              placeholder="请输入代码执行载荷，每行一个"
             ></el-input>
             <div class="hint">
               样例: ${system('whoami')}, &lt;?php echo('code_inj_test'); ?&gt;, eval("print('code_inj_test')")
@@ -207,12 +139,12 @@
         </div>
       </div>
 
-      <!-- 命令注入匹配规则 -->
+      <!-- RCE匹配规则 -->
       <div class="rule-section">
         <div class="rules-header">
           <div class="rule-info">
-            <span class="rule-title">命令注入匹配模式</span>
-            <span class="rule-desc">配置用于检测命令注入成功的匹配模式</span>
+            <span class="rule-title">RCE匹配模式</span>
+            <span class="rule-desc">配置用于检测RCE漏洞成功的匹配模式</span>
           </div>
           <div class="rule-actions">
             <el-button
@@ -244,7 +176,7 @@
         </div>
         <div v-else-if="loadPatternsFailed" class="error-state">
           <el-alert
-            title="加载命令注入匹配模式失败"
+            title="加载RCE匹配模式失败"
             type="error"
             description="请添加规则"
             :closable="false"
@@ -264,16 +196,16 @@
               </el-descriptions-item>
             </el-descriptions>
             <div v-if="Object.keys(matchPatterns).length === 0" class="no-patterns">
-              没有配置命令注入匹配模式，点击"修改"添加匹配模式
+              没有配置RCE匹配模式，点击"修改"添加匹配模式
             </div>
           </div>
           <div v-else class="patterns-edit">
-            <p class="context-edit-hint">请以JSON格式编辑命令注入匹配模式：</p>
+            <p class="context-edit-hint">请以JSON格式编辑RCE匹配模式：</p>
             <el-input
               type="textarea"
               v-model="matchPatternsText"
               :rows="10"
-              placeholder="请输入命令注入匹配模式 (JSON格式)"
+              placeholder="请输入RCE匹配模式 (JSON格式)"
             ></el-input>
             <div class="hint">
               样例: {"os_command": ["cmd_inj_test", "uid=", "gid=", "groups="],
@@ -291,10 +223,10 @@ import { rulesAPI } from '@/services/api';
 import { ElMessage } from 'element-plus';
 
 export default {
-  name: 'CommandInjectionRules',
+  name: 'RceRules',
   data() {
     return {
-      // 系统命令注入载荷
+      // 系统命令执行载荷
       isEditingOsCommand: false,
       isLoadingOsCommand: false,
       loadOsCommandFailed: false,
@@ -302,15 +234,7 @@ export default {
       osCommandPayloadsText: '',
       osCommandRuleId: null,  // 用于存储规则ID，便于更新
 
-      // 盲命令注入载荷
-      isEditingBlindCommand: false,
-      isLoadingBlindCommand: false,
-      loadBlindCommandFailed: false,
-      blindCommandPayloads: [],
-      blindCommandPayloadsText: '',
-      blindCommandRuleId: null,  // 用于存储规则ID，便于更新
-
-      // 代码注入载荷
+      // 代码执行载荷
       isEditingCode: false,
       isLoadingCode: false,
       loadCodeFailed: false,
@@ -318,7 +242,7 @@ export default {
       codePayloadsText: '',
       codeRuleId: null,  // 用于存储规则ID，便于更新
 
-      // 命令注入匹配模式
+      // RCE匹配模式
       isEditingPatterns: false,
       isLoadingPatterns: false,
       loadPatternsFailed: false,
@@ -328,13 +252,12 @@ export default {
     };
   },
   created() {
-    this.fetchCommandInjectionRules();
+    this.fetchRceRules();
   },
   methods: {
-    async fetchCommandInjectionRules() {
-      // 获取所有命令注入规则
+    async fetchRceRules() {
+      // 获取所有RCE规则
       this.fetchOsCommandPayloads();
-      this.fetchBlindCommandPayloads();
       this.fetchCodePayloads();
       this.fetchMatchPatterns();
     },
@@ -344,11 +267,11 @@ export default {
       this.loadOsCommandFailed = false;
 
       try {
-        // 获取系统命令注入载荷规则
+        // 获取系统命令执行载荷规则
         const rules = await this.fetchVulnScanRulesByType('command_injection', 'os_command');
 
         if (rules.length > 0) {
-          // 找到系统命令注入规则
+          // 找到系统命令执行规则
           const rule = rules[0];  // 使用第一条规则
           this.osCommandRuleId = rule.id;
 
@@ -356,64 +279,25 @@ export default {
           this.osCommandPayloads = this.parseRuleContent(rule.rule_content);
           this.osCommandPayloadsText = this.osCommandPayloads.join('\n');
 
-          console.log("找到系统命令注入规则:", rule);
+          console.log("找到系统命令执行规则:", rule);
         } else {
-          console.log("未找到系统命令注入规则");
+          console.log("未找到系统命令执行规则");
           // 不设置默认值，保持为空数组
           this.osCommandPayloads = [];
           this.osCommandPayloadsText = '';
           this.osCommandRuleId = null;
         }
       } catch (error) {
-        console.error('获取系统命令注入规则失败', error);
+        console.error('获取系统命令执行规则失败', error);
         this.loadOsCommandFailed = true;
 
         // 不设置默认值，保持为空数组
         this.osCommandPayloads = [];
         this.osCommandPayloadsText = '';
 
-        ElMessage.error('获取系统命令注入规则失败，请添加规则');
+        ElMessage.error('获取系统命令执行规则失败，请添加规则');
       } finally {
         this.isLoadingOsCommand = false;
-      }
-    },
-
-    async fetchBlindCommandPayloads() {
-      this.isLoadingBlindCommand = true;
-      this.loadBlindCommandFailed = false;
-
-      try {
-        // 获取盲命令注入载荷规则
-        const rules = await this.fetchVulnScanRulesByType('command_injection', 'blind_os_command');
-
-        if (rules.length > 0) {
-          // 找到盲命令注入规则
-          const rule = rules[0];  // 使用第一条规则
-          this.blindCommandRuleId = rule.id;
-
-          // 解析载荷
-          this.blindCommandPayloads = this.parseRuleContent(rule.rule_content);
-          this.blindCommandPayloadsText = this.blindCommandPayloads.join('\n');
-
-          console.log("找到盲命令注入规则:", rule);
-        } else {
-          console.log("未找到盲命令注入规则");
-          // 不设置默认值，保持为空数组
-          this.blindCommandPayloads = [];
-          this.blindCommandPayloadsText = '';
-          this.blindCommandRuleId = null;
-        }
-      } catch (error) {
-        console.error('获取盲命令注入规则失败', error);
-        this.loadBlindCommandFailed = true;
-
-        // 不设置默认值，保持为空数组
-        this.blindCommandPayloads = [];
-        this.blindCommandPayloadsText = '';
-
-        ElMessage.error('获取盲命令注入规则失败，请添加规则');
-      } finally {
-        this.isLoadingBlindCommand = false;
       }
     },
 
@@ -422,11 +306,11 @@ export default {
       this.loadCodeFailed = false;
 
       try {
-        // 获取代码注入载荷规则
+        // 获取代码执行载荷规则
         const rules = await this.fetchVulnScanRulesByType('command_injection', 'code_injection');
 
         if (rules.length > 0) {
-          // 找到代码注入规则
+          // 找到代码执行规则
           const rule = rules[0];  // 使用第一条规则
           this.codeRuleId = rule.id;
 
@@ -434,23 +318,23 @@ export default {
           this.codePayloads = this.parseRuleContent(rule.rule_content);
           this.codePayloadsText = this.codePayloads.join('\n');
 
-          console.log("找到代码注入规则:", rule);
+          console.log("找到代码执行规则:", rule);
         } else {
-          console.log("未找到代码注入规则");
+          console.log("未找到代码执行规则");
           // 不设置默认值，保持为空数组
           this.codePayloads = [];
           this.codePayloadsText = '';
           this.codeRuleId = null;
         }
       } catch (error) {
-        console.error('获取代码注入规则失败', error);
+        console.error('获取代码执行规则失败', error);
         this.loadCodeFailed = true;
 
         // 不设置默认值，保持为空数组
         this.codePayloads = [];
         this.codePayloadsText = '';
 
-        ElMessage.error('获取代码注入规则失败，请添加规则');
+        ElMessage.error('获取代码执行规则失败，请添加规则');
       } finally {
         this.isLoadingCode = false;
       }
@@ -461,7 +345,7 @@ export default {
       this.loadPatternsFailed = false;
 
       try {
-        // 获取命令注入匹配模式规则
+        // 获取RCE匹配模式规则
         const rules = await this.fetchVulnScanRulesByType('command_injection', 'match_patterns');
 
         if (rules.length > 0) {
@@ -479,27 +363,27 @@ export default {
               throw new Error("规则内容格式不正确");
             }
           } catch (e) {
-            console.error("解析命令注入匹配模式失败:", e);
+            console.error("解析RCE匹配模式失败:", e);
             throw e;
           }
 
-          console.log("找到命令注入匹配模式规则:", rule);
+          console.log("找到RCE匹配模式规则:", rule);
         } else {
-          console.log("未找到命令注入匹配模式规则");
+          console.log("未找到RCE匹配模式规则");
           // 不设置默认值，保持为空对象
           this.matchPatterns = {};
           this.matchPatternsText = '';
           this.patternsRuleId = null;
         }
       } catch (error) {
-        console.error('获取命令注入匹配模式规则失败', error);
+        console.error('获取RCE匹配模式规则失败', error);
         this.loadPatternsFailed = true;
 
         // 不设置默认值，保持为空对象
         this.matchPatterns = {};
         this.matchPatternsText = '';
 
-        ElMessage.error('获取命令注入匹配模式规则失败，请添加规则');
+        ElMessage.error('获取RCE匹配模式规则失败，请添加规则');
       } finally {
         this.isLoadingPatterns = false;
       }
@@ -550,8 +434,8 @@ export default {
     // 获取匹配类型标签
     getMatchTypeLabel(type) {
       const labels = {
-        "os_command": "系统命令注入匹配",
-        "code_injection": "代码注入匹配"
+        "os_command": "系统命令执行匹配",
+        "code_injection": "代码执行匹配"
       };
       return labels[type] || type;
     },
@@ -566,15 +450,6 @@ export default {
       this.osCommandPayloadsText = this.osCommandPayloads.join('\n');
     },
 
-    editBlindCommandPayloads() {
-      this.isEditingBlindCommand = true;
-    },
-
-    cancelEditBlindCommand() {
-      this.isEditingBlindCommand = false;
-      this.blindCommandPayloadsText = this.blindCommandPayloads.join('\n');
-    },
-
     editCodePayloads() {
       this.isEditingCode = true;
     },
@@ -587,7 +462,7 @@ export default {
     editMatchPatterns() {
       this.isEditingPatterns = true;
 
-      // 如果没有内容，提供一个空的JSON对象框架
+      // 如果没有内容，提供一个空的JSON对象框架作为模板
       if (!this.matchPatternsText) {
         this.matchPatternsText = '{\n  "os_command": [],\n  "code_injection": []\n}';
       }
@@ -610,74 +485,33 @@ export default {
         // 准备规则数据
         const ruleData = {
           vuln_type: 'command_injection',
-          name: '系统命令注入规则',
-          description: '用于检测系统命令注入漏洞的测试载荷',
+          name: '系统命令执行规则',
+          description: '用于检测系统命令执行漏洞的测试载荷',
           rule_content: JSON.stringify({
             subType: 'os_command',
             payloads: payloads
           })
         };
 
-        console.log("准备保存系统命令注入规则:", ruleData);
+        console.log("准备保存系统命令执行规则:", ruleData);
 
         if (this.osCommandRuleId) {
           // 如果已有规则，则更新
           await rulesAPI.updateVulnScanRule(this.osCommandRuleId, ruleData);
-          ElMessage.success('系统命令注入规则更新成功');
+          ElMessage.success('系统命令执行规则更新成功');
         } else {
           // 如果没有规则，则创建
           const response = await rulesAPI.createVulnScanRule(ruleData);
           this.osCommandRuleId = response.id;
-          ElMessage.success('系统命令注入规则创建成功');
+          ElMessage.success('系统命令执行规则创建成功');
         }
 
         // 更新显示
         this.osCommandPayloads = payloads;
         this.isEditingOsCommand = false;
       } catch (error) {
-        console.error('保存系统命令注入规则失败', error);
-        ElMessage.error('保存系统命令注入规则失败');
-      }
-    },
-
-    async saveBlindCommandPayloads() {
-      try {
-        // 处理文本框中的内容，分割为载荷数组
-        const payloads = this.blindCommandPayloadsText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line);
-
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'command_injection',
-          name: '盲命令注入规则',
-          description: '用于检测无回显的盲命令注入漏洞的测试载荷',
-          rule_content: JSON.stringify({
-            subType: 'blind_os_command',
-            payloads: payloads
-          })
-        };
-
-        console.log("准备保存盲命令注入规则:", ruleData);
-
-        if (this.blindCommandRuleId) {
-          // 如果已有规则，则更新
-          await rulesAPI.updateVulnScanRule(this.blindCommandRuleId, ruleData);
-          ElMessage.success('盲命令注入规则更新成功');
-        } else {
-          // 如果没有规则，则创建
-          const response = await rulesAPI.createVulnScanRule(ruleData);
-          this.blindCommandRuleId = response.id;
-          ElMessage.success('盲命令注入规则创建成功');
-        }
-
-        // 更新显示
-        this.blindCommandPayloads = payloads;
-        this.isEditingBlindCommand = false;
-      } catch (error) {
-        console.error('保存盲命令注入规则失败', error);
-        ElMessage.error('保存盲命令注入规则失败');
+        console.error('保存系统命令执行规则失败', error);
+        ElMessage.error('保存系统命令执行规则失败');
       }
     },
 
@@ -692,33 +526,33 @@ export default {
         // 准备规则数据
         const ruleData = {
           vuln_type: 'command_injection',
-          name: '代码注入规则',
-          description: '用于检测PHP、Java、Python等代码注入漏洞的测试载荷',
+          name: '代码执行规则',
+          description: '用于检测PHP、Java、Python等代码执行漏洞的测试载荷',
           rule_content: JSON.stringify({
             subType: 'code_injection',
             payloads: payloads
           })
         };
 
-        console.log("准备保存代码注入规则:", ruleData);
+        console.log("准备保存代码执行规则:", ruleData);
 
         if (this.codeRuleId) {
           // 如果已有规则，则更新
           await rulesAPI.updateVulnScanRule(this.codeRuleId, ruleData);
-          ElMessage.success('代码注入规则更新成功');
+          ElMessage.success('代码执行规则更新成功');
         } else {
           // 如果没有规则，则创建
           const response = await rulesAPI.createVulnScanRule(ruleData);
           this.codeRuleId = response.id;
-          ElMessage.success('代码注入规则创建成功');
+          ElMessage.success('代码执行规则创建成功');
         }
 
         // 更新显示
         this.codePayloads = payloads;
         this.isEditingCode = false;
       } catch (error) {
-        console.error('保存代码注入规则失败', error);
-        ElMessage.error('保存代码注入规则失败');
+        console.error('保存代码执行规则失败', error);
+        ElMessage.error('保存代码执行规则失败');
       }
     },
 
@@ -733,40 +567,40 @@ export default {
             throw new Error("必须是JSON对象格式");
           }
         } catch (e) {
-          ElMessage.error('命令注入匹配模式必须是有效的JSON对象格式');
+          ElMessage.error('RCE匹配模式必须是有效的JSON对象格式');
           return;
         }
 
         // 准备规则数据
         const ruleData = {
           vuln_type: 'command_injection',
-          name: '命令注入匹配模式规则',
-          description: '用于检测命令注入成功的匹配模式',
+          name: 'RCE匹配模式规则',
+          description: '用于检测RCE漏洞成功的匹配模式',
           rule_content: JSON.stringify({
             subType: 'match_patterns',
             patterns: patterns
           })
         };
 
-        console.log("准备保存命令注入匹配模式规则:", ruleData);
+        console.log("准备保存RCE匹配模式规则:", ruleData);
 
         if (this.patternsRuleId) {
           // 如果已有规则，则更新
           await rulesAPI.updateVulnScanRule(this.patternsRuleId, ruleData);
-          ElMessage.success('命令注入匹配模式规则更新成功');
+          ElMessage.success('RCE匹配模式规则更新成功');
         } else {
           // 如果没有规则，则创建
           const response = await rulesAPI.createVulnScanRule(ruleData);
           this.patternsRuleId = response.id;
-          ElMessage.success('命令注入匹配模式规则创建成功');
+          ElMessage.success('RCE匹配模式规则创建成功');
         }
 
         // 更新显示
         this.matchPatterns = patterns;
         this.isEditingPatterns = false;
       } catch (error) {
-        console.error('保存命令注入匹配模式规则失败', error);
-        ElMessage.error('保存命令注入匹配模式规则失败');
+        console.error('保存RCE匹配模式规则失败', error);
+        ElMessage.error('保存RCE匹配模式规则失败');
       }
     }
   }
@@ -774,11 +608,11 @@ export default {
 </script>
 
 <style scoped>
-.command-injection-rules {
+.rce-rules {
   margin-bottom: 30px;
 }
 
-.command-injection-rules h3 {
+.rce-rules h3 {
   margin-bottom: 15px;
   font-size: 18px;
   color: #303133;

@@ -157,8 +157,6 @@ export default {
     getRceTypeName(row) {
       if (row.vuln_subtype === 'os_command') {
         return '系统命令';
-      } else if (row.vuln_subtype === 'blind_os_command') {
-        return '盲命令';
       } else if (row.vuln_subtype === 'php_code') {
         return 'PHP代码';
       } else if (row.vuln_subtype === 'java_code') {
@@ -166,15 +164,13 @@ export default {
       } else if (row.vuln_subtype === 'python_code') {
         return 'Python代码';
       }
-      return '命令注入';
+      return '命令执行';
     },
 
     // 获取RCE类型对应的标签样式
     getRceTagType(row) {
       if (row.vuln_subtype === 'os_command' || row.vuln_subtype === 'php_code') {
         return 'danger';
-      } else if (row.vuln_subtype === 'blind_os_command') {
-        return 'warning';
       } else if (row.vuln_subtype === 'java_code' || row.vuln_subtype === 'python_code') {
         return 'error';
       }
@@ -190,11 +186,6 @@ export default {
         // 截取执行结果前20个字符，如果超过则添加省略号
         const result = resultMatch[1].trim();
         return result.length > 20 ? result.slice(0, 20) + '...' : result;
-      }
-
-      // 如果没有明确的执行结果
-      if (row.vuln_subtype === 'blind_os_command') {
-        return '延时响应';
       }
 
       return '成功执行';

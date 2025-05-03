@@ -10,7 +10,7 @@ from .models import VulnScanResult
 from .modules.sql_injection_scanner import SqlInjectionScanner
 from .modules.xss_scanner import XssScanner  # 引入XSS扫描模块
 from .modules.file_inclusion_scanner import FileInclusionScanner  # 引入文件包含扫描模块
-from .modules.command_injection_scanner import CommandInjectionScanner  # 引入命令注入扫描模块
+from .modules.rce_scanner import RceScanner  # 引入RCE扫描模块（替代命令注入扫描模块）
 
 
 class VulnScanner:
@@ -33,7 +33,7 @@ class VulnScanner:
         self.sql_injection_scanner = SqlInjectionScanner()
         self.xss_scanner = XssScanner()  # 初始化XSS扫描器
         self.file_inclusion_scanner = FileInclusionScanner()  # 初始化文件包含扫描器
-        self.command_injection_scanner = CommandInjectionScanner()  # 初始化命令注入扫描器
+        self.rce_scanner = RceScanner()  # 初始化RCE扫描器（替代命令注入扫描器）
         # 以后可以添加其他类型的扫描器
         # self.ssrf_scanner = SsrfScanner()
         # 等等...
@@ -57,9 +57,9 @@ class VulnScanner:
         if hasattr(self.file_inclusion_scanner, 'clear_cache'):
             self.file_inclusion_scanner.clear_cache()
 
-        # 重置命令注入扫描模块的缓存
-        if hasattr(self.command_injection_scanner, 'clear_cache'):
-            self.command_injection_scanner.clear_cache()
+        # 重置RCE扫描模块的缓存
+        if hasattr(self.rce_scanner, 'clear_cache'):
+            self.rce_scanner.clear_cache()
 
         # 以后可以添加其他类型的扫描器缓存清理
         # if hasattr(self.ssrf_scanner, 'clear_cache'):
@@ -149,7 +149,7 @@ class VulnScanner:
                     self.sql_injection_scanner.scan(context),
                     self.xss_scanner.scan(context),  # 添加XSS扫描任务
                     self.file_inclusion_scanner.scan(context),  # 添加文件包含扫描任务
-                    self.command_injection_scanner.scan(context),  # 添加命令注入扫描任务
+                    self.rce_scanner.scan(context),  # 添加RCE扫描任务（替代命令注入扫描任务）
                     # 以后可以添加其他类型的扫描
                     # self.ssrf_scanner.scan(context),
                     # 等等...
@@ -179,11 +179,11 @@ class VulnScanner:
                 else:
                     print(f"文件包含扫描出错: {str(scan_results[2])}")
 
-                # 处理命令注入扫描结果
+                # 处理RCE扫描结果
                 if not isinstance(scan_results[3], Exception):
                     vuln_results.extend(scan_results[3])
                 else:
-                    print(f"命令注入扫描出错: {str(scan_results[3])}")
+                    print(f"RCE扫描出错: {str(scan_results[3])}")
 
                 # 以后可以添加其他类型的扫描结果处理
                 # if not isinstance(scan_results[4], Exception):

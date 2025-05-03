@@ -26,7 +26,7 @@
         <el-tab-pane label="SQL注入" name="sql_injection"></el-tab-pane>
         <el-tab-pane label="XSS" name="xss"></el-tab-pane>
         <el-tab-pane label="文件包含" name="file_inclusion"></el-tab-pane>
-        <el-tab-pane label="命令注入" name="command_injection"></el-tab-pane>
+        <el-tab-pane label="RCE" name="command_injection"></el-tab-pane>
         <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
         <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
         <el-tab-pane label="其他" name="other"></el-tab-pane>
@@ -78,7 +78,7 @@
       @delete-vuln="deleteResult"
     />
 
-    <!-- 命令注入结果 -->
+    <!-- RCE结果 -->
     <RceResults
       v-else-if="currentVulnType === 'command_injection'"
       :vulnResults="results"
@@ -138,8 +138,8 @@ import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
 import SqlInjectionResults from '@/components/vuln/SqlInjectionResults.vue';
 import XssResults from '@/components/vuln/XssResults.vue';
-import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue'; // 导入文件包含结果组件
-import RceResults from '@/components/vuln/RceResults.vue';
+import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue';
+import RceResults from '@/components/vuln/RceResults.vue'; // 导入RCE结果组件
 import SsrfResults from '@/components/vuln/SsrfResults.vue';
 import GeneralVulnResults from '@/components/vuln/GeneralVulnResults.vue';
 import VulnDetailDialog from '@/components/vuln/VulnDetailDialog.vue';
@@ -154,8 +154,8 @@ export default {
     ResultFilters,
     SqlInjectionResults,
     XssResults,
-    FileInclusionResults, // 注册文件包含结果组件
-    RceResults,
+    FileInclusionResults,
+    RceResults, // 注册RCE结果组件
     SsrfResults,
     GeneralVulnResults,
     VulnDetailDialog
@@ -283,11 +283,25 @@ export default {
         // 显示通知
         ElNotification({
           title: '漏洞发现',
-          message: `发现新${data.data.vuln_type_display}漏洞: ${data.data.name}`,
+          message: `发现新${this.getVulnTypeDisplay(data.data.vuln_type)}漏洞: ${data.data.name}`,
           type: this.getNotificationType(data.data.severity),
           duration: 5000
         });
       }
+    },
+
+    // 获取漏洞类型显示名称
+    getVulnTypeDisplay(vulnType) {
+      const vulnTypeMap = {
+        'sql_injection': 'SQL注入',
+        'xss': 'XSS跨站脚本',
+        'file_inclusion': '文件包含',
+        'command_injection': 'RCE', // 将命令注入改为RCE
+        'ssrf': 'SSRF',
+        'xxe': 'XXE',
+        'other': '其他'
+      };
+      return vulnTypeMap[vulnType] || vulnType;
     },
 
     // 添加新方法，根据严重程度返回通知类型

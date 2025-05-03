@@ -62,7 +62,7 @@
           <el-tab-pane label="SQL注入" name="sql_injection"></el-tab-pane>
           <el-tab-pane label="XSS" name="xss"></el-tab-pane>
           <el-tab-pane label="文件包含" name="file_inclusion"></el-tab-pane>
-          <el-tab-pane label="命令注入" name="command_injection"></el-tab-pane>
+          <el-tab-pane label="RCE" name="command_injection"></el-tab-pane>
           <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
           <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
           <el-tab-pane label="其他" name="other"></el-tab-pane>
@@ -82,9 +82,9 @@
           <template v-else-if="activeVulnTab === 'file_inclusion'">
             <FileInclusionRules />
           </template>
-          <!-- 命令注入模块显示专用组件 -->
+          <!-- RCE模块显示专用组件 -->
           <template v-else-if="activeVulnTab === 'command_injection'">
-            <CommandInjectionRules />
+            <RceRules />
           </template>
           <!-- 其他漏洞类型暂时显示提示信息 -->
           <template v-else>
@@ -122,7 +122,7 @@ import InfoRuleEditDialog from '@/components/rules/InfoRuleEditDialog.vue';
 import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue';
 import XssRules from '@/components/rules/XssRules.vue';
 import FileInclusionRules from '@/components/rules/FileInclusionRules.vue';
-import CommandInjectionRules from '@/components/rules/CommandInjectionRules.vue'; // 导入命令注入规则组件
+import RceRules from '@/components/rules/RceRules.vue'; // 导入RceRules组件
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
@@ -135,7 +135,7 @@ export default {
     SqlinjectionRules,
     XssRules,
     FileInclusionRules,
-    CommandInjectionRules // 注册命令注入规则组件
+    RceRules // 注册RceRules组件
   },
   data() {
     return {
@@ -235,7 +235,7 @@ export default {
 
     handleVulnTabClick() {
       // 漏洞扫描规则标签切换处理
-      // 注意：SQL注入、XSS、文件包含、命令注入规则已由组件自行加载
+      // 注意：SQL注入、XSS、文件包含、RCE规则已由组件自行加载
       console.log(`切换到漏洞类型标签: ${this.activeVulnTab}`);
     },
 
