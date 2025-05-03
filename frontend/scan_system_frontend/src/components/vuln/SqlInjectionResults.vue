@@ -1,4 +1,4 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue 修改版 -->
+<!-- 改进版 SqlInjectionResults.vue -->
 <template>
   <div class="sqlinjection-results">
     <el-table
@@ -44,14 +44,28 @@
         show-overflow-tooltip
       ></el-table-column>
 
+      <!-- 匹配值列，使用matched_error字段 -->
       <el-table-column
         label="匹配值"
         width="180"
         show-overflow-tooltip
       >
         <template #default="scope">
-          <!-- 修改：针对错误回显型注入显示实际匹配到的SQL错误关键词 -->
-          <span v-if="isSqlErrorMatch(scope.row)">{{ getErrorMatchInfo(scope.row) }}</span>
+          <!-- 针对错误回显型注入显示实际匹配到的SQL错误关键词 -->
+          <el-tag
+            v-if="isSqlErrorMatch(scope.row)"
+            type="danger"
+            effect="dark"
+          >
+            {{ getErrorMatchInfo(scope.row) }}
+          </el-tag>
+          <!-- 针对时间型注入显示时间延迟 -->
+          <el-tag
+            v-else-if="isTimeBasedInjection(scope.row)"
+            type="warning"
+          >
+            {{ getResponseTime(scope.row) }}
+          </el-tag>
           <span v-else>-</span>
         </template>
       </el-table-column>
@@ -101,7 +115,6 @@
         width="120"
       >
         <template #default="scope">
-          <!-- 修改：将详情和删除按钮放在同一行 -->
           <div class="operation-buttons">
             <el-button
               @click="$emit('view-detail', scope.row)"
@@ -168,6 +181,17 @@ export default {
     }
   },
   emits: ['size-change', 'current-change', 'view-detail', 'delete-vuln'],
+  data() {
+    return {
+      // SQL错误模式
+      sqlErrorPatterns: [
+        'SQL syntax', 'MySQL', 'ORA-', 'SQLSTATE',
+        'Incorrect syntax', 'ODBC Driver', 'PostgreSQL',
+        'Warning: mysql', 'Warning: pg', 'SQL Server',
+        'invalid query', 'ora_', 'pg_', 'mysqli'
+      ]
+    };
+  },
   methods: {
     formatDate(dateString) {
       if (!dateString) return '';
@@ -185,30 +209,30 @@ export default {
       return row.vuln_subtype === 'blind' && (row.proof || '').includes('时间');
     },
 
-    // 修改：获取错误匹配信息，提取实际匹配到的SQL错误关键词
+    // 获取错误匹配信息
     getErrorMatchInfo(row) {
-      // 从proof中提取匹配信息
+      // 优先使用服务端提取的matched_error字段
+      if (row.matched_error) {
+        return row.matched_error;
+      }
+
+      // 如果没有提供matched_error，尝试从proof中提取
       const proof = row.proof || '';
-      
-      // 尝试提取"包含SQL错误信息"后面的具体错误关键词
+
+      // 尝试提取"包含SQL错误信息: xxx"格式
       const errorMatch = proof.match(/包含SQL错误信息[：:]?\s*(.+?)(?:\s|$)/);
       if (errorMatch && errorMatch[1]) {
         return errorMatch[1].trim();
       }
-      
+
       // 如果没有明确提取到错误信息，则尝试从响应中查找常见SQL错误模式
       const response = row.response || '';
-      const commonErrors = [
-        'SQL syntax', 'MySQL', 'SQLSTATE', 'ORA-',
-        'Oracle error', 'Microsoft SQL Server', 'PostgreSQL'
-      ];
-      
-      for (const error of commonErrors) {
+      for (const error of this.sqlErrorPatterns) {
         if (response.includes(error)) {
           return error;
         }
       }
-      
+
       return 'SQL错误';
     },
 
@@ -282,7 +306,6 @@ export default {
   text-align: right;
 }
 
-/* 修改：让操作按钮在同一行显示 */
 .operation-buttons {
   display: flex;
   justify-content: space-around;
@@ -294,5 +317,17 @@ export default {
 
 .delete-btn:hover {
   color: #f78989;
+}
+
+/* 定义不同漏洞类型的标签样式 */
+:deep(.el-tag--danger.el-tag--dark) {
+  background-color: #F56C6C;
+  color: white;
+  font-weight: bold;
+}
+
+:deep(.el-tag--warning) {
+  color: #E6A23C;
+  border-color: #E6A23C;
 }
 </style>
