@@ -165,40 +165,45 @@ class VulnScanner:
                     vuln_result = await self.save_vuln_result(
                         asset=asset,
                         vuln_type=result['vuln_type'],
-                        vuln_subtype=result['vuln_subtype'],
+                        vuln_subtype=result.get('vuln_subtype'),
                         name=result['name'],
                         description=result['description'],
                         severity=result['severity'],
                         url=result['url'],
-                        request=result['request'],
-                        response=result['response'],
-                        proof=result['proof']
+                        request=result.get('request'),
+                        response=result.get('response'),
+                        proof=result.get('proof'),
+                        parameter=result.get('parameter'),
+                        payload=result.get('payload')
                     )
 
                     # 发送漏洞结果事件
-                    await channel_layer.group_send(
-                        'vuln_scan_scanner',
-                        {
-                            'type': 'scan_result',
-                            'data': {
-                                'id': vuln_result.id,
-                                'asset': asset.host,
-                                'vuln_type': vuln_result.vuln_type,
-                                'vuln_type_display': vuln_result.get_vuln_type_display(),
-                                'vuln_subtype': vuln_result.vuln_subtype,
-                                'name': vuln_result.name,
-                                'description': vuln_result.description,
-                                'severity': vuln_result.severity,
-                                'severity_display': vuln_result.get_severity_display(),
-                                'url': vuln_result.url,
-                                'request': vuln_result.request,
-                                'response': vuln_result.response,
-                                'proof': vuln_result.proof,
-                                'scan_date': vuln_result.scan_date.isoformat(),
-                                'is_verified': vuln_result.is_verified
+                    if vuln_result:
+                        await channel_layer.group_send(
+                            'vuln_scan_scanner',
+                            {
+                                'type': 'scan_result',
+                                'data': {
+                                    'id': vuln_result.id,
+                                    'asset': asset.host,
+                                    'vuln_type': vuln_result.vuln_type,
+                                    'vuln_type_display': vuln_result.get_vuln_type_display(),
+                                    'vuln_subtype': vuln_result.vuln_subtype,
+                                    'name': vuln_result.name,
+                                    'description': vuln_result.description,
+                                    'severity': vuln_result.severity,
+                                    'severity_display': vuln_result.get_severity_display(),
+                                    'url': vuln_result.url,
+                                    'request': vuln_result.request,
+                                    'response': vuln_result.response,
+                                    'proof': vuln_result.proof,
+                                    'scan_date': vuln_result.scan_date.isoformat(),
+                                    'is_verified': vuln_result.is_verified,
+                                    'parameter': vuln_result.parameter,
+                                    'payload': vuln_result.payload
+                                }
                             }
-                        }
-                    )
+                        )
 
                 # 发送扫描完成事件
                 await channel_layer.group_send(
@@ -249,7 +254,7 @@ class VulnScanner:
 
     @sync_to_async
     def save_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
-                         response, proof):
+                         response, proof, parameter=None, payload=None):
         """保存漏洞结果"""
         try:
             # 检查是否已存在相同的漏洞结果
@@ -274,6 +279,8 @@ class VulnScanner:
                     request=request,
                     response=response,
                     proof=proof,
+                    parameter=parameter,
+                    payload=payload,
                     scan_date=timezone.now()
                 )
             else:

@@ -1,3 +1,4 @@
+# system/mitmproxy_script.py
 import json
 import time
 import base64
@@ -97,23 +98,18 @@ class Proxy:
             # 处理值
             if isinstance(value, bytes):
                 try:
-                    value = value.decode('utf-8')
-                except UnicodeDecodeError:
                     value = value.decode('utf-8', errors='replace')
+                except Exception:
+                    # 如果仍然出错，使用占位符
+                    value = "[二进制数据]"
             elif value is None:
                 value = ''
             else:
                 # 确保值是字符串
-                value = str(value)
-
-            # 特殊处理User-Agent头
-            if key.lower() == 'user-agent':
-                # 确保User-Agent是有效的UTF-8字符串
                 try:
-                    value = value.encode('utf-8', errors='replace').decode('utf-8')
+                    value = str(value)
                 except Exception:
-                    # 如果还有问题，使用安全的替代值
-                    value = "Unknown User-Agent"
+                    value = "[无法转换为字符串]"
 
             processed_headers[key] = value
 

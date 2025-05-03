@@ -29,8 +29,8 @@ class SqlInjectionScanner:
         # 默认延时时间(用于基于时间的盲注)
         self.time_delay = 5
 
-        # 永久禁用的HTTP头 - 不管数据库规则如何，这些头一定不会被测试
-        self.permanently_disabled_headers = ["User-Agent", "Referer"]
+        # 不再设置永久禁用的头部
+        # self.permanently_disabled_headers = ["User-Agent", "Referer"]
 
     def safe_decode(self, value):
         """安全地解码任何值，处理所有可能的编码错误"""
@@ -47,7 +47,7 @@ class SqlInjectionScanner:
         if isinstance(value, str):
             # 如果已经是字符串，确保它是有效的UTF-8
             try:
-                return value.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+                return value.encode('utf-8', errors='replace').decode('utf-8')
             except Exception:
                 return "[编码错误]"
 
@@ -201,10 +201,6 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             # 从规则中获取要测试的HTTP头列表
             headers = rule_content['payloads']
-
-            # 永久排除指定的头部
-            headers = [h for h in headers if h not in self.permanently_disabled_headers]
-
             return headers
 
         # 如果没有找到规则，返回空列表，而不是默认值
@@ -630,28 +626,26 @@ class SqlInjectionScanner:
             # 解析URL获取主机信息
             parsed_url = urlparse(url)
 
-            # 再次过滤永久禁用的头部
-            filtered_headers = [h for h in headers_to_test if h not in self.permanently_disabled_headers]
-
             # 如果没有要测试的头部，直接返回
-            if not filtered_headers:
+            if not headers_to_test:
                 return results
 
-            print(f"测试HTTP头: {filtered_headers}")
+            print(f"测试HTTP头: {headers_to_test}")
 
             # 测试每个HTTP头
-            for header in filtered_headers:
+            for header in headers_to_test:
                 # 如果请求中不包含该头部，跳过
                 if header not in req_headers:
+                    print(f"跳过不存在的HTTP头: {header}")
                     continue
 
                 try:
-                    # 安全获取原始值，处理可能的编码问题
+                    # 安全获取原始值
                     original_value = self.safe_decode(req_headers[header])
 
                     # 如果值为空或只有占位符，跳过
                     if not original_value or original_value in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
-                        print(f"跳过HTTP头 {header} 因为值无法正确解码")
+                        print(f"跳过HTTP头 {header} 因为值无法正确解码: {original_value}")
                         continue
 
                     # 测试回显型注入
@@ -664,12 +658,14 @@ class SqlInjectionScanner:
                         # 创建测试头部
                         test_headers = {}
                         for k, v in req_headers.items():
-                            if k != header and k not in self.permanently_disabled_headers:
-                                # 对其他头部使用安全解码
-                                test_headers[k] = self.safe_decode(v)
-                            elif k == header:
+                            if k == header:
                                 # 对目标头部添加payload
                                 test_headers[k] = original_value + payload
+                            else:
+                                # 对其他头部使用安全解码
+                                decoded_value = self.safe_decode(v)
+                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
+                                    test_headers[k] = decoded_value
 
                         # 确保Host头存在
                         if 'Host' not in test_headers:
@@ -724,12 +720,14 @@ class SqlInjectionScanner:
                         # 创建测试头部
                         test_headers = {}
                         for k, v in req_headers.items():
-                            if k != header and k not in self.permanently_disabled_headers:
-                                # 对其他头部使用安全解码
-                                test_headers[k] = self.safe_decode(v)
-                            elif k == header:
+                            if k == header:
                                 # 对目标头部添加payload
                                 test_headers[k] = original_value + payload
+                            else:
+                                # 对其他头部使用安全解码
+                                decoded_value = self.safe_decode(v)
+                                if decoded_value and decoded_value not in ["[二进制数据]", "[编码错误]", "[无法转换为字符串]"]:
+                                    test_headers[k] = decoded_value
 
                         # 确保Host头存在
                         if 'Host' not in test_headers:

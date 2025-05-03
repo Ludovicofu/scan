@@ -280,6 +280,8 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"处理代理数据时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     @database_sync_to_async
     def update_asset(self, url):
