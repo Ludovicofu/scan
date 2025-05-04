@@ -34,7 +34,7 @@ class VulnScanner:
         self.xss_scanner = XssScanner()
         self.file_inclusion_scanner = FileInclusionScanner()
 
-        # 修改：初始化RCE扫描器，移除对未定义模块的依赖
+        # 初始化RCE扫描器
         self.rce_scanner = self._init_rce_scanner()
 
         # 已扫描的URL记录
@@ -44,26 +44,17 @@ class VulnScanner:
         """初始化RCE扫描器，处理可能的导入错误"""
         try:
             rce_scanner = RceScanner()
-            # 修改RceScanner中可能引起问题的部分
-            # 1. 移除对utils模块的依赖
+            # 修改：移除对RulesApiProxy的依赖，不传参数调用load_payloads
             if hasattr(rce_scanner, 'load_payloads'):
-                # 创建一个简单的规则API代理
-                class RulesApiProxy:
-                    @staticmethod
-                    async def get_rules_by_type_and_subtype(vuln_type, subtype):
-                        # 这里使用一个简单的实现，返回一个空列表
-                        # 实际应当调用数据库获取规则
-                        return []
-
-                # 异步执行load_payloads，防止初始化卡住
-                asyncio.create_task(rce_scanner.load_payloads(RulesApiProxy()))
+                # 异步执行load_payloads，不传递任何参数
+                asyncio.create_task(rce_scanner.load_payloads())
 
             print("RCE扫描器初始化成功")
             return rce_scanner
         except Exception as e:
             print(f"RCE扫描器初始化失败: {str(e)}")
-            # 返回一个简化版的RCE扫描器
-            return SimpleRceScanner()
+            # 返回None代替SimpleRceScanner
+            return None
 
     def reset_scan_state(self):
         """重置扫描状态，清除缓存"""
@@ -168,15 +159,18 @@ class VulnScanner:
                 ]
 
                 # 添加RCE扫描任务，增加错误处理
-                try:
-                    # 检查RCE扫描器scan方法是否可用
-                    if hasattr(self.rce_scanner, 'scan'):
-                        tasks.append(self.rce_scanner.scan(context))
-                        print(f"添加RCE扫描任务: {url}")
-                    else:
-                        print("RCE扫描器没有scan方法，跳过")
-                except Exception as e:
-                    print(f"添加RCE扫描任务时出错: {str(e)}")
+                if self.rce_scanner:  # 检查RCE扫描器是否成功初始化
+                    try:
+                        # 检查RCE扫描器scan方法是否可用
+                        if hasattr(self.rce_scanner, 'scan'):
+                            tasks.append(self.rce_scanner.scan(context))
+                            print(f"添加RCE扫描任务: {url}")
+                        else:
+                            print("RCE扫描器没有scan方法，跳过")
+                    except Exception as e:
+                        print(f"添加RCE扫描任务时出错: {str(e)}")
+                else:
+                    print("RCE扫描器未初始化，跳过RCE扫描")
 
                 # 等待所有任务完成或有一个失败
                 scan_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -342,5 +336,3 @@ class VulnScanner:
             import traceback
             traceback.print_exc()
             return None
-
-
