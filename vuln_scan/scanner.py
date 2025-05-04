@@ -45,39 +45,88 @@ class VulnScanner:
     def _init_rce_scanner(self):
         """初始化RCE扫描器，处理可能的导入错误"""
         try:
+            print("开始初始化RCE扫描器...")
             rce_scanner = RceScanner()
-            # 修改：移除对RulesApiProxy的依赖，不传参数调用load_payloads
+            # 移除对RulesApiProxy的依赖，不传参数调用load_payloads
+            # 注意：这里改为同步初始化，便于调试
             if hasattr(rce_scanner, 'load_payloads'):
-                # 异步执行load_payloads，不传递任何参数
-                asyncio.create_task(rce_scanner.load_payloads())
+                try:
+                    # 创建异步任务，但使用日志记录任务状态
+                    task = asyncio.create_task(rce_scanner.load_payloads())
+                    task.add_done_callback(
+                        lambda t: print(f"RCE规则加载{'成功' if not t.exception() else '失败: ' + str(t.exception())}")
+                    )
+                except Exception as load_err:
+                    print(f"创建RCE规则加载任务失败: {str(load_err)}")
 
             print("RCE扫描器初始化成功")
             return rce_scanner
+        except ImportError as e:
+            print(f"导入RCE扫描器模块失败: {str(e)}")
+            return None
         except Exception as e:
             print(f"RCE扫描器初始化失败: {str(e)}")
-            # 返回None代替SimpleRceScanner
+            import traceback
+            traceback.print_exc()
             return None
 
     def _init_ssrf_scanner(self):
         """初始化SSRF扫描器，处理可能的导入错误"""
         try:
-            print("开始初始化SSRF扫描器...")
-            ssrf_scanner = SsrfScanner()
-            # 异步加载规则
-            if hasattr(ssrf_scanner, 'load_payloads'):
-                print("SSRF扫描器有load_payloads方法，异步执行")
-                # 异步执行load_payloads，不传递任何参数
-                asyncio.create_task(ssrf_scanner.load_payloads())
-            else:
-                print("SSRF扫描器没有load_payloads方法")
+            print("===== 开始初始化SSRF扫描器... =====")
 
-            print("SSRF扫描器初始化成功")
+            # 首先验证类是否可以导入
+            try:
+                ssrf_scanner_type = type(SsrfScanner)
+                print(f"SSRF扫描器类型: {ssrf_scanner_type}")
+            except Exception as type_err:
+                print(f"获取SSRF扫描器类型失败: {str(type_err)}")
+
+            # 创建扫描器实例
+            ssrf_scanner = SsrfScanner()
+            print(f"SSRF扫描器实例创建成功: {ssrf_scanner}")
+
+            # 检查关键方法
+            has_load_method = hasattr(ssrf_scanner, 'load_payloads')
+            has_scan_method = hasattr(ssrf_scanner, 'scan')
+            print(f"SSRF扫描器方法检查 - load_payloads: {has_load_method}, scan: {has_scan_method}")
+
+            # 同步加载规则以确保初始化成功
+            if has_load_method:
+                try:
+                    # 创建异步任务并设置回调函数记录结果
+                    task = asyncio.create_task(ssrf_scanner.load_payloads())
+
+                    def log_result(future):
+                        try:
+                            result = future.result()
+                            print(f"SSRF规则加载结果: {result}")
+                        except Exception as future_err:
+                            print(f"SSRF规则加载异步任务出错: {str(future_err)}")
+                            import traceback
+                            traceback.print_exc()
+
+                    task.add_done_callback(log_result)
+                    print("SSRF规则加载任务已创建")
+                except Exception as load_err:
+                    print(f"创建SSRF规则加载任务失败: {str(load_err)}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("警告: SSRF扫描器没有load_payloads方法")
+
+            print("===== SSRF扫描器初始化成功 =====")
             return ssrf_scanner
+
+        except ImportError as e:
+            print(f"导入SSRF扫描器模块失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
         except Exception as e:
             print(f"SSRF扫描器初始化失败: {str(e)}")
             import traceback
             traceback.print_exc()
-            # 返回None
             return None
 
     def reset_scan_state(self):
@@ -95,11 +144,18 @@ class VulnScanner:
             self.file_inclusion_scanner.clear_cache()
 
         if self.ssrf_scanner and hasattr(self.ssrf_scanner, 'clear_cache'):  # 检查SSRF扫描器是否初始化
-            self.ssrf_scanner.clear_cache()
-            print("SSRF扫描器缓存已清除")
+            try:
+                self.ssrf_scanner.clear_cache()
+                print("SSRF扫描器缓存已清除")
+            except Exception as e:
+                print(f"清除SSRF扫描器缓存失败: {str(e)}")
 
         if self.rce_scanner and hasattr(self.rce_scanner, 'clear_cache'):
-            self.rce_scanner.clear_cache()
+            try:
+                self.rce_scanner.clear_cache()
+                print("RCE扫描器缓存已清除")
+            except Exception as e:
+                print(f"清除RCE扫描器缓存失败: {str(e)}")
 
         print("漏洞扫描器状态已重置")
 
@@ -201,12 +257,19 @@ class VulnScanner:
                     try:
                         # 检查SSRF扫描器scan方法是否可用
                         if hasattr(self.ssrf_scanner, 'scan'):
-                            tasks.append(self.ssrf_scanner.scan(context))
-                            print(f"添加SSRF扫描任务: {url}")
+                            print(f"尝试添加SSRF扫描任务: {url}")
+                            # 首先验证scan方法是否可调用
+                            if callable(getattr(self.ssrf_scanner, 'scan')):
+                                tasks.append(self.ssrf_scanner.scan(context))
+                                print(f"成功添加SSRF扫描任务: {url}")
+                            else:
+                                print("SSRF扫描器scan方法不可调用，跳过")
                         else:
                             print("SSRF扫描器没有scan方法，跳过")
                     except Exception as e:
                         print(f"添加SSRF扫描任务时出错: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
                 else:
                     print("SSRF扫描器未初始化，跳过SSRF扫描")
 
@@ -215,64 +278,48 @@ class VulnScanner:
                     try:
                         # 检查RCE扫描器scan方法是否可用
                         if hasattr(self.rce_scanner, 'scan'):
-                            tasks.append(self.rce_scanner.scan(context))
-                            print(f"添加RCE扫描任务: {url}")
+                            print(f"尝试添加RCE扫描任务: {url}")
+                            # 验证scan方法是否可调用
+                            if callable(getattr(self.rce_scanner, 'scan')):
+                                tasks.append(self.rce_scanner.scan(context))
+                                print(f"成功添加RCE扫描任务: {url}")
+                            else:
+                                print("RCE扫描器scan方法不可调用，跳过")
                         else:
                             print("RCE扫描器没有scan方法，跳过")
                     except Exception as e:
                         print(f"添加RCE扫描任务时出错: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
                 else:
                     print("RCE扫描器未初始化，跳过RCE扫描")
 
                 print(f"创建了 {len(tasks)} 个扫描任务")
 
-                # 等待所有任务完成或有一个失败
-                scan_results = await asyncio.gather(*tasks, return_exceptions=True)
-                print(f"获取到 {len(scan_results)} 个扫描结果")
+                # 等待所有任务完成或有一个失败，增加错误处理
+                scan_results = []
+                for i, task in enumerate(tasks):
+                    try:
+                        result = await task
+                        scan_results.append(result)
+                        scanner_name = ["SQL注入", "XSS", "文件包含", "SSRF", "RCE"][min(i, 4)]
+                        print(f"{scanner_name}扫描完成，结果数量: {len(result) if result else 0}")
+                    except Exception as e:
+                        scanner_name = ["SQL注入", "XSS", "文件包含", "SSRF", "RCE"][min(i, 4)]
+                        print(f"{scanner_name}扫描出错: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        scan_results.append([])  # 添加空列表保持索引一致
 
                 # 处理扫描结果
                 vuln_results = []
 
-                # 处理SQL注入扫描结果
-                if not isinstance(scan_results[0], Exception):
-                    vuln_results.extend(scan_results[0])
-                    print(f"SQL注入扫描完成，结果数量: {len(scan_results[0])}")
-                else:
-                    print(f"SQL注入扫描出错: {str(scan_results[0])}")
-
-                # 处理XSS扫描结果
-                if not isinstance(scan_results[1], Exception):
-                    vuln_results.extend(scan_results[1])
-                    print(f"XSS扫描完成，结果数量: {len(scan_results[1])}")
-                else:
-                    print(f"XSS扫描出错: {str(scan_results[1])}")
-
-                # 处理文件包含扫描结果
-                if not isinstance(scan_results[2], Exception):
-                    vuln_results.extend(scan_results[2])
-                    print(f"文件包含扫描完成，结果数量: {len(scan_results[2])}")
-                else:
-                    print(f"文件包含扫描出错: {str(scan_results[2])}")
-
-                # 处理SSRF扫描结果（如果有）
-                ssrf_index = 3  # SSRF结果的索引
-                if len(scan_results) > ssrf_index:
-                    if not isinstance(scan_results[ssrf_index], Exception):
-                        ssrf_result_count = len(scan_results[ssrf_index])
-                        print(f"SSRF扫描完成，结果数量: {ssrf_result_count}")
-                        vuln_results.extend(scan_results[ssrf_index])
-                    else:
-                        print(f"SSRF扫描出错: {str(scan_results[ssrf_index])}")
-
-                # 处理RCE扫描结果（如果有）
-                rce_index = 4 if self.ssrf_scanner else 3  # 根据SSRF扫描器是否存在调整索引
-                if len(scan_results) > rce_index:
-                    if not isinstance(scan_results[rce_index], Exception):
-                        rce_result_count = len(scan_results[rce_index])
-                        print(f"RCE扫描完成，结果数量: {rce_result_count}")
-                        vuln_results.extend(scan_results[rce_index])
-                    else:
-                        print(f"RCE扫描出错: {str(scan_results[rce_index])}")
+                # 合并所有有效的扫描结果
+                for i, result in enumerate(scan_results):
+                    if result:  # 如果结果不为空或None
+                        scanner_name = ["SQL注入", "XSS", "文件包含", "SSRF", "RCE"][min(i, 4)]
+                        print(f"合并{scanner_name}扫描结果: {len(result)}个")
+                        vuln_results.extend(result)
 
                 # 保存漏洞结果
                 print(f"共发现 {len(vuln_results)} 个漏洞")
