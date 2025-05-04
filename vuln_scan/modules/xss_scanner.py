@@ -190,20 +190,9 @@ class XssScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的载荷
-        print("未找到反射型XSS规则，使用默认载荷")
-        return [
-            "<script>alert(1)</script>",
-            "<img src=x onerror=alert(1)>",
-            "';alert(1);//",
-            "\"><script>alert(1)</script>",
-            "<svg/onload=alert(1)>",
-            "<iframe src=\"javascript:alert(1)\"></iframe>",
-            "<body onload=alert(1)>",
-            "javascript:alert(1)",
-            "\"onmouseover=\"alert(1)",
-            "'-alert(1)-'"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到反射型XSS规则，跳过该类型扫描")
+        return []
 
     async def get_stored_payloads(self, context):
         """获取存储型XSS测试载荷"""
@@ -214,14 +203,9 @@ class XssScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的载荷
-        print("未找到存储型XSS规则，使用默认载荷")
-        return [
-            "<script>alert('stored_xss_1')</script>",
-            "<img src=x onerror=alert('stored_xss_2')>",
-            "<svg/onload=alert('stored_xss_3')>",
-            "<iframe src=\"javascript:alert('stored_xss_4')\"></iframe>"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到存储型XSS规则，跳过该类型扫描")
+        return []
 
     async def get_dom_payloads(self, context):
         """获取DOM型XSS测试载荷"""
@@ -232,15 +216,9 @@ class XssScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的载荷
-        print("未找到DOM型XSS规则，使用默认载荷")
-        return [
-            "javascript:alert(1)",
-            "#<script>alert(1)</script>",
-            "?q=<script>alert(1)</script>",
-            "?param=';alert(1);//",
-            "#javascript:alert(1)"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到DOM型XSS规则，跳过该类型扫描")
+        return []
 
     async def get_context_patterns(self, context):
         """获取XSS上下文匹配模式"""
@@ -251,14 +229,9 @@ class XssScanner:
         if rule_content and 'patterns' in rule_content and isinstance(rule_content['patterns'], dict):
             return rule_content['patterns']
 
-        # 如果没有找到规则，返回默认的匹配模式
-        print("未找到XSS上下文匹配模式规则，使用默认匹配模式")
-        return {
-            "html": r"<[^>]*>(.*?)<\/[^>]*>",
-            "attribute": r"<[^>]*[a-zA-Z0-9]+=(['\"])(.*?)\1[^>]*>",
-            "javascript": r"<script[^>]*>(.*?)<\/script>",
-            "url": r"(href|src|action|url)\s*=\s*(['\"])(.*?)\2"
-        }
+        # 如果没有找到规则，返回空字典
+        print("未找到XSS上下文匹配模式规则，使用默认匹配逻辑")
+        return {}
 
     async def scan_url_parameters(self, context, url, xss_payloads, context_patterns):
         """扫描URL参数中的XSS漏洞"""

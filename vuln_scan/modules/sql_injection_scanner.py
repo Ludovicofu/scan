@@ -186,17 +186,9 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的载荷
-        print("未找到回显型SQL注入规则，使用默认载荷")
-        return [
-            "'",
-            "\"",
-            "')",
-            "\";",
-            "' UNION SELECT 1,2,3--",
-            "\" UNION SELECT @@version,2,3--",
-            "' OR '1'='1"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到回显型SQL注入规则，跳过该类型的扫描")
+        return []
 
     async def get_blind_payloads(self, context):
         """获取盲注型SQL注入测试载荷"""
@@ -207,15 +199,9 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的载荷
-        print("未找到盲注型SQL注入规则，使用默认载荷")
-        return [
-            "' OR (SELECT SLEEP(5))--",
-            "'; SELECT SLEEP(5)--",
-            "'; WAITFOR DELAY '0:0:5'--",
-            "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
-            "' AND 1=dbms_pipe.receive_message('RDS',10)--"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到盲注型SQL注入规则，跳过该类型的扫描")
+        return []
 
     async def get_http_headers_to_test(self, context):
         """获取要测试的HTTP头列表"""
@@ -229,15 +215,9 @@ class SqlInjectionScanner:
             print(f"从数据库获取到HTTP头规则: {headers}")
             return headers
 
-        # 如果没有找到规则，返回默认值
-        print("未找到HTTP头注入规则，使用默认HTTP头")
-        return [
-            "Cookie",
-            "X-Forwarded-For",
-            "Referer",
-            "User-Agent",
-            "Authorization"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到HTTP头注入规则，跳过HTTP头扫描")
+        return []
 
     async def get_error_patterns(self, context):
         """获取SQL错误匹配模式"""
@@ -248,27 +228,9 @@ class SqlInjectionScanner:
         if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
             return rule_content['payloads']
 
-        # 如果没有找到规则，返回默认的匹配模式
-        print("未找到SQL错误匹配模式规则，使用默认匹配模式")
-        return [
-            r"SQL syntax.*MySQL",
-            r"Warning.*mysqli",
-            r"MySQLSyntaxErrorException",
-            r"valid MySQL result",
-            r"check the manual that (corresponds to|fits) your MySQL server version",
-            r"MySqlClient\\.",
-            r"com\\.mysql\\.jdbc\\.exceptions",
-            r"ORA-[0-9][0-9][0-9][0-9]",
-            r"Oracle error",
-            r"Oracle.*Driver",
-            r"SQLSTATE\\[",
-            r"SQL Server message",
-            r"Warning.*mssql_",
-            r"Driver.*? SQL[\\-\\_\\ ]*Server",
-            r"JET Database Engine",
-            r"Microsoft Access Driver",
-            r"Syntax error \\(missing operator\\) in query expression"
-        ]
+        # 如果没有找到规则，返回空列表
+        print("未找到SQL错误匹配模式规则，可能会影响检测准确性")
+        return []
 
     async def scan_url_parameters(self, context, url, error_payloads, blind_payloads, error_patterns):
         """扫描URL参数中的SQL注入漏洞"""
@@ -954,15 +916,9 @@ class SqlInjectionScanner:
         if not response_text:
             return False, None
 
-        # 如果没有提供错误模式，返回一些默认的错误模式
+        # 如果没有提供错误模式，返回False
         if not error_patterns:
-            error_patterns = [
-                r"SQL syntax.*MySQL",
-                r"Warning.*mysqli",
-                r"ORA-[0-9][0-9][0-9][0-9]",
-                r"SQLSTATE\[",
-                r"SQL Server"
-            ]
+            return False, None
 
         # 编译正则表达式以提高性能
         compiled_patterns = []
