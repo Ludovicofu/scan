@@ -11,6 +11,7 @@ from .modules.sql_injection_scanner import SqlInjectionScanner
 from .modules.xss_scanner import XssScanner
 from .modules.file_inclusion_scanner import FileInclusionScanner
 from .modules.rce_scanner import RceScanner
+from .modules.ssrf_scanner import SsrfScanner  # 确保导入SSRF扫描器
 
 
 class VulnScanner:
@@ -33,6 +34,7 @@ class VulnScanner:
         self.sql_injection_scanner = SqlInjectionScanner()
         self.xss_scanner = XssScanner()
         self.file_inclusion_scanner = FileInclusionScanner()
+        self.ssrf_scanner = SsrfScanner()  # 初始化SSRF扫描器
 
         # 初始化RCE扫描器
         self.rce_scanner = self._init_rce_scanner()
@@ -69,6 +71,9 @@ class VulnScanner:
 
         if hasattr(self.file_inclusion_scanner, 'clear_cache'):
             self.file_inclusion_scanner.clear_cache()
+
+        if hasattr(self.ssrf_scanner, 'clear_cache'):  # 清除SSRF扫描器缓存
+            self.ssrf_scanner.clear_cache()
 
         if hasattr(self.rce_scanner, 'clear_cache'):
             self.rce_scanner.clear_cache()
@@ -156,6 +161,7 @@ class VulnScanner:
                     self.sql_injection_scanner.scan(context),
                     self.xss_scanner.scan(context),
                     self.file_inclusion_scanner.scan(context),
+                    self.ssrf_scanner.scan(context),  # 将SSRF扫描器添加到扫描任务中
                 ]
 
                 # 添加RCE扫描任务，增加错误处理
@@ -196,13 +202,20 @@ class VulnScanner:
                 else:
                     print(f"文件包含扫描出错: {str(scan_results[2])}")
 
+                # 处理SSRF扫描结果
+                if not isinstance(scan_results[3], Exception):
+                    print(f"SSRF扫描完成，结果数量: {len(scan_results[3])}")
+                    vuln_results.extend(scan_results[3])
+                else:
+                    print(f"SSRF扫描出错: {str(scan_results[3])}")
+
                 # 处理RCE扫描结果（如果有）
-                if len(scan_results) > 3:
-                    if not isinstance(scan_results[3], Exception):
-                        print(f"RCE扫描成功，结果数量: {len(scan_results[3])}")
-                        vuln_results.extend(scan_results[3])
+                if len(scan_results) > 4:
+                    if not isinstance(scan_results[4], Exception):
+                        print(f"RCE扫描成功，结果数量: {len(scan_results[4])}")
+                        vuln_results.extend(scan_results[4])
                     else:
-                        print(f"RCE扫描出错: {str(scan_results[3])}")
+                        print(f"RCE扫描出错: {str(scan_results[4])}")
 
                 # 保存漏洞结果
                 for result in vuln_results:

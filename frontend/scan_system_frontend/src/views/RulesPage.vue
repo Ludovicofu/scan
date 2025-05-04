@@ -86,6 +86,10 @@
           <template v-else-if="activeVulnTab === 'command_injection'">
             <RceRules />
           </template>
+          <!-- SSRF模块显示专用组件 -->
+          <template v-else-if="activeVulnTab === 'ssrf'">
+            <SsrfRules />
+          </template>
           <!-- 其他漏洞类型暂时显示提示信息 -->
           <template v-else>
             <el-alert
@@ -122,7 +126,8 @@ import InfoRuleEditDialog from '@/components/rules/InfoRuleEditDialog.vue';
 import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue';
 import XssRules from '@/components/rules/XssRules.vue';
 import FileInclusionRules from '@/components/rules/FileInclusionRules.vue';
-import RceRules from '@/components/rules/RceRules.vue'; // 导入RceRules组件
+import RceRules from '@/components/rules/RceRules.vue';
+import SsrfRules from '@/components/rules/SsrfRules.vue';  // 导入SSRF规则组件
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
@@ -135,7 +140,8 @@ export default {
     SqlinjectionRules,
     XssRules,
     FileInclusionRules,
-    RceRules // 注册RceRules组件
+    RceRules,
+    SsrfRules  // 注册SSRF规则组件
   },
   data() {
     return {
