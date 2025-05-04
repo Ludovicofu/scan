@@ -15,7 +15,7 @@ class SsrfScanner:
 
     def __init__(self):
         """初始化扫描器"""
-        print("SSRF扫描器初始化")  # 初始化日志
+        print("SSRF扫描器初始化")
         self.ssrf_payloads = []  # SSRF测试载荷
         self.match_patterns = []  # 匹配模式
         self.rules_loaded = False  # 规则是否已加载
@@ -40,7 +40,7 @@ class SsrfScanner:
         从数据库加载SSRF测试载荷和匹配模式
         如果没有规则，返回False，跳过扫描
         """
-        print("SSRF扫描器开始加载规则...")  # 加载规则日志
+        print("\n================== SSRF扫描器开始加载规则 ==================")
         try:
             current_time = asyncio.get_event_loop().time()
 
@@ -51,28 +51,37 @@ class SsrfScanner:
 
             # 加载SSRF载荷
             payload_rules = await self._get_rules_by_type_and_subtype('ssrf', 'payload')
-            print(f"查询到 {len(payload_rules)} 条SSRF载荷规则")  # 查询结果日志
+            print(f"查询到 {len(payload_rules)} 条SSRF载荷规则")
 
             if payload_rules:
-                rule_content = json.loads(payload_rules[0].rule_content)
-                self.ssrf_payloads = rule_content.get('payloads', [])
-                print(f"已加载 {len(self.ssrf_payloads)} 条SSRF测试载荷")
-                print(
-                    f"载荷样例: {self.ssrf_payloads[:3] if len(self.ssrf_payloads) > 3 else self.ssrf_payloads}")  # 载荷样例日志
+                try:
+                    rule_content = json.loads(payload_rules[0].rule_content)
+                    self.ssrf_payloads = rule_content.get('payloads', [])
+                    print(f"已加载 {len(self.ssrf_payloads)} 条SSRF测试载荷")
+                    print(f"载荷样例: {self.ssrf_payloads[:3] if len(self.ssrf_payloads) > 3 else self.ssrf_payloads}")
+                except Exception as e:
+                    print(f"解析SSRF载荷规则内容失败: {str(e)}")
+                    print(f"原始规则内容: {payload_rules[0].rule_content[:200]}...")
+                    self.ssrf_payloads = []
             else:
                 print("未找到SSRF载荷规则，不执行SSRF扫描")
                 self.ssrf_payloads = []
 
             # 加载匹配模式
             pattern_rules = await self._get_rules_by_type_and_subtype('ssrf', 'match_pattern')
-            print(f"查询到 {len(pattern_rules)} 条SSRF匹配模式规则")  # 查询结果日志
+            print(f"查询到 {len(pattern_rules)} 条SSRF匹配模式规则")
 
             if pattern_rules:
-                rule_content = json.loads(pattern_rules[0].rule_content)
-                self.match_patterns = rule_content.get('payloads', [])
-                print(f"已加载 {len(self.match_patterns)} 条SSRF匹配模式")
-                print(
-                    f"匹配模式样例: {self.match_patterns[:3] if len(self.match_patterns) > 3 else self.match_patterns}")  # 匹配模式样例日志
+                try:
+                    rule_content = json.loads(pattern_rules[0].rule_content)
+                    self.match_patterns = rule_content.get('payloads', [])
+                    print(f"已加载 {len(self.match_patterns)} 条SSRF匹配模式")
+                    print(
+                        f"匹配模式样例: {self.match_patterns[:3] if len(self.match_patterns) > 3 else self.match_patterns}")
+                except Exception as e:
+                    print(f"解析SSRF匹配模式规则内容失败: {str(e)}")
+                    print(f"原始规则内容: {pattern_rules[0].rule_content[:200]}...")
+                    self.match_patterns = []
             else:
                 print("未找到SSRF匹配模式规则，不执行SSRF扫描")
                 self.match_patterns = []
@@ -81,12 +90,13 @@ class SsrfScanner:
             self.rules_loaded = True
             self.rules_last_check = current_time
 
-            # 如果没有任何规则，返回False
+            # 如果没有任何规则，返回False，跳过扫描
             if not self.ssrf_payloads or not self.match_patterns:
                 print("SSRF规则不完整，跳过SSRF扫描")
                 return False
 
-            print("SSRF规则加载完成，准备开始扫描")  # 加载完成日志
+            print("SSRF规则加载完成，准备开始扫描")
+            print("================== SSRF规则加载完成 ==================\n")
             return True
         except Exception as e:
             print(f"加载SSRF规则失败: {str(e)}")
@@ -105,7 +115,7 @@ class SsrfScanner:
                 is_enabled=True
             )
 
-            print(f"查询到 {type_rules.count()} 条类型为 {vuln_type} 的规则")  # 规则数量日志
+            print(f"查询到 {type_rules.count()} 条类型为 {vuln_type} 的规则")
 
             # 从规则内容中筛选子类型
             for rule in type_rules:
@@ -113,9 +123,13 @@ class SsrfScanner:
                     rule_content = json.loads(rule.rule_content)
                     if rule_content.get('subType') == subtype:
                         rules.append(rule)
+                        print(f"找到符合子类型 {subtype} 的规则: ID={rule.id}, 名称={rule.name}")
                 except json.JSONDecodeError:
-                    print(f"规则ID {rule.id} JSON解析失败，跳过")  # JSON解析错误日志
-                    continue
+                    print(f"规则ID {rule.id} JSON解析失败，尝试字符串匹配")
+                    # 如果JSON解析失败，尝试字符串匹配
+                    if f'"subType": "{subtype}"' in rule.rule_content or f'"subType":"{subtype}"' in rule.rule_content:
+                        rules.append(rule)
+                        print(f"通过字符串匹配找到符合子类型 {subtype} 的规则: ID={rule.id}")
                 except Exception as e:
                     print(f"解析规则内容出错: {str(e)}")
                     continue
@@ -162,7 +176,7 @@ class SsrfScanner:
 
     async def scan(self, context):
         """执行SSRF扫描"""
-        print(f"\n=========== SSRF扫描开始 ===========\n目标URL: {context['url']}")  # 扫描开始日志
+        print(f"\n=========== SSRF扫描开始 ===========\n目标URL: {context['url']}")
 
         # 加载规则，如果没有规则则跳过扫描
         rules_loaded = await self.load_payloads()
@@ -195,22 +209,34 @@ class SsrfScanner:
         # 准备结果
         results = []
 
+        # 检查URL中是否包含可能的SSRF参数（url, link, file, path等）
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        potential_ssrf_params = [
+            param for param in query_params
+            if param.lower() in ['url', 'link', 'site', 'uri', 'file', 'path', 'dest', 'redirect',
+                                 'target', 'location', 'domain', 'callback', 'return', 'next', 'src']
+        ]
+
+        if potential_ssrf_params:
+            print(f"发现潜在SSRF参数: {potential_ssrf_params}")
+
         # 1. 检查URL参数中的SSRF
         if '?' in url:
-            print(f"开始扫描URL参数，共有 {len(parse_qs(urlparse(url).query))} 个参数")  # URL参数扫描日志
+            print(f"开始扫描URL参数，共有 {len(parse_qs(urlparse(url).query))} 个参数")
             url_results = await self.scan_url_parameters(context, url, self.ssrf_payloads, self.match_patterns)
             results.extend(url_results)
-            print(f"URL参数扫描完成，发现 {len(url_results)} 个SSRF漏洞")  # URL参数扫描结果日志
+            print(f"URL参数扫描完成，发现 {len(url_results)} 个SSRF漏洞")
 
         # 2. 检查POST请求中的SSRF
         if method == 'POST' and req_content:
-            print(f"开始扫描POST参数")  # POST参数扫描日志
+            print(f"开始扫描POST参数")
             post_results = await self.scan_post_parameters(context, url, req_content, self.ssrf_payloads,
                                                            self.match_patterns)
             results.extend(post_results)
-            print(f"POST参数扫描完成，发现 {len(post_results)} 个SSRF漏洞")  # POST参数扫描结果日志
+            print(f"POST参数扫描完成，发现 {len(post_results)} 个SSRF漏洞")
 
-        print(f"\n=========== SSRF扫描结束 ===========\n共发现 {len(results)} 个SSRF漏洞")  # 扫描结束日志
+        print(f"\n=========== SSRF扫描结束 ===========\n共发现 {len(results)} 个SSRF漏洞")
         return results
 
     async def scan_url_parameters(self, context, url, ssrf_payloads, match_patterns):
@@ -239,7 +265,14 @@ class SsrfScanner:
                     continue
 
                 original_value = values[0]
-                print(f"测试URL参数: {param}，原始值: {original_value}")  # 参数测试日志
+                print(f"测试URL参数: {param}，原始值: {original_value}")
+
+                # 检查是否是URL类型参数
+                is_url_param = param.lower() in ['url', 'link', 'site', 'uri', 'file', 'path', 'dest', 'redirect',
+                                                 'target', 'location', 'domain', 'callback', 'return', 'next', 'src']
+
+                if is_url_param:
+                    print(f"参数 {param} 可能是URL类型参数，优先级提高")
 
                 # 测试每个SSRF载荷
                 for payload in ssrf_payloads:
@@ -249,18 +282,15 @@ class SsrfScanner:
                         print(f"参数 {param} 已检测到SSRF漏洞，跳过")
                         continue
 
-                    # 创建测试URL
+                    # 创建测试URL - 直接替换参数值
                     test_params = query_params.copy()
-
-                    # 直接替换参数值为payload
-                    test_params[param] = [payload]
-
+                    test_params[param] = [payload]  # 直接替换为payload
                     test_query = urlencode(test_params, doseq=True)
                     test_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
                     if test_query:
                         test_url += f"?{test_query}"
 
-                    print(f"测试SSRF载荷: {payload}，构造URL: {test_url}")  # 测试载荷日志
+                    print(f"测试SSRF载荷: {payload}，构造URL: {test_url}")
 
                     # 发送请求
                     async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
@@ -269,12 +299,16 @@ class SsrfScanner:
                                 status = response.status
                                 response_text = await response.text()
 
-                                print(f"请求状态码: {status}, 响应长度: {len(response_text)}")  # 响应状态日志
+                                print(f"请求状态码: {status}, 响应长度: {len(response_text)}")
+
                                 # 检查是否存在SSRF特征
                                 ssrf_match = self._check_ssrf_match(response_text, match_patterns)
 
                                 if ssrf_match:
-                                    print(f"发现SSRF特征: {ssrf_match}")  # 发现漏洞日志
+                                    print(f"发现SSRF特征: {ssrf_match}")
+
+                                    # 确定SSRF子类型
+                                    ssrf_subtype = self._determine_ssrf_subtype(payload, ssrf_match)
 
                                     # 构造请求数据
                                     request_data = f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}"
@@ -288,9 +322,10 @@ class SsrfScanner:
                                     # 标记为已发现的漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
-                                    # 添加结果，不指定子类型
+                                    # 添加结果
                                     results.append({
                                         'vuln_type': 'ssrf',
+                                        'vuln_subtype': ssrf_subtype,
                                         'name': f'URL参数 {param} 中的SSRF漏洞',
                                         'description': f'在URL参数 {param} 中发现SSRF漏洞，可以访问服务器内网或本地资源',
                                         'severity': 'high',
@@ -305,12 +340,14 @@ class SsrfScanner:
                                     # 每个参数只添加一个结果
                                     break
                                 else:
-                                    print(f"未发现SSRF特征")  # 未发现漏洞日志
+                                    print(f"未发现SSRF特征")
                         except Exception as e:
                             print(f"测试URL参数 {param} 的SSRF漏洞时出错: {str(e)}")
                             continue
         except Exception as e:
             print(f"扫描URL参数SSRF时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         return results
 
@@ -329,7 +366,7 @@ class SsrfScanner:
                     content_type = value.lower()
                     break
 
-            print(f"POST请求Content-Type: {content_type}")  # 内容类型日志
+            print(f"POST请求Content-Type: {content_type}")
 
             post_params = {}
 
@@ -338,14 +375,14 @@ class SsrfScanner:
                 # 处理表单数据
                 try:
                     post_params = parse_qs(self.safe_decode(req_content))
-                    print(f"解析表单数据，共有 {len(post_params)} 个参数")  # 表单参数数量日志
+                    print(f"解析表单数据，共有 {len(post_params)} 个参数")
                 except Exception as e:
                     print(f"解析表单数据时出错: {str(e)}")
             elif content_type and 'application/json' in content_type:
                 # 处理JSON数据
                 try:
                     json_data = json.loads(self.safe_decode(req_content))
-                    print(f"解析JSON数据成功")  # JSON解析成功日志
+                    print(f"解析JSON数据成功")
 
                     # 将JSON扁平化为键值对
                     def flatten_json(json_obj, prefix=''):
@@ -366,14 +403,14 @@ class SsrfScanner:
                     post_params = flatten_json(json_data)
                     # 转换为与parse_qs相同的格式 {param: [value]}
                     post_params = {k: [v] for k, v in post_params.items()}
-                    print(f"扁平化JSON数据，共有 {len(post_params)} 个参数")  # 扁平化JSON参数数量日志
+                    print(f"扁平化JSON数据，共有 {len(post_params)} 个参数")
                 except Exception as e:
                     print(f"解析JSON数据时出错: {str(e)}")
             else:
                 # 尝试直接解析为表单数据
                 try:
                     post_params = parse_qs(self.safe_decode(req_content))
-                    print(f"尝试解析为表单数据，共有 {len(post_params)} 个参数")  # 尝试解析为表单日志
+                    print(f"尝试解析为表单数据，共有 {len(post_params)} 个参数")
                 except Exception as e:
                     print(f"解析未知类型的请求内容时出错: {str(e)}")
 
@@ -394,7 +431,14 @@ class SsrfScanner:
                     continue
 
                 original_value = values[0]
-                print(f"测试POST参数: {param}，原始值: {original_value}")  # 参数测试日志
+                print(f"测试POST参数: {param}，原始值: {original_value}")
+
+                # 检查是否是URL类型参数
+                is_url_param = param.lower() in ['url', 'link', 'site', 'uri', 'file', 'path', 'dest', 'redirect',
+                                                 'target', 'location', 'domain', 'callback', 'return', 'next', 'src']
+
+                if is_url_param:
+                    print(f"参数 {param} 可能是URL类型参数，优先级提高")
 
                 # 测试每个SSRF载荷
                 for payload in ssrf_payloads:
@@ -404,13 +448,11 @@ class SsrfScanner:
                         print(f"参数 {param} 已检测到SSRF漏洞，跳过")
                         continue
 
-                    # 创建测试参数
+                    # 创建测试参数 - 直接替换参数值
                     test_params = post_params.copy()
+                    test_params[param] = [payload]  # 直接替换为payload
 
-                    # 直接替换参数值为payload
-                    test_params[param] = [payload]
-
-                    print(f"测试SSRF载荷: {payload}")  # 测试载荷日志
+                    print(f"测试SSRF载荷: {payload}")
 
                     # 根据content_type准备请求内容
                     if content_type and 'application/json' in content_type:
@@ -421,12 +463,12 @@ class SsrfScanner:
                             test_json[k] = v[0]
                         test_content = json.dumps(test_json)
                         headers = {'Content-Type': 'application/json'}
-                        print(f"构造JSON请求体")  # 构造JSON请求体日志
+                        print(f"构造JSON请求体")
                     else:
                         # 默认使用表单格式
                         test_content = urlencode(test_params, doseq=True)
                         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                        print(f"构造表单请求体")  # 构造表单请求体日志
+                        print(f"构造表单请求体")
 
                     # 发送请求
                     async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
@@ -435,13 +477,16 @@ class SsrfScanner:
                                 status = response.status
                                 response_text = await response.text()
 
-                                print(f"请求状态码: {status}, 响应长度: {len(response_text)}")  # 响应状态日志
+                                print(f"请求状态码: {status}, 响应长度: {len(response_text)}")
 
                                 # 检查是否存在SSRF特征
                                 ssrf_match = self._check_ssrf_match(response_text, match_patterns)
 
                                 if ssrf_match:
-                                    print(f"发现SSRF特征: {ssrf_match}")  # 发现漏洞日志
+                                    print(f"发现SSRF特征: {ssrf_match}")
+
+                                    # 确定SSRF子类型
+                                    ssrf_subtype = self._determine_ssrf_subtype(payload, ssrf_match)
 
                                     # 构造请求数据
                                     request_data = f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}"
@@ -455,9 +500,10 @@ class SsrfScanner:
                                     # 标记为已发现的漏洞
                                     self.found_vulnerabilities.add(vuln_key)
 
-                                    # 添加结果，不指定子类型
+                                    # 添加结果
                                     results.append({
                                         'vuln_type': 'ssrf',
+                                        'vuln_subtype': ssrf_subtype,
                                         'name': f'POST参数 {param} 中的SSRF漏洞',
                                         'description': f'在POST参数 {param} 中发现SSRF漏洞，可以访问服务器内网或本地资源',
                                         'severity': 'high',
@@ -472,12 +518,14 @@ class SsrfScanner:
                                     # 每个参数只添加一个结果
                                     break
                                 else:
-                                    print(f"未发现SSRF特征")  # 未发现漏洞日志
+                                    print(f"未发现SSRF特征")
                         except Exception as e:
                             print(f"测试POST参数 {param} 的SSRF漏洞时出错: {str(e)}")
                             continue
         except Exception as e:
             print(f"扫描POST参数SSRF时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         return results
 
@@ -494,15 +542,25 @@ class SsrfScanner:
                 regex = re.compile(pattern, re.IGNORECASE)
                 match = regex.search(response_text)
                 if match:
-                    print(f"找到匹配模式 '{pattern}'，匹配内容: '{match.group(0)}'")  # 匹配成功日志
+                    print(f"找到匹配模式 '{pattern}'，匹配内容: '{match.group(0)}'")
                     return match.group(0)
             except Exception as e:
-                print(f"正则表达式 '{pattern}' 匹配出错: {str(e)}")  # 正则匹配错误日志
+                print(f"正则表达式 '{pattern}' 匹配出错: {str(e)}")
 
                 # 如果正则表达式无效，尝试简单字符串匹配
                 if pattern in response_text:
-                    print(f"使用字符串匹配找到 '{pattern}'")  # 字符串匹配成功日志
+                    print(f"使用字符串匹配找到 '{pattern}'")
                     return pattern
 
-        print("未找到任何SSRF特征")  # 未找到特征日志
+        print("未找到任何SSRF特征")
         return None
+
+    def _determine_ssrf_subtype(self, payload, match_result):
+        """确定SSRF漏洞的子类型"""
+        # 根据payload和匹配结果确定SSRF子类型
+        if 'file:' in payload:
+            return 'file_protocol'
+        elif 'internal_network' in payload or '127.0.0.1' in payload or 'localhost' in payload:
+            return 'internal_network'
+        else:
+            return 'internal_network'  # 默认子类型
