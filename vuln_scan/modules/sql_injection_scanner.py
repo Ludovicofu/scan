@@ -27,9 +27,6 @@ class SqlInjectionScanner:
         # 默认超时时间
         self.timeout = 10
 
-        # 默认延时时间(用于基于时间的盲注)
-        self.time_delay = 5
-
     def safe_decode(self, value):
         """安全地解码任何值，处理所有可能的编码错误"""
         if value is None:
@@ -94,12 +91,11 @@ class SqlInjectionScanner:
 
         # 获取扫描配置
         error_based_payloads = await self.get_error_based_payloads(context)
-        blind_payloads = await self.get_blind_payloads(context)
         http_headers = await self.get_http_headers_to_test(context)
         error_patterns = await self.get_error_patterns(context)
 
         # 检查是否有规则可用
-        if not error_based_payloads and not blind_payloads:
+        if not error_based_payloads:
             print(f"警告: 没有可用的SQL注入载荷规则，跳过SQL注入扫描")
             return []
 
@@ -111,7 +107,6 @@ class SqlInjectionScanner:
                 context,
                 url,
                 error_based_payloads,
-                blind_payloads,
                 error_patterns
             )
             results.extend(url_results)
@@ -123,7 +118,6 @@ class SqlInjectionScanner:
                 url,
                 req_content,
                 error_based_payloads,
-                blind_payloads,
                 error_patterns
             )
             results.extend(post_results)
@@ -137,7 +131,6 @@ class SqlInjectionScanner:
                 req_headers,
                 http_headers,
                 error_based_payloads,
-                blind_payloads,
                 error_patterns
             )
             results.extend(header_results)
@@ -190,19 +183,6 @@ class SqlInjectionScanner:
         print("未找到回显型SQL注入规则，跳过该类型的扫描")
         return []
 
-    async def get_blind_payloads(self, context):
-        """获取盲注型SQL注入测试载荷"""
-        # 从数据库获取规则
-        rule_content = await self._get_rule_from_db('sql_injection', 'blind')
-
-        # 如果找到规则并且有payload字段，返回规则中的payload
-        if rule_content and 'payloads' in rule_content and isinstance(rule_content['payloads'], list):
-            return rule_content['payloads']
-
-        # 如果没有找到规则，返回空列表
-        print("未找到盲注型SQL注入规则，跳过该类型的扫描")
-        return []
-
     async def get_http_headers_to_test(self, context):
         """获取要测试的HTTP头列表"""
         # 从数据库获取规则
@@ -232,12 +212,12 @@ class SqlInjectionScanner:
         print("未找到SQL错误匹配模式规则，可能会影响检测准确性")
         return []
 
-    async def scan_url_parameters(self, context, url, error_payloads, blind_payloads, error_patterns):
+    async def scan_url_parameters(self, context, url, error_payloads, error_patterns):
         """扫描URL参数中的SQL注入漏洞"""
         results = []
 
         # 如果没有载荷，直接返回
-        if not error_payloads and not blind_payloads:
+        if not error_payloads:
             return results
 
         try:
@@ -284,7 +264,7 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
-                                # 获取完整的响应文本
+                                # a获取完整的响应文本
                                 response_text = await response.text(errors='replace')
 
                                 # 获取所有响应头
@@ -323,113 +303,17 @@ class SqlInjectionScanner:
                             print(f"测试URL参数 {param} 时出错: {str(e)}")
                             continue
 
-                # 测试盲注型注入
-                for payload in blind_payloads:
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"blind_url_{param}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
-
-                    # 创建测试URL
-                    test_params = query_params.copy()
-                    test_params[param] = [original_value + payload]
-                    test_query = urlencode(test_params, doseq=True)
-                    test_url = urlunparse((
-                        parsed_url.scheme,
-                        parsed_url.netloc,
-                        parsed_url.path,
-                        parsed_url.params,
-                        test_query,
-                        parsed_url.fragment
-                    ))
-
-                    # 开始时间
-                    start_time = asyncio.get_event_loop().time()
-
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.get(
-                                    test_url,
-                                    timeout=self.timeout * 2,  # 增加超时时间以容纳延时
-                                    ssl=False
-                            ) as response:
-                                # 获取响应文本，但限制长度以防止占用过多内存
-                                response_text = await response.text(errors='replace')
-
-                                # 获取所有响应头
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-
-                                # 构建完整的HTTP响应内容
-                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
-
-                                # 计算响应时间
-                                end_time = asyncio.get_event_loop().time()
-                                response_time = end_time - start_time
-
-                                # 如果响应时间超过预期延时，可能存在基于时间的盲注
-                                if response_time >= self.time_delay * 0.8:
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'blind',
-                                        'name': f'URL参数 {param} 中的盲注型SQL注入漏洞',
-                                        'description': f'在URL参数 {param} 中发现基于时间的盲注型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': param,
-                                        'payload': payload,
-                                        'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
-                                        'response': full_response,
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
-                                    }
-
-                                    results.append(result)
-
-                                    # 一旦找到一个参数的漏洞，就不再测试该参数的其他载荷
-                                    break
-                        except asyncio.TimeoutError:
-                            # 超时也可能是基于时间的盲注的证据
-                            # 记录漏洞
-                            self.found_vulnerabilities.add(vuln_key)
-
-                            # 创建漏洞结果
-                            result = {
-                                'vuln_type': 'sql_injection',
-                                'vuln_subtype': 'blind',
-                                'name': f'URL参数 {param} 中的盲注型SQL注入漏洞',
-                                'description': f'在URL参数 {param} 中发现基于时间的盲注型SQL注入漏洞',
-                                'severity': 'high',
-                                'url': url,
-                                'parameter': param,
-                                'payload': payload,
-                                'request': f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}",
-                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
-                                'proof': f"在参数 {param} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
-                            }
-
-                            results.append(result)
-
-                            # 一旦找到一个参数的漏洞，就不再测试该参数的其他载荷
-                            break
-                        except Exception as e:
-                            print(f"测试URL参数 {param} 时出错: {str(e)}")
-                            continue
-
         except Exception as e:
             print(f"扫描URL参数时出错: {str(e)}")
 
         return results
 
-    async def scan_post_parameters(self, context, url, req_content, error_payloads, blind_payloads, error_patterns):
+    async def scan_post_parameters(self, context, url, req_content, error_payloads, error_patterns):
         """扫描POST请求参数中的SQL注入漏洞"""
         results = []
 
         # 如果没有载荷，直接返回
-        if not error_payloads and not blind_payloads:
+        if not error_payloads:
             return results
 
         try:
@@ -448,18 +332,25 @@ class SqlInjectionScanner:
                     break
 
             post_params = {}
+            decoded_req_content = self.safe_decode(req_content)
+
+            # 打印原始请求内容，帮助调试
+            print(f"原始POST请求内容: {decoded_req_content[:100]}...")
 
             # 处理不同的内容类型
             if content_type and 'application/x-www-form-urlencoded' in content_type:
                 # 处理表单数据
                 try:
-                    post_params = parse_qs(self.safe_decode(req_content))
+                    # 确保正确解析URL编码的表单数据
+                    post_params = parse_qs(decoded_req_content, keep_blank_values=True)
+                    print(f"解析的表单参数: {post_params}")
                 except Exception as e:
                     print(f"解析表单数据时出错: {str(e)}")
             elif content_type and 'application/json' in content_type:
                 # 处理JSON数据
                 try:
-                    json_data = json.loads(self.safe_decode(req_content))
+                    json_data = json.loads(decoded_req_content)
+                    print(f"解析的JSON数据: {json_data}")
 
                     # 将JSON扁平化为键值对
                     def flatten_json(json_obj, prefix=''):
@@ -485,19 +376,34 @@ class SqlInjectionScanner:
             else:
                 # 尝试直接解析为表单数据
                 try:
-                    post_params = parse_qs(self.safe_decode(req_content))
+                    # 无论content-type如何，先尝试解析为表单数据
+                    post_params = parse_qs(decoded_req_content, keep_blank_values=True)
+                    print(f"尝试解析为表单数据 (无明确content-type): {post_params}")
+
+                    # 如果解析结果为空，但有内容，尝试其他解析方法
+                    if not post_params and decoded_req_content.strip():
+                        try:
+                            # 尝试JSON解析
+                            json_data = json.loads(decoded_req_content)
+                            # 简单地转换JSON对象的顶级键值对
+                            post_params = {k: [str(v)] for k, v in json_data.items() if not isinstance(v, (dict, list))}
+                            print(f"尝试解析为JSON数据 (无明确content-type): {post_params}")
+                        except json.JSONDecodeError:
+                            # 如果不是JSON，可能是自定义格式，尝试简单的解析
+                            if '=' in decoded_req_content:
+                                # 可能是原始表单格式但格式不标准
+                                parts = decoded_req_content.split('&')
+                                for part in parts:
+                                    if '=' in part:
+                                        key, value = part.split('=', 1)
+                                        post_params[key] = [urllib.parse.unquote_plus(value)]
+                                print(f"使用自定义解析方法: {post_params}")
                 except Exception as e:
                     print(f"解析未知类型的请求内容时出错: {str(e)}")
-                    # 如果解析失败，尝试JSON解析
-                    try:
-                        json_data = json.loads(self.safe_decode(req_content))
-                        # 简单地转换JSON对象的顶级键值对
-                        post_params = {k: [str(v)] for k, v in json_data.items() if not isinstance(v, (dict, list))}
-                    except:
-                        pass
 
             # 如果没有参数，直接返回
             if not post_params:
+                print("未能解析出任何POST参数，跳过SQL注入检测")
                 return results
 
             # 测试每个参数
@@ -506,191 +412,126 @@ class SqlInjectionScanner:
                     continue
 
                 original_value = values[0]
+                print(f"测试参数: {param}={original_value}")
 
-                # 测试回显型注入
+                # 1. 直接替换原值为 payload
                 for payload in error_payloads:
                     # 检测是否已存在相同漏洞
                     vuln_key = f"error_based_post_{param}_{url}"
                     if vuln_key in self.found_vulnerabilities:
                         continue
 
-                    # 创建测试参数
-                    test_params = post_params.copy()
-                    test_params[param] = [original_value + payload]
+                    # 创建测试参数 - 直接替换原值
+                    test_params_replace = post_params.copy()
+                    test_params_replace[param] = [payload]
 
-                    # 根据content_type准备请求内容
-                    if content_type and 'application/json' in content_type:
-                        # 将扁平的参数还原为JSON
-                        test_json = {}
-                        for k, v in test_params.items():
-                            # 简单处理，仅支持顶级键
-                            test_json[k] = v[0]
-                        test_content = json.dumps(test_json)
-                        headers = {'Content-Type': 'application/json'}
-                    else:
-                        # 默认使用表单格式
-                        test_content = urlencode(test_params, doseq=True)
-                        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                    # 测试直接替换的payload
+                    result = await self._test_post_payload(
+                        url, parsed_url, param, payload, test_params_replace,
+                        content_type, vuln_key, error_patterns, "替换"
+                    )
+                    if result:
+                        results.append(result)
+                        break  # 找到漏洞，不再测试该参数
 
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.post(
-                                    url,
-                                    data=test_content,
-                                    headers=headers,
-                                    timeout=self.timeout,
-                                    ssl=False
-                            ) as response:
-                                # 获取完整的响应文本
-                                response_text = await response.text(errors='replace')
+                # 如果没有找到漏洞，尝试附加payload
+                if f"error_based_post_{param}_{url}" not in self.found_vulnerabilities:
+                    for payload in error_payloads:
+                        # 创建测试参数 - 附加payload到原值
+                        test_params_append = post_params.copy()
+                        test_params_append[param] = [original_value + payload]
 
-                                # 获取所有响应头
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+                        # 测试附加payload
+                        result = await self._test_post_payload(
+                            url, parsed_url, param, payload, test_params_append,
+                            content_type, vuln_key, error_patterns, "附加"
+                        )
+                        if result:
+                            results.append(result)
+                            break  # 找到漏洞，不再测试该参数
 
-                                # 构建完整的HTTP响应内容
-                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
+        except Exception as e:
+            print(f"扫描POST参数时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
-                                # 检查是否有SQL错误信息
-                                error_match, matched_pattern = self.check_sql_error_with_match(response_text,
-                                                                                               error_patterns)
-                                if error_match:
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
+        return results
 
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'error_based',
-                                        'name': f'POST参数 {param} 中的SQL注入漏洞',
-                                        'description': f'在POST参数 {param} 中发现回显型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': param,
-                                        'payload': payload,
-                                        'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                        'response': full_response,
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
-                                    }
+    async def _test_post_payload(self, url, parsed_url, param, payload, test_params,
+                                 content_type, vuln_key, error_patterns, method_description):
+        """测试单个POST参数的SQL注入payload"""
+        try:
+            # 根据content_type准备请求内容
+            if content_type and 'application/json' in content_type:
+                # 将扁平的参数还原为JSON
+                test_json = {}
+                for k, v in test_params.items():
+                    # 简单处理，仅支持顶级键
+                    test_json[k] = v[0]
+                test_content = json.dumps(test_json)
+                headers = {'Content-Type': 'application/json'}
+            else:
+                # 默认使用表单格式
+                test_content = urlencode(test_params, doseq=True)
+                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-                                    results.append(result)
+            print(f"测试 {method_description} payload: {param}={payload}")
+            print(f"请求内容: {test_content[:100]}...")
 
-                                    # 一旦找到一个参数的漏洞，就不再测试该参数的其他载荷
-                                    break
-                        except Exception as e:
-                            print(f"测试POST参数 {param} 时出错: {str(e)}")
-                            continue
+            # 发送请求
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.post(
+                            url,
+                            data=test_content,
+                            headers=headers,
+                            timeout=self.timeout,
+                            ssl=False
+                    ) as response:
+                        # 获取完整的响应文本
+                        response_text = await response.text(errors='replace')
+                        status = response.status
 
-                # 测试盲注型注入
-                for payload in blind_payloads:
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"blind_post_{param}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
+                        # 状态码检查
+                        print(f"响应状态码: {status}")
+                        if status >= 500:
+                            print("可能的服务器错误，可能表明SQL注入")
 
-                    # 创建测试参数
-                    test_params = post_params.copy()
-                    test_params[param] = [original_value + payload]
+                        # 获取所有响应头
+                        headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
 
-                    # 根据content_type准备请求内容
-                    if content_type and 'application/json' in content_type:
-                        # 将扁平的参数还原为JSON
-                        test_json = {}
-                        for k, v in test_params.items():
-                            # 简单处理，仅支持顶级键
-                            test_json[k] = v[0]
-                        test_content = json.dumps(test_json)
-                        headers = {'Content-Type': 'application/json'}
-                    else:
-                        # 默认使用表单格式
-                        test_content = urlencode(test_params, doseq=True)
-                        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                        # 构建完整的HTTP响应内容
+                        full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text[:500]}..."
 
-                    # 开始时间
-                    start_time = asyncio.get_event_loop().time()
-
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.post(
-                                    url,
-                                    data=test_content,
-                                    headers=headers,
-                                    timeout=self.timeout * 2,  # 增加超时时间以容纳延时
-                                    ssl=False
-                            ) as response:
-                                # 获取响应文本
-                                response_text = await response.text(errors='replace')
-
-                                # 获取所有响应头
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-
-                                # 构建完整的HTTP响应内容
-                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
-
-                                # 计算响应时间
-                                end_time = asyncio.get_event_loop().time()
-                                response_time = end_time - start_time
-
-                                # 如果响应时间超过预期延时，可能存在基于时间的盲注
-                                if response_time >= self.time_delay * 0.8:
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'blind',
-                                        'name': f'POST参数 {param} 中的盲注型SQL注入漏洞',
-                                        'description': f'在POST参数 {param} 中发现基于时间的盲注型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': param,
-                                        'payload': payload,
-                                        'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                        'response': full_response,
-                                        'proof': f"在参数 {param} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
-                                    }
-
-                                    results.append(result)
-
-                                    # 一旦找到一个参数的漏洞，就不再测试该参数的其他载荷
-                                    break
-                        except asyncio.TimeoutError:
-                            # 超时也可能是基于时间的盲注的证据
+                        # 检查是否有SQL错误信息
+                        error_match, matched_pattern = self.check_sql_error_with_match(response_text, error_patterns)
+                        if error_match:
+                            print(f"发现SQL错误匹配: {matched_pattern}")
                             # 记录漏洞
                             self.found_vulnerabilities.add(vuln_key)
 
                             # 创建漏洞结果
-                            result = {
+                            return {
                                 'vuln_type': 'sql_injection',
-                                'vuln_subtype': 'blind',
-                                'name': f'POST参数 {param} 中的盲注型SQL注入漏洞',
-                                'description': f'在POST参数 {param} 中发现基于时间的盲注型SQL注入漏洞',
+                                'vuln_subtype': 'error_based',
+                                'name': f'POST参数 {param} 中的SQL注入漏洞',
+                                'description': f'在POST参数 {param} 中发现回显型SQL注入漏洞',
                                 'severity': 'high',
                                 'url': url,
                                 'parameter': param,
                                 'payload': payload,
-                                'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {content_type}\n\n{test_content}",
-                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
-                                'proof': f"在参数 {param} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
+                                'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}",
+                                'response': full_response,
+                                'proof': f"在参数 {param} 中{method_description}注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
                             }
-
-                            results.append(result)
-
-                            # 一旦找到一个参数的漏洞，就不再测试该参数的其他载荷
-                            break
-                        except Exception as e:
-                            print(f"测试POST参数 {param} 时出错: {str(e)}")
-                            continue
-
+                except Exception as e:
+                    print(f"测试POST参数 {param} 时出错: {str(e)}")
         except Exception as e:
-            print(f"扫描POST参数时出错: {str(e)}")
+            print(f"准备测试POST参数 {param} 时出错: {str(e)}")
 
-        return results
+        return None
 
-    async def scan_http_headers(self, context, url, req_headers, http_headers_to_test, error_payloads, blind_payloads,
-                                error_patterns):
+    async def scan_http_headers(self, context, url, req_headers, http_headers_to_test, error_payloads, error_patterns):
         """
         扫描HTTP头中的SQL注入漏洞
 
@@ -700,7 +541,6 @@ class SqlInjectionScanner:
             req_headers: 请求头信息
             http_headers_to_test: 要测试的HTTP头列表
             error_payloads: 回显型注入载荷
-            blind_payloads: 盲注型注入载荷
             error_patterns: SQL错误模式
 
         返回:
@@ -709,7 +549,7 @@ class SqlInjectionScanner:
         results = []
 
         # 如果没有载荷或要测试的HTTP头，直接返回
-        if (not error_payloads and not blind_payloads) or not http_headers_to_test:
+        if not error_payloads or not http_headers_to_test:
             return results
 
         try:
@@ -805,94 +645,6 @@ class SqlInjectionScanner:
 
                                     # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
                                     break
-                        except Exception as e:
-                            print(f"测试HTTP头 {header} 时出错: {str(e)}")
-                            continue
-
-                # 测试盲注型注入
-                for payload in blind_payloads:
-                    # 检测是否已存在相同漏洞
-                    vuln_key = f"blind_header_{header}_{url}"
-                    if vuln_key in self.found_vulnerabilities:
-                        continue
-
-                    # 创建测试头部
-                    headers = {k: v for k, v in req_headers.items()}
-                    headers[header] = original_value + payload
-
-                    # 开始时间
-                    start_time = asyncio.get_event_loop().time()
-
-                    # 发送请求
-                    async with aiohttp.ClientSession() as session:
-                        try:
-                            async with session.get(
-                                    url,
-                                    headers=headers,
-                                    timeout=self.timeout * 2,  # 增加超时时间以容纳延时
-                                    ssl=False
-                            ) as response:
-                                # 获取响应文本
-                                response_text = await response.text(errors='replace')
-
-                                # 获取所有响应头
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-
-                                # 构建完整的HTTP响应内容
-                                full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text}"
-
-                                # 计算响应时间
-                                end_time = asyncio.get_event_loop().time()
-                                response_time = end_time - start_time
-
-                                # 如果响应时间超过预期延时，可能存在基于时间的盲注
-                                if response_time >= self.time_delay * 0.8:
-                                    # 记录漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 创建漏洞结果
-                                    result = {
-                                        'vuln_type': 'sql_injection',
-                                        'vuln_subtype': 'blind',
-                                        'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
-                                        'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'parameter': header,
-                                        'payload': payload,
-                                        'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {original_value + payload}",
-                                        'response': full_response,
-                                        'proof': f"在HTTP头 {header} 中注入 {payload} 后，响应时间达到 {response_time:.2f} 秒，超过了预期的 {self.time_delay} 秒"
-                                    }
-
-                                    results.append(result)
-
-                                    # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
-                                    break
-                        except asyncio.TimeoutError:
-                            # 超时也可能是基于时间的盲注的证据
-                            # 记录漏洞
-                            self.found_vulnerabilities.add(vuln_key)
-
-                            # 创建漏洞结果
-                            result = {
-                                'vuln_type': 'sql_injection',
-                                'vuln_subtype': 'blind',
-                                'name': f'HTTP头 {header} 中的盲注型SQL注入漏洞',
-                                'description': f'在HTTP头 {header} 中发现基于时间的盲注型SQL注入漏洞',
-                                'severity': 'high',
-                                'url': url,
-                                'parameter': header,
-                                'payload': payload,
-                                'request': f"GET {url} HTTP/1.1\nHost: {parsed_url.netloc}\n{header}: {original_value + payload}",
-                                'response': f"HTTP/1.1 408 Request Timeout\n\n请求超时，可能表明存在基于时间的盲注",
-                                'proof': f"在HTTP头 {header} 中注入 {payload} 后，请求超时，可能表明存在基于时间的盲注"
-                            }
-
-                            results.append(result)
-
-                            # 一旦找到一个头部的漏洞，就不再测试该头部的其他载荷
-                            break
                         except Exception as e:
                             print(f"测试HTTP头 {header} 时出错: {str(e)}")
                             continue
