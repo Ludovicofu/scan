@@ -1,13 +1,11 @@
 """
 组件信息扫描模块：负责扫描网站组件和服务相关信息
+重构版：模仿漏洞扫描模块架构，集成原有功能
 """
 import asyncio
 import json
+import aiohttp
 from urllib.parse import urlparse, urljoin
-from asgiref.sync import sync_to_async
-from django.utils import timezone
-from ..component_info import ComponentInfoScanner
-from rules.models import InfoCollectionRule
 
 
 class ComponentScanner:
@@ -15,8 +13,6 @@ class ComponentScanner:
 
     def __init__(self):
         """初始化扫描器"""
-        self.component_info_scanner = ComponentInfoScanner()
-
         # 添加结果缓存，避免重复发送相同结果
         # 格式: (asset_id, module, rule_type, description)
         self.result_cache = set()
@@ -93,15 +89,18 @@ class ComponentScanner:
     async def _do_passive_scan(self, passive_rules, context, request_data, response_data, helpers, scanner=None):
         """执行被动扫描，增加去重逻辑"""
         asset = context['asset']
+        url = context['url']
         status_code = context['status_code']
         req_headers = context['req_headers']
         resp_headers = context['resp_headers']
         resp_content = context['resp_content']
         channel_layer = context['channel_layer']
+        use_proxy = context['use_proxy']
+        proxy_address = context['proxy_address']
 
         # 加载组件特征签名
         if self.signatures_cache is None:
-            self.signatures_cache = await self._load_component_signatures()
+            self.signatures_cache = await self._load_component_signatures(context)
 
         # 预处理请求和响应头，确保所有值都是字符串
         processed_req_headers = {}
@@ -157,12 +156,11 @@ class ComponentScanner:
 
         # 自动检测组件
         if self.signatures_cache:
-            use_proxy = context.get('use_proxy', False)
-            proxy_address = context.get('proxy_address', None)
-
             # 使用加载的特征签名进行组件检测
-            detected_components = await self.component_info_scanner.detect_components(
-                url=context['url'],
+            detected_components = await self.detect_components(
+                url=url,
+                resp_headers=processed_resp_headers,
+                resp_content=resp_content,
                 use_proxy=use_proxy,
                 proxy_address=proxy_address,
                 signatures=self.signatures_cache
@@ -444,7 +442,7 @@ class ComponentScanner:
 
                     # 设置超时
                     scan_result = await asyncio.wait_for(
-                        self.component_info_scanner.scan(
+                        self.scan_url(
                             url=url,
                             behavior=behavior,
                             rule_type=rule_type,
@@ -535,28 +533,317 @@ class ComponentScanner:
                     traceback.print_exc()
                     continue
 
-    @sync_to_async
-    def _load_component_signatures(self):
-        """从数据库加载组件特征签名"""
-        try:
-            # 查找名为"组件特征签名"的规则
-            rules = InfoCollectionRule.objects.filter(
-                module='component',
-                description__contains='组件特征签名',
-                is_enabled=True
-            ).first()
+    async def scan_url(self, url, behavior, rule_type, match_values, use_proxy=False, proxy_address=None):
+        """
+        根据规则扫描组件与服务信息
 
-            if not rules:
+        参数:
+            url: 目标URL
+            behavior: 扫描行为
+            rule_type: 规则类型 (status_code, response_content, header)
+            match_values: 匹配值列表
+            use_proxy: 是否使用代理
+            proxy_address: 代理地址
+
+        返回:
+            匹配结果字典，如果没有匹配则返回None
+        """
+        # 日志记录和参数验证
+        print(f"组件扫描参数: URL={url}, 行为={behavior}, 规则类型={rule_type}")
+        if not match_values or len(match_values) == 0:
+            print(f"警告: 没有提供匹配值，跳过组件扫描")
+            return None
+
+        # 解析原始URL，获取基本域名和协议
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        # 构建目标URL（基本URL + 行为路径）
+        target_url = urljoin(base_url, behavior)
+
+        # 设置代理
+        proxy = None
+        if use_proxy and proxy_address:
+            proxy = proxy_address
+
+        # 构建请求头
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Connection': 'close',
+        }
+
+        try:
+            # 创建异步HTTP会话
+            async with aiohttp.ClientSession() as session:
+                # 发送请求
+                async with session.get(
+                        target_url,
+                        headers=headers,
+                        proxy=proxy,
+                        ssl=False,  # 忽略SSL证书验证
+                        timeout=aiohttp.ClientTimeout(total=10)  # 设置超时
+                ) as response:
+                    # 获取响应状态码
+                    status_code = response.status
+
+                    # 获取响应头 - 使用安全解码
+                    resp_headers = {}
+                    for key, value in response.headers.items():
+                        safe_key = self.safe_decode(key)
+                        safe_value = self.safe_decode(value)
+
+                        # 跳过解码失败的头部
+                        if "[解码失败" in safe_key or "[二进制数据" in safe_key:
+                            continue
+                        if "[解码失败" in safe_value or "[二进制数据" in safe_value:
+                            safe_value = "[二进制内容]"
+
+                        resp_headers[safe_key] = safe_value
+
+                    # 获取响应内容
+                    resp_content = await response.text(errors='replace')
+
+                    # 根据规则类型进行匹配
+                    if rule_type == 'status_code':
+                        # 状态码判断
+                        if str(status_code) in match_values:
+                            return {'match_value': str(status_code)}
+
+                    elif rule_type == 'response_content':
+                        # 响应内容匹配
+                        for match_value in match_values:
+                            if match_value.lower() in resp_content.lower():
+                                return {'match_value': match_value}
+
+                    elif rule_type == 'header':
+                        # HTTP头匹配 - 添加更多的安全检查
+                        for match_value in match_values:
+                            try:
+                                # 安全解析匹配值
+                                if ':' in match_value:
+                                    header_parts = match_value.split(':', 1)
+                                    header_name = header_parts[0].strip()
+                                    header_value = header_parts[1].strip() if len(header_parts) > 1 else ''
+                                else:
+                                    header_name = match_value.strip()
+                                    header_value = ''
+
+                                # 检查头名称是否有效
+                                if not header_name or header_name in ["[编码错误]", "[二进制数据", "[解码失败"]:
+                                    print(f"无效的HTTP头名称: {header_name}")
+                                    continue
+
+                                # 检查头是否存在
+                                if header_name in resp_headers:
+                                    actual_value = resp_headers[header_name]
+
+                                    # 跳过二进制内容
+                                    if actual_value == "[二进制内容]":
+                                        continue
+
+                                    # 如果没有指定值，或者值包含在实际值中
+                                    if not header_value or (header_value.lower() in actual_value.lower()):
+                                        return {'match_value': match_value}
+                            except Exception as e:
+                                print(f"处理HTTP头匹配值时出错: {str(e)}")
+                                continue
+
+            # 没有匹配结果
+            return None
+
+        except aiohttp.ClientConnectorError as e:
+            # 连接错误，可能是端口关闭
+            print(f"连接错误: {str(e)}")
+            return None
+        except aiohttp.ClientError as e:
+            # 其他HTTP客户端错误
+            print(f"HTTP客户端错误: {str(e)}")
+            return None
+        except asyncio.TimeoutError:
+            # 请求超时
+            print(f"请求超时")
+            return None
+        except Exception as e:
+            # 其他错误
+            print(f"组件与服务信息扫描出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    async def detect_components(self, url, resp_headers, resp_content, use_proxy=False, proxy_address=None, signatures=None):
+        """
+        检测网站使用的组件和服务
+
+        参数:
+            url: 目标URL
+            resp_headers: 响应头
+            resp_content: 响应内容
+            use_proxy: 是否使用代理
+            proxy_address: 代理地址
+            signatures: 组件特征签名，如果为None则使用默认配置
+
+        返回:
+            检测到的组件列表
+        """
+        # 如果没有提供特征签名，则返回空列表
+        if not signatures:
+            print("警告: 没有提供组件特征签名")
+            return []
+
+        # 解析原始URL
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        # 设置代理
+        proxy = None
+        if use_proxy and proxy_address:
+            proxy = proxy_address
+
+        detected_components = []
+
+        try:
+            # 检查每个组件的特征指纹
+            for component, component_signatures in signatures.items():
+                for signature in component_signatures:
+                    try:
+                        # 验证签名格式
+                        if not isinstance(signature, dict) or 'type' not in signature:
+                            print(f"无效的特征签名格式: {signature}")
+                            continue
+
+                        sig_type = signature.get('type')
+
+                        if sig_type == 'header':
+                            # 检查HTTP头
+                            header_name = signature.get('name')
+                            header_value = signature.get('value', '')
+
+                            if not header_name:
+                                print(f"无效的HTTP头名称: {header_name}")
+                                continue
+
+                            # 检查头名称是否有效
+                            if header_name in ["[编码错误]", "[二进制数据", "[解码失败"]:
+                                continue
+
+                            # 安全检查头部
+                            if header_name in resp_headers:
+                                actual_value = resp_headers[header_name]
+
+                                # 跳过二进制内容
+                                if actual_value == "[二进制内容]":
+                                    continue
+
+                                if not header_value or header_value.lower() in actual_value.lower():
+                                    if component not in detected_components:
+                                        detected_components.append(component)
+                                        print(f"通过HTTP头 {header_name} 检测到组件: {component}")
+
+                        elif sig_type == 'content':
+                            # 检查响应内容
+                            content_value = signature.get('value')
+
+                            if not content_value:
+                                continue
+
+                            if content_value.lower() in resp_content.lower():
+                                if component not in detected_components:
+                                    detected_components.append(component)
+                                    print(f"通过内容匹配 '{content_value}' 检测到组件: {component}")
+                    except Exception as e:
+                        print(f"处理组件特征时出错: {str(e)}")
+                        continue
+
+            # 请求特定路径
+            async with aiohttp.ClientSession() as session:
+                for component, component_signatures in signatures.items():
+                    for signature in component_signatures:
+                        try:
+                            if signature.get('type') == 'path':
+                                path_value = signature.get('value')
+                                if not path_value:
+                                    continue
+
+                                path_url = urljoin(base_url, path_value)
+
+                                try:
+                                    async with session.get(
+                                            path_url,
+                                            proxy=proxy,
+                                            ssl=False,
+                                            timeout=aiohttp.ClientTimeout(total=5)
+                                    ) as path_response:
+                                        # 如果请求成功（状态码200），则认为检测到了组件
+                                        if path_response.status == 200:
+                                            if component not in detected_components:
+                                                detected_components.append(component)
+                                                print(f"通过路径 {path_value} 检测到组件: {component}")
+
+                                except Exception as path_error:
+                                    # 忽略路径请求错误
+                                    continue
+                        except Exception as e:
+                            print(f"处理路径特征时出错: {str(e)}")
+                            continue
+
+        except Exception as e:
+            # 扫描出错
+            print(f"组件检测出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+        return detected_components
+
+    async def _load_component_signatures(self, context):
+        """
+        加载组件特征签名
+
+        参数:
+            context: 扫描上下文
+
+        返回:
+            加载的特征签名字典
+        """
+        try:
+            # 从上下文中获取帮助类
+            helpers = context.get('helpers')
+            if not helpers:
+                print("缺少辅助类，无法加载组件特征签名")
+                return {}
+
+            # 从数据库获取规则
+            rules = await helpers.get_rules('component', 'passive')
+
+            # 查找名为"组件特征签名"的规则
+            signature_rule = None
+            for rule in rules:
+                if '组件特征签名' in rule.get('description', ''):
+                    signature_rule = rule
+                    break
+
+            if not signature_rule:
                 print("未找到组件特征签名规则")
                 return {}
 
             # 解析规则内容
             try:
-                signatures = json.loads(rules.match_values)
-                print(f"成功加载组件特征签名: {len(signatures)} 个组件")
-                return signatures
+                # 使用match_values字段中的内容作为JSON字符串
+                match_values = signature_rule.get('match_values', [])
+                if isinstance(match_values, list) and len(match_values) > 0:
+                    signatures_str = match_values[0]
+                    signatures = json.loads(signatures_str)
+                    print(f"成功加载组件特征签名: {len(signatures)} 个组件")
+                    return signatures
+                else:
+                    print("组件特征签名规则格式错误，match_values为空")
+                    return {}
             except json.JSONDecodeError:
                 print(f"组件特征签名格式错误，无法解析JSON")
+                return {}
+            except Exception as e:
+                print(f"解析组件特征签名时出错: {str(e)}")
                 return {}
 
         except Exception as e:
@@ -564,3 +851,43 @@ class ComponentScanner:
             import traceback
             traceback.print_exc()
             return {}
+
+    def safe_decode(self, value):
+        """
+        安全地解码任何值，处理所有可能的编码错误
+        增强处理二进制数据的能力
+        """
+        if value is None:
+            return ""
+
+        if isinstance(value, bytes):
+            try:
+                # 首先尝试UTF-8解码
+                return value.decode('utf-8', errors='replace')
+            except Exception:
+                # 尝试其他编码
+                for encoding in ['latin1', 'cp1252', 'iso-8859-1', 'gbk', 'gb2312']:
+                    try:
+                        return value.decode(encoding, errors='replace')
+                    except:
+                        continue
+
+                # 如果所有解码都失败，转为十六进制表示
+                try:
+                    return f"[二进制数据: {value[:20].hex()}...]"
+                except:
+                    return "[二进制数据]"
+
+        if isinstance(value, str):
+            # 如果已经是字符串，确保它是有效的UTF-8
+            try:
+                valid_str = value.encode('utf-8', errors='replace').decode('utf-8')
+                return valid_str
+            except Exception:
+                return value.replace('\ufffd', '?')  # 替换替换字符为问号
+
+        # 处理其他类型
+        try:
+            return str(value)
+        except Exception:
+            return "[无法转换为字符串的对象]"

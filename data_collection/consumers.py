@@ -1,6 +1,6 @@
 """
-修复 data_collection/consumers.py 中的结果重复问题和资产显示问题
-该文件负责WebSocket通信和消息分发，是解决重复通知的关键
+WebSocket消费者：处理数据收集模块的WebSocket连接
+重构版：支持新的扫描架构，增强缓存和去重功能
 """
 import json
 import asyncio

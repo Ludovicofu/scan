@@ -1,5 +1,6 @@
 """
 扫描辅助模块：提供各种扫描辅助方法
+重构版：统一辅助方法，简化跨模块功能
 """
 from asgiref.sync import sync_to_async
 from django.utils import timezone
@@ -177,18 +178,22 @@ class ScanHelpers:
             ).exists()
         except Exception as e:
             print(f"检查现有结果失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False  # 出错时返回False，允许创建新结果
 
     @sync_to_async
     def get_rules(self, module, scan_type):
         """获取规则"""
         try:
+            # 查询指定模块和扫描类型的规则
             rules = InfoCollectionRule.objects.filter(
                 module=module,
                 scan_type=scan_type,
                 is_enabled=True
             )
 
+            # 格式化结果
             result = []
             for rule in rules:
                 # 解析匹配值（按行分割）
@@ -199,6 +204,7 @@ class ScanHelpers:
                 if rule.behaviors:
                     behaviors = [b.strip() for b in rule.behaviors.splitlines() if b.strip()]
 
+                # 添加规则
                 result.append({
                     'id': rule.id,
                     'description': rule.description,

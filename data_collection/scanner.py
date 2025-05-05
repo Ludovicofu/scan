@@ -1,13 +1,15 @@
 """
-扫描器主模块：负责协调各个子模块进行扫描
-修复版本：增强了去重逻辑，防止重复结果
+信息收集主协调器：重构版
+
+负责协调各个扫描模块，管理缓存和配置，处理代理数据并分发扫描任务
+该结构模仿了 vuln_scan/scanner.py 的架构，使系统更加一致
 """
 import asyncio
 from urllib.parse import urlparse
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 
-from .models import Asset, ScanResult
+from .models import Asset, ScanResult, SystemSettings, SkipTarget
 from .modules.network_scanner import NetworkScanner
 from .modules.os_scanner import OSScanner
 from .modules.component_scanner import ComponentScanner
