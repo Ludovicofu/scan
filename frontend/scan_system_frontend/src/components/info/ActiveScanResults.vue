@@ -1,4 +1,4 @@
-<!-- components/info/ActiveScanResults.vue - 修改后 -->
+<!-- components/info/ActiveScanResults.vue (修改后) -->
 <template>
   <div class="active-scan-results">
     <el-table
@@ -180,7 +180,7 @@ export default {
 
       for (const line of lines) {
         if (line && line.includes(':')) {
-          const port = line.split(':', 1)[0].trim();
+          const port = line.split(':', 1)[0].trim(); // 修改了这里，使用trim()而不是strip()
           if (port && !isNaN(port)) {
             ports.push(port);
           }

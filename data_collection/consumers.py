@@ -283,7 +283,7 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                             port_numbers.append(port)
                 port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
 
-            # 创建结果对象 - 添加asset_host
+            # 创建结果对象 - 修改：确保asset字段是主机名而不是ID
             result_data = {
                 'id': result.id,
                 'asset': result.asset.host,  # 使用主机名而不是ID

@@ -1,4 +1,4 @@
-<!-- components/info/InfoResultDetailDialog.vue - 修改后 -->
+<!-- components/info/InfoResultDetailDialog.vue (修改后) -->
 <template>
   <el-dialog
     title="扫描结果详情"
@@ -123,7 +123,7 @@ export default {
         const banner = bannerParts.join(':').trim();
 
         result.push({
-          port: port.trim(),
+          port: port.trim(), // 使用JavaScript的trim()方法
           banner: banner || '无Banner信息'
         });
       });
