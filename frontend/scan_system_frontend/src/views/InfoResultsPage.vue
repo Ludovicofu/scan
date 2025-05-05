@@ -209,8 +209,7 @@ export default {
       this.scanMessage = data.data.message || '';
     },
 
-    // 处理扫描结果的逻辑，需在InfoResultsPage.vue的handleScanResult方法中使用
-
+    // 处理扫描结果的逻辑
     handleScanResult(data) {
       // 检查消息格式
       if (!data || !data.data) {
@@ -220,7 +219,7 @@ export default {
 
       const resultData = data.data;
 
-      // 修复资产显示问题
+      // 确保资产主机字段存在
       this.ensureAssetHost(resultData);
 
       // 检查是否是当前显示的扫描类型
@@ -278,7 +277,7 @@ export default {
       const assetName = this.getAssetDisplay(resultData);
 
       // 根据结果类型设置通知内容
-      if (resultData.rule_type === 'port') {
+      if (resultData.rule_type === 'port' || resultData.is_port_scan) {
         // 端口扫描结果
         notificationType = 'warning';
         notificationTitle = '端口扫描结果';
@@ -324,6 +323,7 @@ export default {
         console.log(`通知频率限制: ${resultData.module}, 跳过显示`);
       }
     },
+
     // 确保资产主机字段存在并有正确的值
     ensureAssetHost(result) {
       if (!result) return;
@@ -349,6 +349,7 @@ export default {
         result.asset_host = '未知资产';
       }
     },
+
     handleScanStatus(data) {
       if (data.status === 'started') {
         // 扫描开始
@@ -417,9 +418,7 @@ export default {
 
         // 修复结果中可能缺失的asset_host字段
         this.results.forEach(result => {
-          if (!result.asset_host && result.asset && typeof result.asset === 'string') {
-            result.asset_host = result.asset;
-          }
+          this.ensureAssetHost(result);
         });
 
         // 更新已处理的结果IDs

@@ -9,7 +9,9 @@ class AssetSerializer(serializers.ModelSerializer):
 
 
 class ScanResultSerializer(serializers.ModelSerializer):
+    # 添加资产主机名字段，从asset关联对象的host属性获取
     asset_host = serializers.CharField(source='asset.host', read_only=True)
+    # 添加模块和扫描类型的显示名称
     module_display = serializers.CharField(source='get_module_display', read_only=True)
     scan_type_display = serializers.CharField(source='get_scan_type_display', read_only=True)
 

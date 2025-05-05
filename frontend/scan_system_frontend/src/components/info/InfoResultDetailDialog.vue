@@ -1,4 +1,4 @@
-<!-- components/info/InfoResultDetailDialog.vue -->
+<!-- components/info/InfoResultDetailDialog.vue - 修改后 -->
 <template>
   <el-dialog
     title="扫描结果详情"
@@ -11,14 +11,14 @@
         <el-descriptions-item label="资产">{{ getAssetDisplay(result) }}</el-descriptions-item>
         <el-descriptions-item label="模块">{{ result.module_display }}</el-descriptions-item>
         <el-descriptions-item label="描述">{{ result.description }}</el-descriptions-item>
-        <el-descriptions-item v-if="result.behavior && result.rule_type !== 'port'" label="行为">{{ result.behavior }}</el-descriptions-item>
-        <el-descriptions-item v-if="result.rule_type === 'port'" label="行为">端口扫描</el-descriptions-item>
+        <el-descriptions-item v-if="result.behavior && !isPortScan(result)" label="行为">{{ result.behavior }}</el-descriptions-item>
+        <el-descriptions-item v-if="isPortScan(result)" label="行为">端口扫描</el-descriptions-item>
         <el-descriptions-item label="规则类型">{{ result.rule_type }}</el-descriptions-item>
         <el-descriptions-item label="扫描日期">{{ formatDate(result.scan_date) }}</el-descriptions-item>
       </el-descriptions>
 
       <!-- 端口扫描结果特殊显示 -->
-      <div v-if="result.rule_type === 'port'" class="port-scan-results">
+      <div v-if="isPortScan(result)" class="port-scan-results">
         <el-divider content-position="left">端口扫描结果</el-divider>
 
         <div class="port-scan-wrapper">
@@ -143,7 +143,7 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     },
 
-    // 获取资产显示文本
+    // 获取资产显示文本 - 修改为处理多种情况
     getAssetDisplay(row) {
       if (!row) return '未知资产';
 

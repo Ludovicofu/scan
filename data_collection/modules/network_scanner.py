@@ -240,7 +240,7 @@ class NetworkScanner:
                             'type': 'scan_result',
                             'data': {
                                 'id': scan_result.id if scan_result else None,
-                                'asset': asset.host,  # 主机名而非ID
+                                'asset': asset.host,  # 使用主机名而不是ID
                                 'asset_host': asset.host,  # 添加资产主机名
                                 'module': 'network',
                                 'module_display': '网络信息',
@@ -368,14 +368,14 @@ class NetworkScanner:
                             # 用于展示的端口号字符串
                             port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
 
-                            # 发送扫描结果事件
+                            # 发送扫描结果事件 - 修改asset为host字符串
                             await channel_layer.group_send(
                                 'data_collection_scanner',
                                 {
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset': asset.host,  # 使用主机名而不是ID
                                         'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'network',
                                         'module_display': '网络信息',
@@ -482,14 +482,14 @@ class NetworkScanner:
                             print(
                                 f"保存主动扫描结果: 资产={asset.host}, 描述={description}, 行为={behavior}, 匹配值={match_value}")
 
-                            # 发送扫描结果事件
+                            # 发送扫描结果事件 - 修改asset为host字符串
                             await channel_layer.group_send(
                                 'data_collection_scanner',
                                 {
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset': asset.host,  # 使用主机名而不是ID
                                         'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'network',
                                         'module_display': '网络信息',

@@ -1,5 +1,5 @@
 """
-修复 data_collection/consumers.py 中的结果重复问题
+修复 data_collection/consumers.py 中的结果重复问题和资产显示问题
 该文件负责WebSocket通信和消息分发，是解决重复通知的关键
 """
 import json
@@ -182,9 +182,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             print("扫描结果数据不完整，跳过")
             return
 
-        # 创建结果缓存键
+        # 创建结果缓存键 - 使用asset_host而不是asset
         cache_key = (
-            result_data.get('asset', ''),
+            result_data.get('asset_host', ''),  # 使用asset_host而不是asset
             result_data.get('module', ''),
             result_data.get('description', ''),
             result_data.get('rule_type', '')
@@ -283,10 +283,11 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                             port_numbers.append(port)
                 port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
 
-            # 创建结果对象
+            # 创建结果对象 - 添加asset_host
             result_data = {
                 'id': result.id,
-                'asset': result.asset.host,
+                'asset': result.asset.host,  # 使用主机名而不是ID
+                'asset_host': result.asset.host,  # 明确添加资产主机名
                 'module': result.module,
                 'module_display': result.get_module_display(),
                 'scan_type': result.scan_type,

@@ -1,4 +1,4 @@
-<!-- components/info/PassiveScanResults.vue -->
+<!-- components/info/PassiveScanResults.vue - 修改后 -->
 <template>
   <div class="passive-scan-results">
     <el-table
@@ -28,10 +28,10 @@
       <el-table-column
         label="资产"
         width="150"
-        prop="asset_host"
       >
         <template #default="scope">
-          <span>{{ scope.row.asset_host || scope.row.asset || '未知资产' }}</span>
+          <!-- 修改：优先使用asset_host字段，如果没有则尝试使用asset字段 -->
+          <span>{{ getAssetDisplay(scope.row) }}</span>
         </template>
       </el-table-column>
 
@@ -65,7 +65,7 @@
       >
         <template #default="scope">
           <!-- 对端口扫描结果特殊处理，只显示端口号 -->
-          <span v-if="scope.row.rule_type === 'port'">
+          <span v-if="scope.row.rule_type === 'port' || scope.row.is_port_scan">
             {{ formatPortNumbers(scope.row.match_value) }}
           </span>
           <span v-else show-overflow-tooltip>{{ scope.row.match_value }}</span>
@@ -145,6 +145,8 @@ export default {
 
     // 获取资产显示文本
     getAssetDisplay(row) {
+      if (!row) return '未知资产';
+
       // 优先级：asset_host > asset（如果asset是字符串） > '未知资产'
       if (row.asset_host) {
         return row.asset_host;

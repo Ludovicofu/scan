@@ -180,15 +180,15 @@ class OSScanner:
 
                     print(f"保存OS被动扫描结果: 资产={asset.host}, 描述={description}")
 
-                    # 发送扫描结果事件
+                    # 发送扫描结果事件 - 修改结果发送格式，使用asset.host代替ID
                     await channel_layer.group_send(
                         'data_collection_scanner',
                         {
                             'type': 'scan_result',
                             'data': {
                                 'id': scan_result.id if scan_result else None,
-                                'asset': asset.host,  # 主机名而非ID
-                                'asset_host': asset.host,  # 添加资产主机名
+                                'asset': asset.host,  # 使用主机名而不是ID
+                                'asset_host': asset.host,  # 添加资产主机名字段
                                 'module': 'os',
                                 'module_display': '操作系统信息',
                                 'scan_type': 'passive',
@@ -312,14 +312,14 @@ class OSScanner:
 
                             print(f"保存OS主动扫描结果: 资产={asset.host}, 描述={description}, 行为={behavior}")
 
-                            # 发送扫描结果事件
+                            # 发送扫描结果事件 - 修改结果发送格式，使用asset.host代替ID
                             await channel_layer.group_send(
                                 'data_collection_scanner',
                                 {
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset': asset.host,  # 使用主机名而不是ID
                                         'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'os',
                                         'module_display': '操作系统信息',

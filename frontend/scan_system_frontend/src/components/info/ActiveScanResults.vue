@@ -1,4 +1,4 @@
-<!-- components/info/ActiveScanResults.vue -->
+<!-- components/info/ActiveScanResults.vue - 修改后 -->
 <template>
   <div class="active-scan-results">
     <el-table
@@ -28,10 +28,10 @@
       <el-table-column
         label="资产"
         width="150"
-        prop="asset_host"
       >
         <template #default="scope">
-          <span>{{ scope.row.asset_host || scope.row.asset || '未知资产' }}</span>
+          <!-- 修改：使用getAssetDisplay方法处理资产显示 -->
+          <span>{{ getAssetDisplay(scope.row) }}</span>
         </template>
       </el-table-column>
 
@@ -54,7 +54,7 @@
       >
         <template #default="scope">
           <!-- 端口扫描结果显示固定文本"端口扫描" -->
-          <span v-if="scope.row.rule_type === 'port'">端口扫描</span>
+          <span v-if="scope.row.rule_type === 'port' || scope.row.is_port_scan">端口扫描</span>
           <span v-else>{{ scope.row.behavior }}</span>
         </template>
       </el-table-column>
@@ -71,7 +71,7 @@
       >
         <template #default="scope">
           <!-- 对端口扫描结果特殊处理，只显示端口号 -->
-          <span v-if="scope.row.rule_type === 'port'">
+          <span v-if="scope.row.rule_type === 'port' || scope.row.is_port_scan">
             {{ formatPortNumbers(scope.row.match_value) }}
           </span>
           <span v-else show-overflow-tooltip>{{ scope.row.match_value }}</span>
@@ -149,16 +149,25 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     },
 
-    // 获取资产显示文本
+    // 获取资产显示文本 - 增加处理各种情况的方法
     getAssetDisplay(row) {
-      // 优先级：asset_host > asset（如果asset是字符串） > '未知资产'
+      if (!row) return '未知资产';
+
+      // 优先级：asset_host > asset（如果asset是字符串） > asset.host > '未知资产'
       if (row.asset_host) {
         return row.asset_host;
-      } else if (row.asset && typeof row.asset === 'string' && !row.asset.match(/^\d+$/)) {
-        return row.asset;
-      } else {
-        return '未知资产';
+      } else if (row.asset) {
+        // 如果asset是字符串且不是纯数字ID
+        if (typeof row.asset === 'string' && !row.asset.match(/^\d+$/)) {
+          return row.asset;
+        }
+        // 如果asset是对象且有host属性
+        else if (typeof row.asset === 'object' && row.asset.host) {
+          return row.asset.host;
+        }
       }
+
+      return '未知资产';
     },
 
     // 提取端口号

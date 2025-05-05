@@ -214,7 +214,7 @@ class ComponentScanner:
                             response_data=response_data
                         )
 
-                        # 发送扫描结果事件
+                        # 发送扫描结果事件 - 使用主机名代替ID
                         if scan_result:
                             await channel_layer.group_send(
                                 'data_collection_scanner',
@@ -222,7 +222,7 @@ class ComponentScanner:
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id,
-                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset': asset.host,  # 使用主机名而不是ID
                                         'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'component',
                                         'module_display': '组件与服务信息',
@@ -364,14 +364,14 @@ class ComponentScanner:
 
                     print(f"保存组件被动扫描结果: 资产={asset.host}, 描述={description}")
 
-                    # 发送扫描结果事件
+                    # 发送扫描结果事件 - 使用主机名代替ID
                     await channel_layer.group_send(
                         'data_collection_scanner',
                         {
                             'type': 'scan_result',
                             'data': {
                                 'id': scan_result.id if scan_result else None,
-                                'asset': asset.host,  # 主机名而非ID
+                                'asset': asset.host,  # 使用主机名而不是ID
                                 'asset_host': asset.host,  # 添加资产主机名
                                 'module': 'component',
                                 'module_display': '组件与服务信息',
@@ -498,14 +498,14 @@ class ComponentScanner:
 
                             print(f"保存组件主动扫描结果: 资产={asset.host}, 描述={description}, 行为={behavior}")
 
-                            # 发送扫描结果事件
+                            # 发送扫描结果事件 - 使用主机名代替ID
                             await channel_layer.group_send(
                                 'data_collection_scanner',
                                 {
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset': asset.host,  # 使用主机名而不是ID
                                         'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'component',
                                         'module_display': '组件与服务信息',
