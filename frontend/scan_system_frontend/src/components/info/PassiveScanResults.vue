@@ -167,7 +167,7 @@ export default {
 
       for (const line of lines) {
         if (line && line.includes(':')) {
-          const port = line.split(':', 1)[0].trim();
+          const port = line.split(':', 1)[0].strip();
           if (port && !isNaN(port)) {
             ports.push(port);
           }
