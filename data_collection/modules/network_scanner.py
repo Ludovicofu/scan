@@ -240,7 +240,8 @@ class NetworkScanner:
                             'type': 'scan_result',
                             'data': {
                                 'id': scan_result.id if scan_result else None,
-                                'asset': asset.host,
+                                'asset': asset.host,  # 主机名而非ID
+                                'asset_host': asset.host,  # 添加资产主机名
                                 'module': 'network',
                                 'module_display': '网络信息',
                                 'scan_type': 'passive',
@@ -374,7 +375,8 @@ class NetworkScanner:
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,
+                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'network',
                                         'module_display': '网络信息',
                                         'scan_type': 'active',
@@ -487,7 +489,8 @@ class NetworkScanner:
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,
+                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'network',
                                         'module_display': '网络信息',
                                         'scan_type': 'active',

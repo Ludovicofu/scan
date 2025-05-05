@@ -52,7 +52,7 @@
           </template>
         </el-table-column>
 
-        <!-- 新增资产列 -->
+        <!-- 修改资产列，使用asset_host字段 -->
         <el-table-column
           prop="asset_host"
           label="资产"
@@ -148,7 +148,7 @@
     >
       <div v-if="selectedResult">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="资产">{{ selectedResult.asset }}</el-descriptions-item>
+          <el-descriptions-item label="资产">{{ selectedResult.asset_host }}</el-descriptions-item>
           <el-descriptions-item label="模块">{{ selectedResult.module_display }}</el-descriptions-item>
           <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
           <el-descriptions-item v-if="selectedResult.behavior && selectedResult.rule_type !== 'port'" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
@@ -493,6 +493,18 @@ export default {
       }
     },
 
+    handleScanStatus(data) {
+      if (data.status === 'started') {
+        // 扫描开始
+        ElMessage.success(data.message || '扫描已开始');
+        this.scanStatus = 'scanning';
+      } else if (data.status === 'stopped') {
+        // 扫描停止
+        ElMessage.info(data.message || '扫描已停止');
+        this.scanStatus = 'idle';
+      }
+    },
+
     // 添加一个处理端口扫描结果的方法，只提取端口号
     formatPortNumbers(matchValue) {
       if (!matchValue) return '';
@@ -573,7 +585,7 @@ export default {
             this.resultIdSet.add(result.id);
           }
           // 更新通知缓存
-          const resultKey = `${result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          const resultKey = `${result.asset_host || result.asset}-${result.module}-${result.description}-${result.rule_type}`;
           this.notificationCache.set(resultKey, true);
         });
 
@@ -605,7 +617,7 @@ export default {
         if (index !== -1) {
           // 移除对应的缓存项
           const result = this.results[index];
-          const resultKey = `${result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          const resultKey = `${result.asset_host || result.asset}-${result.module}-${result.description}-${result.rule_type}`;
           this.notificationCache.delete(resultKey);
 
           // 从列表移除

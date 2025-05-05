@@ -222,7 +222,8 @@ class ComponentScanner:
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id,
-                                        'asset': asset.host,
+                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'component',
                                         'module_display': '组件与服务信息',
                                         'scan_type': 'passive',
@@ -370,7 +371,8 @@ class ComponentScanner:
                             'type': 'scan_result',
                             'data': {
                                 'id': scan_result.id if scan_result else None,
-                                'asset': asset.host,
+                                'asset': asset.host,  # 主机名而非ID
+                                'asset_host': asset.host,  # 添加资产主机名
                                 'module': 'component',
                                 'module_display': '组件与服务信息',
                                 'scan_type': 'passive',
@@ -503,7 +505,8 @@ class ComponentScanner:
                                     'type': 'scan_result',
                                     'data': {
                                         'id': scan_result.id if scan_result else None,
-                                        'asset': asset.host,
+                                        'asset': asset.host,  # 主机名而非ID
+                                        'asset_host': asset.host,  # 添加资产主机名
                                         'module': 'component',
                                         'module_display': '组件与服务信息',
                                         'scan_type': 'active',
