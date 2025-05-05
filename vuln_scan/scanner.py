@@ -28,7 +28,7 @@ class VulnScanner:
         self.scan_timeout = 30  # 默认扫描超时时间（秒）
         self.max_concurrent_scans = 5  # 默认最大并发扫描数
         self.skip_targets = set()  # 要跳过的目标集合
-        self.semaphore = asyncio.Semaphore(5)  # 默认并发数控制
+        self.semaphore = asyncio.Semaphore(2)  # 默认并发数控制
 
         # 初始化各个漏洞扫描模块
         self.sql_injection_scanner = SqlInjectionScanner()

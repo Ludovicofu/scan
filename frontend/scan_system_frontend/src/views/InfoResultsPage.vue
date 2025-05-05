@@ -1,4 +1,3 @@
-<!-- 修复 frontend/scan_system_frontend/src/views/InfoResultsPage.vue 中重复通知和结果显示问题 -->
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
@@ -53,10 +52,17 @@
           </template>
         </el-table-column>
 
+        <!-- 新增资产列 -->
+        <el-table-column
+          prop="asset_host"
+          label="资产"
+          width="150"
+        ></el-table-column>
+
         <el-table-column
           prop="module_display"
           label="模块"
-          width="150"
+          width="120"
         ></el-table-column>
 
         <el-table-column
@@ -69,50 +75,53 @@
           v-if="currentScanType === 'active'"
           prop="behavior"
           label="行为"
-          width="250"
-        ></el-table-column>
+          width="200"
+        >
+          <template #default="scope">
+            <!-- 端口扫描结果显示固定文本"端口扫描" -->
+            <span v-if="scope.row.rule_type === 'port'">端口扫描</span>
+            <span v-else>{{ scope.row.behavior }}</span>
+          </template>
+        </el-table-column>
 
         <el-table-column
           prop="rule_type"
           label="规则类型"
-          width="150"
+          width="120"
         ></el-table-column>
 
         <el-table-column
           prop="match_value"
           label="匹配值"
-          show-overflow-tooltip
         >
           <template #default="scope">
-            <!-- 对端口扫描结果特殊处理 -->
-            <span v-if="scope.row.is_port_scan && scope.row.port_display">
-              {{ scope.row.port_display }}
+            <!-- 对端口扫描结果特殊处理，只显示端口号 -->
+            <span v-if="scope.row.rule_type === 'port'">
+              {{ formatPortNumbers(scope.row.match_value) }}
             </span>
-            <span v-else>{{ scope.row.match_value }}</span>
+            <span v-else show-overflow-tooltip>{{ scope.row.match_value }}</span>
           </template>
         </el-table-column>
 
         <el-table-column
           fixed="right"
           label="操作"
-          width="150"
+          width="120"
         >
           <template #default="scope">
-            <el-button
-              @click="showDetail(scope.row)"
-              type="text"
-              size="small"
-            >
-              详情
-            </el-button>
-            <el-button
-              @click="deleteResult(scope.row.id)"
-              type="text"
-              size="small"
-              class="delete-btn"
-            >
-              删除
-            </el-button>
+            <div class="operation-buttons">
+              <el-button
+                @click="showDetail(scope.row)"
+                type="text"
+                size="small"
+              >详情</el-button>
+              <el-button
+                @click="deleteResult(scope.row.id)"
+                type="text"
+                size="small"
+                class="delete-btn"
+              >删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -142,7 +151,8 @@
           <el-descriptions-item label="资产">{{ selectedResult.asset }}</el-descriptions-item>
           <el-descriptions-item label="模块">{{ selectedResult.module_display }}</el-descriptions-item>
           <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
-          <el-descriptions-item v-if="selectedResult.behavior" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
+          <el-descriptions-item v-if="selectedResult.behavior && selectedResult.rule_type !== 'port'" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
+          <el-descriptions-item v-if="selectedResult.rule_type === 'port'" label="行为">端口扫描</el-descriptions-item>
           <el-descriptions-item label="规则类型">{{ selectedResult.rule_type }}</el-descriptions-item>
           <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
         </el-descriptions>
@@ -163,17 +173,7 @@
               <el-table-column prop="banner" label="Banner信息">
                 <template #default="scope">
                   <div class="banner-content">
-                    <el-tooltip
-                      v-if="isBinaryData(scope.row.banner)"
-                      content="点击查看十六进制数据"
-                      placement="top"
-                      effect="light"
-                    >
-                      <div class="binary-data" @click="scope.row.showHex = !scope.row.showHex">
-                        {{ scope.row.showHex ? scope.row.hexData : scope.row.banner }}
-                      </div>
-                    </el-tooltip>
-                    <span v-else>{{ scope.row.banner }}</span>
+                    {{ scope.row.banner }}
                   </div>
                 </template>
               </el-table-column>
@@ -192,7 +192,7 @@
             <el-tab-pane label="请求内容">
               <div class="detail-panel">
                 <!-- 使用selectedResult中的实际请求数据 -->
-                <div v-if="selectedResult.behavior" class="highlight-section">
+                <div v-if="selectedResult.behavior && !selectedResult.is_port_scan" class="highlight-section">
                   <div class="highlight-title">行为路径:</div>
                   <div class="highlight-content" v-html="highlightBehavior(selectedResult.request_data, selectedResult.behavior)"></div>
                 </div>
@@ -286,20 +286,9 @@ export default {
         const [port, ...bannerParts] = line.split(':');
         const banner = bannerParts.join(':').trim();
 
-        // 提取十六进制数据（如果存在）
-        let hexData = '';
-        if (this.isBinaryData(banner)) {
-          const hexMatch = banner.match(/前\d+字节: ([0-9a-f]+)/i);
-          if (hexMatch && hexMatch[1]) {
-            hexData = this.formatHexData(hexMatch[1]);
-          }
-        }
-
         result.push({
           port: port.trim(),
-          banner: banner || '无Banner信息',
-          hexData,
-          showHex: false
+          banner: banner || '无Banner信息'
         });
       });
 
@@ -411,7 +400,7 @@ export default {
 
       // 构建结果唯一标识
       const resultId = resultData.id;
-      const resultKey = `${resultData.asset}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
+      const resultKey = `${resultData.asset_host || resultData.asset}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
 
       // 检查结果ID是否已存在（如果有ID）
       if (resultId && this.resultIdSet.has(resultId)) {
@@ -453,30 +442,36 @@ export default {
       let notificationTitle = '';
       let notificationMessage = '';
 
+      // 确保使用正确的资产字段
+      const assetName = resultData.asset_host || resultData.asset || '未知资产';
+
       // 根据结果类型设置通知内容
       if (resultData.rule_type === 'port') {
         // 端口扫描结果
         notificationType = 'warning';
         notificationTitle = '端口扫描结果';
-        notificationMessage = `发现开放端口: ${resultData.port_display || resultData.match_value.split("\n")[0]}`;
+
+        // 使用formatPortNumbers只显示端口号
+        const portNumbers = this.formatPortNumbers(resultData.match_value);
+        notificationMessage = `资产 ${assetName} 发现开放端口: ${portNumbers}`;
       } else {
         // 根据模块设置不同的通知
         switch(resultData.module) {
           case 'network':
             notificationTitle = '网络信息';
-            notificationMessage = `发现网络信息: ${resultData.description}`;
+            notificationMessage = `资产 ${assetName} 发现网络信息: ${resultData.description}`;
             break;
           case 'os':
             notificationTitle = '操作系统信息';
-            notificationMessage = `发现操作系统信息: ${resultData.description}`;
+            notificationMessage = `资产 ${assetName} 发现操作系统信息: ${resultData.description}`;
             break;
           case 'component':
             notificationTitle = '组件与服务信息';
-            notificationMessage = `发现组件信息: ${resultData.description}`;
+            notificationMessage = `资产 ${assetName} 发现组件信息: ${resultData.description}`;
             break;
           default:
             notificationTitle = '扫描结果';
-            notificationMessage = `发现新结果: ${resultData.description}`;
+            notificationMessage = `资产 ${assetName} 发现新结果: ${resultData.description}`;
         }
       }
 
@@ -498,17 +493,25 @@ export default {
       }
     },
 
-    handleScanStatus(data) {
-      // 处理扫描状态更新
-      if (data.status === 'started') {
-        this.scanStatus = 'scanning';
-        this.scanProgress = 0;
-        this.scanMessage = data.message || '扫描已开始';
-      } else if (data.status === 'stopped') {
-        this.scanStatus = 'idle';
-        this.scanProgress = 0;
-        this.scanMessage = data.message || '扫描已停止';
+    // 添加一个处理端口扫描结果的方法，只提取端口号
+    formatPortNumbers(matchValue) {
+      if (!matchValue) return '';
+
+      // 提取所有端口号
+      const ports = [];
+      const lines = matchValue.split('\n');
+
+      for (const line of lines) {
+        if (line && line.includes(':')) {
+          const port = line.split(':', 1)[0].trim();
+          if (port && !isNaN(port)) {
+            ports.push(port);
+          }
+        }
       }
+
+      // 返回逗号分隔的端口号列表
+      return ports.join(', ');
     },
 
     // 扫描操作
@@ -675,33 +678,6 @@ export default {
       return text.replace(regex, match => `<span class="highlight-match">${match}</span>`);
     },
 
-    /**
-     * 检查Banner是否是二进制数据描述
-     * @param {string} banner Banner文本
-     * @returns {boolean} 是否为二进制数据
-     */
-    isBinaryData(banner) {
-      return banner && (
-        banner.includes('二进制数据') ||
-        banner.includes('前20字节:') ||
-        banner.includes('前32字节:') ||
-        banner.includes('前16字节:')
-      );
-    },
-
-    /**
-     * 格式化十六进制数据，每2个字符加一个空格
-     * @param {string} hex 十六进制字符串
-     * @returns {string} 格式化后的十六进制字符串
-     */
-    formatHexData(hex) {
-      let result = '';
-      for (let i = 0; i < hex.length; i += 2) {
-        result += hex.substr(i, 2) + ' ';
-      }
-      return result.trim();
-    },
-
     // 工具方法
     formatDate(dateString) {
       if (!dateString) return '';
@@ -742,6 +718,13 @@ h1 {
 
 .delete-btn:hover {
   color: #f78989;
+}
+
+/* 操作按钮样式 */
+.operation-buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
 }
 
 .detail-content {
@@ -797,7 +780,7 @@ h1 {
   border-radius: 3px;
 }
 
-/* 新增端口扫描结果样式 */
+/* 端口扫描结果样式 */
 .port-scan-results {
   margin: 20px 0;
 }
@@ -814,19 +797,6 @@ h1 {
 .banner-content {
   font-family: 'Courier New', monospace;
   word-break: break-all;
-}
-
-.binary-data {
-  cursor: pointer;
-  padding: 2px 4px;
-  background-color: #f5f7fa;
-  border-radius: 3px;
-  color: #303133;
-  transition: background-color 0.2s;
-}
-
-.binary-data:hover {
-  background-color: #e6ebf5;
 }
 
 /* 其他类型结果显示 */
