@@ -206,17 +206,6 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         else:
             print(f"发送扫描结果: {result_data.get('description')}")
 
-        # 确保资产主机名在结果数据中
-        if 'asset' in result_data and not 'asset_host' in result_data:
-            # 如果asset是ID或数字字符串，则获取主机名
-            if isinstance(result_data['asset'], int) or (isinstance(result_data['asset'], str) and result_data['asset'].isdigit()):
-                try:
-                    asset = await self.get_asset_by_id(int(result_data['asset']))
-                    if asset:
-                        result_data['asset_host'] = asset.host
-                except Exception as e:
-                    print(f"获取资产主机名失败: {str(e)}")
-
         # 发送扫描结果通知给客户端
         await self.send(text_data=json.dumps({
             'type': 'scan_result',
@@ -260,22 +249,10 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         return [{'id': t.id, 'target': t.target, 'description': t.description} for t in targets]
 
     @database_sync_to_async
-    def get_asset_by_id(self, asset_id):
-        """获取资产对象"""
-        try:
-            return Asset.objects.get(id=asset_id)
-        except Asset.DoesNotExist:
-            print(f"资产不存在，ID: {asset_id}")
-            return None
-        except Exception as e:
-            print(f"获取资产失败: {str(e)}")
-            return None
-
-    @database_sync_to_async
     def get_scan_results(self, filters):
         """获取扫描结果"""
         # 构建查询
-        queryset = ScanResult.objects.all().select_related('asset')  # 添加select_related以优化查询
+        queryset = ScanResult.objects.all()
 
         # 应用过滤器
         if 'scan_type' in filters:
@@ -309,8 +286,7 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             # 创建结果对象
             result_data = {
                 'id': result.id,
-                'asset': result.asset.host,  # 改为使用主机名而不是ID
-                'asset_host': result.asset.host,  # 明确添加资产主机名
+                'asset': result.asset.host,
                 'module': result.module,
                 'module_display': result.get_module_display(),
                 'scan_type': result.scan_type,

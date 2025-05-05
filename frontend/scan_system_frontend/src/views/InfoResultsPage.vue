@@ -52,12 +52,15 @@
           </template>
         </el-table-column>
 
-        <!-- 修改资产列，使用asset_host字段 -->
+        <!-- 修改资产列，使用多种可能的字段名 -->
         <el-table-column
-          prop="asset_host"
           label="资产"
           width="150"
-        ></el-table-column>
+        >
+          <template #default="scope">
+            {{ getAssetDisplay(scope.row) }}
+          </template>
+        </el-table-column>
 
         <el-table-column
           prop="module_display"
@@ -148,7 +151,7 @@
     >
       <div v-if="selectedResult">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="资产">{{ selectedResult.asset_host }}</el-descriptions-item>
+          <el-descriptions-item label="资产">{{ getAssetDisplay(selectedResult) }}</el-descriptions-item>
           <el-descriptions-item label="模块">{{ selectedResult.module_display }}</el-descriptions-item>
           <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
           <el-descriptions-item v-if="selectedResult.behavior && selectedResult.rule_type !== 'port'" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
@@ -309,6 +312,18 @@ export default {
     this.saveCacheToStorage();
   },
   methods: {
+    // 新增方法：获取资产显示文本
+    getAssetDisplay(row) {
+      // 优先级：asset_host > asset（如果asset是字符串） > '未知资产'
+      if (row.asset_host) {
+        return row.asset_host;
+      } else if (row.asset && typeof row.asset === 'string' && !row.asset.match(/^\d+$/)) {
+        return row.asset;
+      } else {
+        return '未知资产';
+      }
+    },
+
     // 缓存持久化处理
     loadCacheFromStorage() {
       try {
@@ -392,6 +407,11 @@ export default {
 
       const resultData = data.data;
 
+      // 确保资产字段存在 - 修正资产显示问题
+      if (!resultData.asset_host && resultData.asset && typeof resultData.asset === 'string') {
+        resultData.asset_host = resultData.asset;
+      }
+
       // 检查是否是当前显示的扫描类型
       if (resultData.scan_type !== this.currentScanType) {
         console.log(`跳过不匹配当前扫描类型的结果: ${resultData.scan_type} != ${this.currentScanType}`);
@@ -400,7 +420,7 @@ export default {
 
       // 构建结果唯一标识
       const resultId = resultData.id;
-      const resultKey = `${resultData.asset_host || resultData.asset}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
+      const resultKey = `${this.getAssetDisplay(resultData)}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
 
       // 检查结果ID是否已存在（如果有ID）
       if (resultId && this.resultIdSet.has(resultId)) {
@@ -442,8 +462,8 @@ export default {
       let notificationTitle = '';
       let notificationMessage = '';
 
-      // 确保使用正确的资产字段
-      const assetName = resultData.asset_host || resultData.asset || '未知资产';
+      // 获取资产名称 - 使用新的getAssetDisplay方法
+      const assetName = this.getAssetDisplay(resultData);
 
       // 根据结果类型设置通知内容
       if (resultData.rule_type === 'port') {
@@ -579,13 +599,20 @@ export default {
         this.results = response.results || [];
         this.totalResults = response.count || 0;
 
+        // 修复结果中可能缺失的asset_host字段
+        this.results.forEach(result => {
+          if (!result.asset_host && result.asset && typeof result.asset === 'string') {
+            result.asset_host = result.asset;
+          }
+        });
+
         // 更新已处理的结果IDs
         this.results.forEach(result => {
           if (result.id) {
             this.resultIdSet.add(result.id);
           }
           // 更新通知缓存
-          const resultKey = `${result.asset_host || result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          const resultKey = `${this.getAssetDisplay(result)}-${result.module}-${result.description}-${result.rule_type}`;
           this.notificationCache.set(resultKey, true);
         });
 
@@ -617,7 +644,7 @@ export default {
         if (index !== -1) {
           // 移除对应的缓存项
           const result = this.results[index];
-          const resultKey = `${result.asset_host || result.asset}-${result.module}-${result.description}-${result.rule_type}`;
+          const resultKey = `${this.getAssetDisplay(result)}-${result.module}-${result.description}-${result.rule_type}`;
           this.notificationCache.delete(resultKey);
 
           // 从列表移除
