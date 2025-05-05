@@ -1,3 +1,4 @@
+<!-- views/InfoResultsPage.vue (重构版) -->
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
@@ -27,206 +28,52 @@
       </el-radio-group>
     </div>
 
-    <!-- 结果表格 -->
-    <div class="result-table">
-      <el-table
-        v-loading="loading"
-        :data="results"
-        border
-        style="width: 100%"
-      >
-        <el-table-column
-          type="index"
-          label="序号"
-          width="60"
-        ></el-table-column>
+    <!-- 根据当前扫描类型显示对应的结果组件 -->
+    <div class="result-container">
+      <!-- 被动扫描结果 -->
+      <PassiveScanResults
+        v-if="currentScanType === 'passive'"
+        :results="results"
+        :loading="loading"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalResults"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+        @view-detail="showDetail"
+        @delete-result="deleteResult"
+      />
 
-        <el-table-column
-          prop="scan_date"
-          label="日期"
-          width="180"
-          sortable
-        >
-          <template #default="scope">
-            {{ formatDate(scope.row.scan_date) }}
-          </template>
-        </el-table-column>
-
-        <!-- 修改资产列，使用多种可能的字段名 -->
-        <el-table-column
-          label="资产"
-          width="150"
-        >
-          <template #default="scope">
-            {{ getAssetDisplay(scope.row) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column
-          prop="module_display"
-          label="模块"
-          width="120"
-        ></el-table-column>
-
-        <el-table-column
-          prop="description"
-          label="描述"
-          width="180"
-        ></el-table-column>
-
-        <el-table-column
-          v-if="currentScanType === 'active'"
-          prop="behavior"
-          label="行为"
-          width="200"
-        >
-          <template #default="scope">
-            <!-- 端口扫描结果显示固定文本"端口扫描" -->
-            <span v-if="scope.row.rule_type === 'port'">端口扫描</span>
-            <span v-else>{{ scope.row.behavior }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column
-          prop="rule_type"
-          label="规则类型"
-          width="120"
-        ></el-table-column>
-
-        <el-table-column
-          prop="match_value"
-          label="匹配值"
-        >
-          <template #default="scope">
-            <!-- 对端口扫描结果特殊处理，只显示端口号 -->
-            <span v-if="scope.row.rule_type === 'port'">
-              {{ formatPortNumbers(scope.row.match_value) }}
-            </span>
-            <span v-else show-overflow-tooltip>{{ scope.row.match_value }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column
-          fixed="right"
-          label="操作"
-          width="120"
-        >
-          <template #default="scope">
-            <div class="operation-buttons">
-              <el-button
-                @click="showDetail(scope.row)"
-                type="text"
-                size="small"
-              >详情</el-button>
-              <el-button
-                @click="deleteResult(scope.row.id)"
-                type="text"
-                size="small"
-                class="delete-btn"
-              >删除</el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-          v-model:current-page="currentPage"
-          :page-sizes="[10, 20, 50, 100]"
-          v-model:page-size="pageSize"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="totalResults"
-        ></el-pagination>
-      </div>
+      <!-- 主动扫描结果 -->
+      <ActiveScanResults
+        v-if="currentScanType === 'active'"
+        :results="results"
+        :loading="loading"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="totalResults"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+        @view-detail="showDetail"
+        @delete-result="deleteResult"
+      />
     </div>
 
     <!-- 结果详情对话框 -->
-    <el-dialog
-      title="扫描结果详情"
-      v-model="detailDialogVisible"
-      width="80%"
-    >
-      <div v-if="selectedResult">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="资产">{{ getAssetDisplay(selectedResult) }}</el-descriptions-item>
-          <el-descriptions-item label="模块">{{ selectedResult.module_display }}</el-descriptions-item>
-          <el-descriptions-item label="描述">{{ selectedResult.description }}</el-descriptions-item>
-          <el-descriptions-item v-if="selectedResult.behavior && selectedResult.rule_type !== 'port'" label="行为">{{ selectedResult.behavior }}</el-descriptions-item>
-          <el-descriptions-item v-if="selectedResult.rule_type === 'port'" label="行为">端口扫描</el-descriptions-item>
-          <el-descriptions-item label="规则类型">{{ selectedResult.rule_type }}</el-descriptions-item>
-          <el-descriptions-item label="扫描日期">{{ formatDate(selectedResult.scan_date) }}</el-descriptions-item>
-        </el-descriptions>
-
-        <!-- 端口扫描结果特殊显示 -->
-        <div v-if="selectedResult.rule_type === 'port'" class="port-scan-results">
-          <el-divider content-position="left">端口扫描结果</el-divider>
-
-          <div class="port-scan-wrapper">
-            <!-- 端口信息表格 -->
-            <el-table
-              :data="parsedPortResults"
-              border
-              stripe
-              class="port-scan-table"
-            >
-              <el-table-column prop="port" label="端口" width="100" />
-              <el-table-column prop="banner" label="Banner信息">
-                <template #default="scope">
-                  <div class="banner-content">
-                    {{ scope.row.banner }}
-                  </div>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </div>
-        <!-- 其他类型结果显示 -->
-        <div v-else>
-          <el-divider content-position="left">匹配值</el-divider>
-          <div class="match-value">{{ selectedResult.match_value }}</div>
-        </div>
-
-        <div class="detail-content">
-          <el-divider content-position="left">请求/响应详情</el-divider>
-          <el-tabs>
-            <el-tab-pane label="请求内容">
-              <div class="detail-panel">
-                <!-- 使用selectedResult中的实际请求数据 -->
-                <div v-if="selectedResult.behavior && !selectedResult.is_port_scan" class="highlight-section">
-                  <div class="highlight-title">行为路径:</div>
-                  <div class="highlight-content" v-html="highlightBehavior(selectedResult.request_data, selectedResult.behavior)"></div>
-                </div>
-                <pre>{{ selectedResult.request_data || '无请求数据' }}</pre>
-              </div>
-            </el-tab-pane>
-            <el-tab-pane label="响应内容">
-              <div class="detail-panel">
-                <!-- 使用selectedResult中的实际响应数据 -->
-                <div v-if="selectedResult.match_value && selectedResult.rule_type !== 'port'" class="highlight-section">
-                  <div class="highlight-title">匹配值:</div>
-                  <div class="highlight-content" v-html="highlightMatchValue(selectedResult.response_data, selectedResult.match_value)"></div>
-                </div>
-                <pre>{{ selectedResult.response_data || '无响应数据' }}</pre>
-              </div>
-            </el-tab-pane>
-          </el-tabs>
-        </div>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="detailDialogVisible = false">关闭</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <InfoResultDetailDialog
+      :visible="detailDialogVisible"
+      :result="selectedResult"
+      @close="detailDialogVisible = false"
+    />
   </div>
 </template>
 
 <script>
 import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
+import PassiveScanResults from '@/components/info/PassiveScanResults.vue';
+import ActiveScanResults from '@/components/info/ActiveScanResults.vue';
+import InfoResultDetailDialog from '@/components/info/InfoResultDetailDialog.vue';
 import { infoCollectionAPI } from '@/services/api';
 import { dataCollectionWS } from '@/services/websocket';
 import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
@@ -235,7 +82,10 @@ export default {
   name: 'InfoResultsPage',
   components: {
     ScanProgress,
-    ResultFilters
+    ResultFilters,
+    PassiveScanResults,
+    ActiveScanResults,
+    InfoResultDetailDialog
   },
   data() {
     return {
@@ -270,34 +120,6 @@ export default {
       lastNotificationTime: {} // 记录每种类型通知的最后时间
     };
   },
-  computed: {
-    // 解析端口扫描结果为表格数据
-    parsedPortResults() {
-      if (!this.selectedResult || this.selectedResult.rule_type !== 'port' || !this.selectedResult.match_value) {
-        return [];
-      }
-
-      let result = [];
-      const matchValue = this.selectedResult.match_value || '';
-
-      // 处理单行和多行情况
-      const lines = matchValue.includes('\n') ? matchValue.split('\n') : [matchValue];
-
-      lines.forEach(line => {
-        if (!line || !line.includes(':')) return;
-
-        const [port, ...bannerParts] = line.split(':');
-        const banner = bannerParts.join(':').trim();
-
-        result.push({
-          port: port.trim(),
-          banner: banner || '无Banner信息'
-        });
-      });
-
-      return result;
-    }
-  },
   created() {
     this.initWebSocket();
     this.fetchResults();
@@ -312,18 +134,6 @@ export default {
     this.saveCacheToStorage();
   },
   methods: {
-    // 新增方法：获取资产显示文本
-    getAssetDisplay(row) {
-      // 优先级：asset_host > asset（如果asset是字符串） > '未知资产'
-      if (row.asset_host) {
-        return row.asset_host;
-      } else if (row.asset && typeof row.asset === 'string' && !row.asset.match(/^\d+$/)) {
-        return row.asset;
-      } else {
-        return '未知资产';
-      }
-    },
-
     // 缓存持久化处理
     loadCacheFromStorage() {
       try {
@@ -383,12 +193,14 @@ export default {
           ElMessage.error('连接服务器失败，实时扫描进度将不可用');
         });
     },
+
     closeWebSocket() {
       // 移除事件监听器
       dataCollectionWS.removeListener('scan_progress', this.handleScanProgress);
       dataCollectionWS.removeListener('scan_result', this.handleScanResult);
       dataCollectionWS.removeListener('scan_status', this.handleScanStatus);
     },
+
     handleScanProgress(data) {
       // 处理扫描进度更新
       this.scanStatus = data.data.status;
@@ -397,7 +209,8 @@ export default {
       this.scanMessage = data.data.message || '';
     },
 
-    // 修改后的处理扫描结果方法
+    // 处理扫描结果的逻辑，需在InfoResultsPage.vue的handleScanResult方法中使用
+
     handleScanResult(data) {
       // 检查消息格式
       if (!data || !data.data) {
@@ -407,10 +220,8 @@ export default {
 
       const resultData = data.data;
 
-      // 确保资产字段存在 - 修正资产显示问题
-      if (!resultData.asset_host && resultData.asset && typeof resultData.asset === 'string') {
-        resultData.asset_host = resultData.asset;
-      }
+      // 修复资产显示问题
+      this.ensureAssetHost(resultData);
 
       // 检查是否是当前显示的扫描类型
       if (resultData.scan_type !== this.currentScanType) {
@@ -418,9 +229,10 @@ export default {
         return;
       }
 
-      // 构建结果唯一标识
+      // 构建结果唯一标识 - 使用正确的资产显示值
       const resultId = resultData.id;
-      const resultKey = `${this.getAssetDisplay(resultData)}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
+      const assetDisplay = resultData.asset_host || (typeof resultData.asset === 'string' ? resultData.asset : '未知资产');
+      const resultKey = `${assetDisplay}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
 
       // 检查结果ID是否已存在（如果有ID）
       if (resultId && this.resultIdSet.has(resultId)) {
@@ -462,7 +274,7 @@ export default {
       let notificationTitle = '';
       let notificationMessage = '';
 
-      // 获取资产名称 - 使用新的getAssetDisplay方法
+      // 获取资产名称
       const assetName = this.getAssetDisplay(resultData);
 
       // 根据结果类型设置通知内容
@@ -512,7 +324,31 @@ export default {
         console.log(`通知频率限制: ${resultData.module}, 跳过显示`);
       }
     },
+    // 确保资产主机字段存在并有正确的值
+    ensureAssetHost(result) {
+      if (!result) return;
 
+      // 如果没有asset_host字段，尝试从asset获取
+      if (!result.asset_host && result.asset) {
+        // 如果asset是字符串类型且不是纯数字ID
+        if (typeof result.asset === 'string' && !result.asset.match(/^\d+$/)) {
+          result.asset_host = result.asset;
+        }
+        // 如果asset是对象类型且有host属性
+        else if (typeof result.asset === 'object' && result.asset.host) {
+          result.asset_host = result.asset.host;
+        }
+      }
+
+      // 确保最终有一个有效的资产显示值
+      if (!result.asset_host && typeof result.asset === 'string') {
+        result.asset_host = result.asset;
+      } else if (!result.asset_host) {
+        // 如果都没有，设置为默认值，但这不应该发生
+        console.warn('无法确定资产显示值，使用默认值');
+        result.asset_host = '未知资产';
+      }
+    },
     handleScanStatus(data) {
       if (data.status === 'started') {
         // 扫描开始
@@ -523,27 +359,6 @@ export default {
         ElMessage.info(data.message || '扫描已停止');
         this.scanStatus = 'idle';
       }
-    },
-
-    // 添加一个处理端口扫描结果的方法，只提取端口号
-    formatPortNumbers(matchValue) {
-      if (!matchValue) return '';
-
-      // 提取所有端口号
-      const ports = [];
-      const lines = matchValue.split('\n');
-
-      for (const line of lines) {
-        if (line && line.includes(':')) {
-          const port = line.split(':', 1)[0].trim();
-          if (port && !isNaN(port)) {
-            ports.push(port);
-          }
-        }
-      }
-
-      // 返回逗号分隔的端口号列表
-      return ports.join(', ');
     },
 
     // 扫描操作
@@ -564,6 +379,7 @@ export default {
         options: {}
       });
     },
+
     stopScan() {
       if (!dataCollectionWS.isConnected) {
         ElMessage.error('WebSocket未连接，无法停止扫描');
@@ -670,15 +486,18 @@ export default {
       this.pageSize = val;
       this.fetchResults();
     },
+
     handlePageChange(val) {
       this.currentPage = val;
       this.fetchResults();
     },
+
     handleFilterChange(filters) {
       this.filters = filters;
       this.currentPage = 1; // 重置为第一页
       this.fetchResults();
     },
+
     handleScanTypeChange() {
       this.currentPage = 1; // 重置为第一页
       this.fetchResults();
@@ -690,38 +509,46 @@ export default {
       this.detailDialogVisible = true;
     },
 
-    // 高亮显示行为和匹配值
-    highlightBehavior(text, behavior) {
-      if (!text || !behavior) return text;
+    // 获取资产显示文本
+    getAssetDisplay(row) {
+      if (!row) return '未知资产';
 
-      // 对behavior进行转义，以便正确用于正则表达式
-      const escapedBehavior = behavior.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      // 创建正则表达式，使用全局搜索和不区分大小写选项
-      const regex = new RegExp(escapedBehavior, 'gi');
-
-      // 用带有高亮的HTML替换匹配的文本
-      return text.replace(regex, match => `<span class="highlight-behavior">${match}</span>`);
+      // 优先级：asset_host > asset（如果asset是字符串） > '未知资产'
+      if (row.asset_host) {
+        return row.asset_host;
+      } else if (row.asset && typeof row.asset === 'string' && !row.asset.match(/^\d+$/)) {
+        return row.asset;
+      } else {
+        return '未知资产';
+      }
     },
 
-    highlightMatchValue(text, matchValue) {
-      if (!text || !matchValue) return text;
+    // 提取端口号
+    formatPortNumbers(matchValue) {
+      if (!matchValue) return '';
 
-      // 对matchValue进行转义，以便正确用于正则表达式
-      const escapedMatchValue = matchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // 提取所有端口号
+      const ports = [];
+      const lines = matchValue.split('\n');
 
-      // 创建正则表达式，使用全局搜索和不区分大小写选项
-      const regex = new RegExp(escapedMatchValue, 'gi');
+      for (const line of lines) {
+        if (line && line.includes(':')) {
+          const port = line.split(':', 1)[0].trim();
+          if (port && !isNaN(port)) {
+            ports.push(port);
+          }
+        }
+      }
 
-      // 用带有高亮的HTML替换匹配的文本
-      return text.replace(regex, match => `<span class="highlight-match">${match}</span>`);
+      // 返回逗号分隔的端口号列表
+      return ports.join(', ');
     },
 
     // 工具方法
     formatDate(dateString) {
       if (!dateString) return '';
       const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
   }
 };
@@ -742,109 +569,15 @@ h1 {
   margin-bottom: 20px;
 }
 
-.result-table {
+.result-container {
   margin-top: 20px;
 }
 
-.pagination {
-  margin-top: 20px;
-  text-align: right;
-}
-
-.delete-btn {
-  color: #F56C6C;
-}
-
-.delete-btn:hover {
-  color: #f78989;
-}
-
-/* 操作按钮样式 */
-.operation-buttons {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-}
-
-.detail-content {
-  margin-top: 20px;
-}
-
-.detail-panel {
-  background-color: #f5f7fa;
-  padding: 15px;
-  border-radius: 4px;
-  margin-top: 10px;
-}
-
-.detail-panel pre {
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  margin-top: 10px;
-  overflow-x: auto;
-  max-height: 500px;
-}
-
-.highlight-section {
-  margin-bottom: 10px;
-  background-color: #ebeef5;
-  padding: 10px;
-  border-radius: 4px;
-}
-
-.highlight-title {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.highlight-content {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  font-size: 13px;
-}
-
-:deep(.highlight-behavior) {
-  background-color: #67C23A;
-  color: white;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-:deep(.highlight-match) {
-  background-color: #409EFF;
-  color: white;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-/* 端口扫描结果样式 */
-.port-scan-results {
-  margin: 20px 0;
-}
-
-.port-scan-wrapper {
-  margin-top: 15px;
-}
-
-.port-scan-table {
-  width: 100%;
-  margin-bottom: 20px;
-}
-
-.banner-content {
-  font-family: 'Courier New', monospace;
-  word-break: break-all;
-}
-
-/* 其他类型结果显示 */
-.match-value {
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-break: break-all;
+@media (max-width: 768px) {
+  .scan-type-tabs {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
