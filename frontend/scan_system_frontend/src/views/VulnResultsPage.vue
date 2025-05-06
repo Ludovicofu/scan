@@ -1,18 +1,6 @@
-<!-- frontend/scan_system_frontend/src/views/VulnResultsPage.vue -->
 <template>
   <div class="vuln-results-page">
     <h1>漏洞检测结果</h1>
-
-    <!-- 扫描进度 -->
-    <ScanProgress
-      title="漏洞扫描进度"
-      :status="scanStatus"
-      :progress="scanProgress"
-      :current-url="currentScanUrl"
-      :message="scanMessage"
-      @start="startScan"
-      @stop="stopScan"
-    />
 
     <!-- 过滤器 -->
     <ResultFilters
@@ -134,12 +122,11 @@
 </template>
 
 <script>
-import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
 import SqlInjectionResults from '@/components/vuln/SqlInjectionResults.vue';
 import XssResults from '@/components/vuln/XssResults.vue';
 import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue';
-import RceResults from '@/components/vuln/RceResults.vue'; // 导入RCE结果组件
+import RceResults from '@/components/vuln/RceResults.vue';
 import SsrfResults from '@/components/vuln/SsrfResults.vue';
 import GeneralVulnResults from '@/components/vuln/GeneralVulnResults.vue';
 import VulnDetailDialog from '@/components/vuln/VulnDetailDialog.vue';
@@ -150,24 +137,17 @@ import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
 export default {
   name: 'VulnResultsPage',
   components: {
-    ScanProgress,
     ResultFilters,
     SqlInjectionResults,
     XssResults,
     FileInclusionResults,
-    RceResults, // 注册RCE结果组件
+    RceResults,
     SsrfResults,
     GeneralVulnResults,
     VulnDetailDialog
   },
   data() {
     return {
-      // 扫描状态
-      scanStatus: 'idle', // idle, scanning, completed, error
-      scanProgress: 0,
-      currentScanUrl: '',
-      scanMessage: '',
-
       // 表格数据
       loading: false,
       results: [],
@@ -232,27 +212,16 @@ export default {
         .then(() => {
           console.log("WebSocket连接成功!");
           // 添加事件监听器
-          vulnScanWS.addListener('scan_progress', this.handleScanProgress);
           vulnScanWS.addListener('scan_result', this.handleScanResult);
-          vulnScanWS.addListener('scan_status', this.handleScanStatus);
         })
         .catch(error => {
           console.error('连接WebSocket失败', error);
-          ElMessage.error('连接服务器失败，实时扫描进度将不可用');
+          ElMessage.error('连接服务器失败，实时扫描结果将不可用');
         });
     },
     closeWebSocket() {
       // 移除事件监听器
-      vulnScanWS.removeListener('scan_progress', this.handleScanProgress);
       vulnScanWS.removeListener('scan_result', this.handleScanResult);
-      vulnScanWS.removeListener('scan_status', this.handleScanStatus);
-    },
-    handleScanProgress(data) {
-      // 处理扫描进度更新
-      this.scanStatus = data.data.status;
-      this.scanProgress = data.data.progress;
-      this.currentScanUrl = data.data.url || '';
-      this.scanMessage = data.data.message || '';
     },
 
     handleScanResult(data) {
@@ -312,44 +281,6 @@ export default {
         case 'low': return 'info';
         default: return 'warning';
       }
-    },
-
-    handleScanStatus(data) {
-      // 处理扫描状态更新
-      if (data.status === 'started') {
-        this.scanStatus = 'scanning';
-        this.scanProgress = 0;
-        this.scanMessage = data.message || '扫描已开始';
-      } else if (data.status === 'stopped') {
-        this.scanStatus = 'idle';
-        this.scanProgress = 0;
-        this.scanMessage = data.message || '扫描已停止';
-      }
-    },
-
-    // 扫描操作
-    startScan() {
-      if (!vulnScanWS.isConnected) {
-        ElMessage.error('WebSocket未连接，无法启动扫描');
-        return;
-      }
-
-      // 发送开始扫描消息
-      vulnScanWS.send({
-        type: 'start_scan',
-        options: {}
-      });
-    },
-    stopScan() {
-      if (!vulnScanWS.isConnected) {
-        ElMessage.error('WebSocket未连接，无法停止扫描');
-        return;
-      }
-
-      // 发送停止扫描消息
-      vulnScanWS.send({
-        type: 'stop_scan'
-      });
     },
 
     // 数据操作方法

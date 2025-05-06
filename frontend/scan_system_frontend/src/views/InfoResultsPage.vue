@@ -1,18 +1,6 @@
-<!-- views/InfoResultsPage.vue (修改版) -->
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
-
-    <!-- 扫描进度 -->
-    <ScanProgress
-      title="信息收集扫描进度"
-      :status="scanStatus"
-      :progress="scanProgress"
-      :current-url="currentScanUrl"
-      :message="scanMessage"
-      @start="startScan"
-      @stop="stopScan"
-    />
 
     <!-- 过滤器 -->
     <ResultFilters
@@ -69,7 +57,6 @@
 </template>
 
 <script>
-import ScanProgress from '@/components/common/ScanProgress.vue';
 import ResultFilters from '@/components/common/ResultFilters.vue';
 import PassiveScanResults from '@/components/info/PassiveScanResults.vue';
 import ActiveScanResults from '@/components/info/ActiveScanResults.vue';
@@ -81,7 +68,6 @@ import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
 export default {
   name: 'InfoResultsPage',
   components: {
-    ScanProgress,
     ResultFilters,
     PassiveScanResults,
     ActiveScanResults,
@@ -89,12 +75,6 @@ export default {
   },
   data() {
     return {
-      // 扫描状态
-      scanStatus: 'idle', // idle, scanning, completed, error
-      scanProgress: 0,
-      currentScanUrl: '',
-      scanMessage: '',
-
       // 表格数据
       loading: false,
       results: [],
@@ -177,36 +157,18 @@ export default {
         .then(() => {
           console.log("WebSocket连接成功!");
 
-          // 重置服务端的缓存，确保不会遗漏结果
-          dataCollectionWS.send({
-            type: 'reset_cache',
-            reset_global: false // 不清除全局缓存，只清除本次连接的缓存
-          });
-
           // 添加事件监听器
-          dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
           dataCollectionWS.addListener('scan_result', this.handleScanResult);
-          dataCollectionWS.addListener('scan_status', this.handleScanStatus);
         })
         .catch(error => {
           console.error('连接WebSocket失败', error);
-          ElMessage.error('连接服务器失败，实时扫描进度将不可用');
+          ElMessage.error('连接服务器失败，实时扫描结果将不可用');
         });
     },
 
     closeWebSocket() {
       // 移除事件监听器
-      dataCollectionWS.removeListener('scan_progress', this.handleScanProgress);
       dataCollectionWS.removeListener('scan_result', this.handleScanResult);
-      dataCollectionWS.removeListener('scan_status', this.handleScanStatus);
-    },
-
-    handleScanProgress(data) {
-      // 处理扫描进度更新
-      this.scanStatus = data.data.status;
-      this.scanProgress = data.data.progress;
-      this.currentScanUrl = data.data.url || '';
-      this.scanMessage = data.data.message || '';
     },
 
     // 处理扫描结果的逻辑
@@ -350,49 +312,6 @@ export default {
       }
     },
 
-    handleScanStatus(data) {
-      if (data.status === 'started') {
-        // 扫描开始
-        ElMessage.success(data.message || '扫描已开始');
-        this.scanStatus = 'scanning';
-      } else if (data.status === 'stopped') {
-        // 扫描停止
-        ElMessage.info(data.message || '扫描已停止');
-        this.scanStatus = 'idle';
-      }
-    },
-
-    // 扫描操作
-    startScan() {
-      if (!dataCollectionWS.isConnected) {
-        ElMessage.error('WebSocket未连接，无法启动扫描');
-        return;
-      }
-
-      // 先重置缓存，确保不会漏掉新的扫描结果
-      dataCollectionWS.send({
-        type: 'reset_cache'
-      });
-
-      // 发送开始扫描消息
-      dataCollectionWS.send({
-        type: 'start_scan',
-        options: {}
-      });
-    },
-
-    stopScan() {
-      if (!dataCollectionWS.isConnected) {
-        ElMessage.error('WebSocket未连接，无法停止扫描');
-        return;
-      }
-
-      // 发送停止扫描消息
-      dataCollectionWS.send({
-        type: 'stop_scan'
-      });
-    },
-
     // 数据操作方法
     async fetchResults() {
       this.loading = true;
@@ -532,7 +451,7 @@ export default {
 
       for (const line of lines) {
         if (line && line.includes(':')) {
-          const port = line.split(':', 1)[0].trim(); // 修改了这里，使用trim()而不是strip()
+          const port = line.split(':', 1)[0].trim();
           if (port && !isNaN(port)) {
             ports.push(port);
           }
@@ -574,7 +493,6 @@ h1 {
 
 @media (max-width: 768px) {
   .scan-type-tabs {
-    display: flex;
     flex-direction: column;
     align-items: flex-start;
   }
