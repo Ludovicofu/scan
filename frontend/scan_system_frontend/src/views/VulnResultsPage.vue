@@ -16,8 +16,6 @@
         <el-tab-pane label="文件包含" name="file_inclusion"></el-tab-pane>
         <el-tab-pane label="RCE" name="command_injection"></el-tab-pane>
         <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
-        <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
-        <el-tab-pane label="其他" name="other"></el-tab-pane>
       </el-tabs>
     </div>
 
@@ -96,20 +94,6 @@
       @delete-vuln="deleteResult"
     />
 
-    <!-- 其他漏洞类型结果 - 通用表格 -->
-    <GeneralVulnResults
-      v-else
-      :vulnResults="results"
-      :loading="loading"
-      :currentPage="currentPage"
-      :pageSize="pageSize"
-      :total="totalResults"
-      @size-change="handleSizeChange"
-      @current-change="handlePageChange"
-      @view-detail="showDetail"
-      @delete-vuln="deleteResult"
-    />
-
     <!-- 结果详情对话框 -->
     <VulnDetailDialog
       :visible="detailDialogVisible"
@@ -128,7 +112,6 @@ import XssResults from '@/components/vuln/XssResults.vue';
 import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue';
 import RceResults from '@/components/vuln/RceResults.vue';
 import SsrfResults from '@/components/vuln/SsrfResults.vue';
-import GeneralVulnResults from '@/components/vuln/GeneralVulnResults.vue';
 import VulnDetailDialog from '@/components/vuln/VulnDetailDialog.vue';
 import { vulnScanAPI } from '@/services/api';
 import { vulnScanWS } from '@/services/websocket';
@@ -143,7 +126,6 @@ export default {
     FileInclusionResults,
     RceResults,
     SsrfResults,
-    GeneralVulnResults,
     VulnDetailDialog
   },
   data() {
@@ -265,10 +247,8 @@ export default {
         'sql_injection': 'SQL注入',
         'xss': 'XSS跨站脚本',
         'file_inclusion': '文件包含',
-        'command_injection': 'RCE', // 将命令注入改为RCE
-        'ssrf': 'SSRF',
-        'xxe': 'XXE',
-        'other': '其他'
+        'command_injection': 'RCE',
+        'ssrf': 'SSRF'
       };
       return vulnTypeMap[vulnType] || vulnType;
     },

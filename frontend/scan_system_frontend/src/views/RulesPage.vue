@@ -64,8 +64,6 @@
           <el-tab-pane label="文件包含" name="file_inclusion"></el-tab-pane>
           <el-tab-pane label="RCE" name="command_injection"></el-tab-pane>
           <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
-          <el-tab-pane label="XXE" name="xxe"></el-tab-pane>
-          <el-tab-pane label="其他" name="other"></el-tab-pane>
         </el-tabs>
 
         <!-- 漏洞检测规则内容 -->
@@ -89,16 +87,6 @@
           <!-- SSRF模块显示专用组件 -->
           <template v-else-if="activeVulnTab === 'ssrf'">
             <SsrfRules />
-          </template>
-          <!-- 其他漏洞类型暂时显示提示信息 -->
-          <template v-else>
-            <el-alert
-              title="功能开发中"
-              type="info"
-              :closable="false"
-              description="该漏洞类型的规则管理功能正在开发中，敬请期待。"
-              show-icon
-            ></el-alert>
           </template>
         </div>
       </el-tab-pane>
@@ -127,7 +115,7 @@ import SqlinjectionRules from '@/components/rules/SqlinjectionRules.vue';
 import XssRules from '@/components/rules/XssRules.vue';
 import FileInclusionRules from '@/components/rules/FileInclusionRules.vue';
 import RceRules from '@/components/rules/RceRules.vue';
-import SsrfRules from '@/components/rules/SsrfRules.vue';  // 导入SSRF规则组件
+import SsrfRules from '@/components/rules/SsrfRules.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
@@ -141,7 +129,7 @@ export default {
     XssRules,
     FileInclusionRules,
     RceRules,
-    SsrfRules  // 注册SSRF规则组件
+    SsrfRules
   },
   data() {
     return {

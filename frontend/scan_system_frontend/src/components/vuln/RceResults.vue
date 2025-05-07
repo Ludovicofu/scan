@@ -46,20 +46,20 @@
 
       <el-table-column
         label="漏洞类型"
-        width="100"
+        width="120"
       >
-        <template>
-          <el-tag type="danger">命令执行</el-tag>
+        <template #default="scope">
+          <el-tag type="danger">{{ getVulnSubtypeDisplay(scope.row.vuln_subtype) }}</el-tag>
         </template>
       </el-table-column>
 
       <el-table-column
-        label="执行结果"
+        label="匹配值"
         width="180"
         show-overflow-tooltip
       >
         <template #default="scope">
-          {{ getExecutionResult(scope.row) }}
+          {{ getMatchValue(scope.row) }}
         </template>
       </el-table-column>
 
@@ -148,8 +148,25 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     },
 
-    // 获取执行结果
-    getExecutionResult(row) {
+    // 获取漏洞子类型显示名称
+    getVulnSubtypeDisplay(subtype) {
+      const subtypeMap = {
+        'os_command': '命令执行',
+        'blind_os_command': '盲命令执行',
+        'php_code': 'PHP代码执行',
+        'java_code': 'Java代码执行',
+        'python_code': 'Python代码执行',
+        'js_code': 'JS代码执行'
+      };
+
+      // 如果没有子类型，默认显示为"命令执行"
+      if (!subtype) return '命令执行';
+
+      return subtypeMap[subtype] || subtype;
+    },
+
+    // 获取匹配值
+    getMatchValue(row) {
       // 从proof中提取执行结果
       const proof = row.proof || '';
 
@@ -169,16 +186,8 @@ export default {
         }
       }
 
-      // 如果没有明确的执行结果，尝试从proof的最后部分提取
-      if (proof.includes('执行结果')) {
-        const parts = proof.split('执行结果');
-        if (parts.length > 1) {
-          const lastPart = parts[parts.length - 1].trim();
-          return lastPart.length > 30 ? lastPart.slice(0, 30) + '...' : lastPart;
-        }
-      }
-
-      return '无具体执行结果';
+      // 如果没有明确的执行结果，返回 echo rce_test_cmd 这个默认值
+      return 'echo rce_test_cmd';
     },
 
     // 分页事件处理
