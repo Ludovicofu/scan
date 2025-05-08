@@ -30,6 +30,10 @@ INSTALLED_APPS = [
     'report_management',
 ]
 
+# 确保这些配置存在
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
 # 添加媒体文件配置 - 用于存储报告文件
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
