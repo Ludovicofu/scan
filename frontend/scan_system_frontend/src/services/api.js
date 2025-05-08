@@ -312,16 +312,6 @@ const assetAPI = {
     return api.delete(`asset_management/notes/${noteId}/`);
   },
 
-  // 获取资产标签
-  getTags(params) {
-    return api.get('asset_management/tags/', { params });
-  },
-
-  // 获取资产分组
-  getGroups(params) {
-    return api.get('asset_management/groups/', { params });
-  },
-
   // 获取资产统计信息
   getAssetStatistics() {
     return api.get('asset_management/statistics/');

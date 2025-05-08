@@ -17,24 +17,6 @@
             </template>
           </el-input>
         </el-form-item>
-
-        <!-- 删除标签过滤器 -->
-
-        <el-form-item label="分组">
-          <el-select
-            v-model="selectedGroup"
-            placeholder="选择分组"
-            clearable
-            @change="handleGroupChange"
-          >
-            <el-option
-              v-for="group in groups"
-              :key="group.id"
-              :label="group.name"
-              :value="group.id"
-            ></el-option>
-          </el-select>
-        </el-form-item>
       </el-form>
     </div>
 
@@ -108,7 +90,6 @@
         >
           <template #default="scope">
             {{ scope.row.host }}
-            <!-- 删除了标签显示部分 -->
           </template>
         </el-table-column>
 
@@ -206,9 +187,7 @@
           <strong>最后发现时间：</strong> {{ formatDate(selectedAsset.last_seen) }}
         </p>
 
-        <!-- 删除了资产标签显示区 -->
-
-        <!-- 详情标签页 - 移除资产备注标签页 -->
+        <!-- 详情标签页 -->
         <el-tabs v-model="activeDetailTab">
           <el-tab-pane label="信息收集结果" name="info">
             <el-table
@@ -382,10 +361,6 @@ export default {
 
       // 搜索和过滤
       searchQuery: '',
-      selectedGroup: null,
-
-      // 分组数据
-      groups: [],
 
       // 统计数据
       statistics: {
@@ -431,7 +406,6 @@ export default {
   },
   created() {
     this.fetchAssets();
-    this.fetchGroups();
     this.fetchStatistics();
   },
   methods: {
@@ -444,11 +418,6 @@ export default {
           page_size: this.pageSize,
           search: this.searchQuery || undefined
         };
-
-        // 添加分组过滤
-        if (this.selectedGroup) {
-          params.group = this.selectedGroup;
-        }
 
         const response = await assetAPI.getAssets(params);
         this.assets = response.results || [];
@@ -480,16 +449,6 @@ export default {
       return text.length > 15 ? text.substring(0, 15) + '...' : text;
     },
 
-    // 获取分组列表
-    async fetchGroups() {
-      try {
-        const response = await assetAPI.getGroups();
-        this.groups = response.results || [];
-      } catch (error) {
-        console.error('获取分组列表失败', error);
-      }
-    },
-
     // 获取统计数据
     async fetchStatistics() {
       try {
@@ -506,11 +465,6 @@ export default {
       this.fetchAssets();
     },
 
-    handleGroupChange() {
-      this.currentPage = 1;
-      this.fetchAssets();
-    },
-
     // 显示资产详情
     async showDetail(asset) {
       this.selectedAsset = asset;
@@ -520,7 +474,7 @@ export default {
       // 加载详情数据
       await this.loadDetailData(asset.id);
 
-      // 仍然获取资产备注，但不在详情页显示
+      // 获取资产备注
       await this.fetchAssetNotes(asset.id);
     },
 

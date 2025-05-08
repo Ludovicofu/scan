@@ -6,10 +6,9 @@ from data_collection.models import Asset, ScanResult
 from vuln_scan.models import VulnScanResult
 from vuln_scan.serializers import VulnScanResultSerializer
 from data_collection.serializers import ScanResultSerializer
-from .models import AssetNote, AssetTag, AssetGroup
+from .models import AssetNote
 from .serializers import (
-    AssetSerializer, AssetDetailSerializer, AssetNoteSerializer,
-    AssetTagSerializer, AssetGroupSerializer
+    AssetSerializer, AssetDetailSerializer, AssetNoteSerializer
 )
 
 
@@ -24,17 +23,6 @@ class AssetList(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Asset.objects.all()
-
-        # 标签过滤
-        tag_id = self.request.query_params.get('tag')
-        if tag_id:
-            queryset = queryset.filter(tags__id=tag_id)
-
-        # 分组过滤
-        group_id = self.request.query_params.get('group')
-        if group_id:
-            queryset = queryset.filter(groups__id=group_id)
-
         return queryset
 
 
@@ -104,40 +92,6 @@ class AssetNoteDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AssetNoteSerializer
 
 
-# 资产标签视图
-class AssetTagList(generics.ListCreateAPIView):
-    """资产标签列表视图"""
-    queryset = AssetTag.objects.all()
-    serializer_class = AssetTagSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-
-
-class AssetTagDetail(generics.RetrieveUpdateDestroyAPIView):
-    """资产标签详情视图"""
-    queryset = AssetTag.objects.all()
-    serializer_class = AssetTagSerializer
-
-
-# 资产分组视图
-class AssetGroupList(generics.ListCreateAPIView):
-    """资产分组列表视图"""
-    queryset = AssetGroup.objects.all()
-    serializer_class = AssetGroupSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-
-
-class AssetGroupDetail(generics.RetrieveUpdateDestroyAPIView):
-    """资产分组详情视图"""
-    queryset = AssetGroup.objects.all()
-    serializer_class = AssetGroupSerializer
-
-
 # 资产统计API
 @api_view(['GET'])
 def asset_statistics(request):
@@ -158,63 +112,10 @@ def asset_statistics(request):
     # VulnScanResult 关联到 Asset 的 related_name 是 'vuln_scan_results'
     high_risk_assets = Asset.objects.filter(vuln_scan_results__severity='high').distinct().count()
 
-    # 按标签统计
-    tag_stats = AssetTag.objects.annotate(asset_count=Count('assets')).values('id', 'name', 'color', 'asset_count')
-
     # 返回统计数据
     return Response({
         'total_assets': total_assets,
         'recent_assets': recent_assets,
         'vuln_assets': vuln_assets,
-        'high_risk_assets': high_risk_assets,
-        'tag_stats': tag_stats
+        'high_risk_assets': high_risk_assets
     })
-
-
-# 资产关联管理API
-@api_view(['POST'])
-def add_asset_to_group(request, asset_id, group_id):
-    """将资产添加到分组"""
-    try:
-        asset = Asset.objects.get(pk=asset_id)
-        group = AssetGroup.objects.get(pk=group_id)
-        group.assets.add(asset)
-        return Response({'status': 'success'})
-    except (Asset.DoesNotExist, AssetGroup.DoesNotExist):
-        return Response({'status': 'error', 'message': '资产或分组不存在'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(['POST'])
-def remove_asset_from_group(request, asset_id, group_id):
-    """从分组中移除资产"""
-    try:
-        asset = Asset.objects.get(pk=asset_id)
-        group = AssetGroup.objects.get(pk=group_id)
-        group.assets.remove(asset)
-        return Response({'status': 'success'})
-    except (Asset.DoesNotExist, AssetGroup.DoesNotExist):
-        return Response({'status': 'error', 'message': '资产或分组不存在'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(['POST'])
-def add_tag_to_asset(request, asset_id, tag_id):
-    """为资产添加标签"""
-    try:
-        asset = Asset.objects.get(pk=asset_id)
-        tag = AssetTag.objects.get(pk=tag_id)
-        asset.tags.add(tag)
-        return Response({'status': 'success'})
-    except (Asset.DoesNotExist, AssetTag.DoesNotExist):
-        return Response({'status': 'error', 'message': '资产或标签不存在'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(['POST'])
-def remove_tag_from_asset(request, asset_id, tag_id):
-    """从资产移除标签"""
-    try:
-        asset = Asset.objects.get(pk=asset_id)
-        tag = AssetTag.objects.get(pk=tag_id)
-        asset.tags.remove(tag)
-        return Response({'status': 'success'})
-    except (Asset.DoesNotExist, AssetTag.DoesNotExist):
-        return Response({'status': 'error', 'message': '资产或标签不存在'}, status=status.HTTP_404_NOT_FOUND)
