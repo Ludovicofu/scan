@@ -1,15 +1,26 @@
 # report_management/report_generator.py
+# 修复查询错误的报告生成器
+
 import os
 import time
+import logging
 from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
-from xhtml2pdf import pisa
+from django.db.models import Count, Q
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.units import inch, cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 from io import BytesIO
-import tempfile
-from weasyprint import HTML, CSS
-from data_collection.models import Asset, ScanResult
-from vuln_scan.models import VulnScanResult
+import platform
+
+# 配置日志
+logger = logging.getLogger(__name__)
 
 # 确保reports目录存在
 REPORTS_DIR = os.path.join(settings.MEDIA_ROOT, 'reports')
@@ -17,686 +28,548 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 
 
 class ReportGenerator:
-    """改进的PDF报告生成器，解决中文乱码问题"""
+    """修复查询错误的报告生成器"""
 
     @staticmethod
-    def generate_report(report, use_weasyprint=True):
-        """生成报告主入口方法
-
-        Args:
-            report: Report对象
-            use_weasyprint: 是否使用WeasyPrint代替xhtml2pdf (默认True)
-
-        Returns:
-            str: 生成的PDF文件路径
-        """
+    def generate_report(report):
+        """生成报告主入口方法"""
         try:
-            # 根据报告类型选择生成方法
-            if report.report_type == 'asset':
-                return ReportGenerator._generate_asset_report(report, use_weasyprint)
-            elif report.report_type == 'vuln':
-                return ReportGenerator._generate_vuln_report(report, use_weasyprint)
-            else:  # comprehensive
-                return ReportGenerator._generate_comprehensive_report(report, use_weasyprint)
+            # 生成PDF文件名
+            filename = f"security_report_{report.id}_{int(time.time())}.pdf"
+            output_path = os.path.join(REPORTS_DIR, filename)
+
+            # 创建PDF
+            ReportGenerator._create_detailed_pdf(report, output_path)
+
+            return output_path
         except Exception as e:
+            logger.error(f"报告生成失败: {str(e)}")
+            logger.error(f"错误详情:", exc_info=True)
             raise Exception(f"报告生成失败: {str(e)}")
 
     @staticmethod
-    def _generate_asset_report(report, use_weasyprint=True):
-        """生成资产报告PDF"""
-        # 获取资产数据
-        assets = report.assets.all() if report.assets.exists() else Asset.objects.all()
+    def _create_detailed_pdf(report, output_path):
+        """使用ReportLab创建详细PDF，支持中文"""
+        try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        # 准备HTML内容
-        html_content = ReportGenerator._render_asset_report_html(report, assets)
+            # 注册字体
+            if platform.system() == 'Windows':
+                try:
+                    font_path = "C:\\Windows\\Fonts\\simsun.ttc"
+                    pdfmetrics.registerFont(TTFont('SimSun', font_path))
+                    pdfmetrics.registerFont(TTFont('SimSunBd', "C:\\Windows\\Fonts\\simhei.ttf"))  # 使用黑体作为粗体
+                except Exception as e:
+                    logger.error(f"注册字体失败: {str(e)}")
+                    # 如果注册失败，使用默认字体
 
-        # 生成PDF文件名
-        filename = f"asset_report_{report.id}_{int(time.time())}.pdf"
-        output_path = os.path.join(REPORTS_DIR, filename)
-
-        # 使用选定的库生成PDF
-        if use_weasyprint:
-            return ReportGenerator._html_to_pdf_weasyprint(html_content, output_path)
-        else:
-            return ReportGenerator._html_to_pdf_xhtml2pdf(html_content, output_path)
-
-    @staticmethod
-    def _generate_vuln_report(report, use_weasyprint=True):
-        """生成漏洞报告PDF"""
-        # 获取相关资产
-        assets = report.assets.all() if report.assets.exists() else Asset.objects.all()
-        asset_ids = [asset.id for asset in assets]
-
-        # 获取漏洞数据
-        if asset_ids:
-            vulns = VulnScanResult.objects.filter(asset_id__in=asset_ids)
-        else:
-            vulns = VulnScanResult.objects.all()
-
-        # 准备HTML内容
-        html_content = ReportGenerator._render_vuln_report_html(report, vulns)
-
-        # 生成PDF文件名
-        filename = f"vuln_report_{report.id}_{int(time.time())}.pdf"
-        output_path = os.path.join(REPORTS_DIR, filename)
-
-        # 使用选定的库生成PDF
-        if use_weasyprint:
-            return ReportGenerator._html_to_pdf_weasyprint(html_content, output_path)
-        else:
-            return ReportGenerator._html_to_pdf_xhtml2pdf(html_content, output_path)
-
-    @staticmethod
-    def _generate_comprehensive_report(report, use_weasyprint=True):
-        """生成综合报告PDF"""
-        # 获取相关资产
-        assets = report.assets.all() if report.assets.exists() else Asset.objects.all()
-        asset_ids = [asset.id for asset in assets]
-
-        # 获取漏洞数据和信息收集结果
-        if asset_ids:
-            vulns = VulnScanResult.objects.filter(asset_id__in=asset_ids)
-            info_results = ScanResult.objects.filter(asset_id__in=asset_ids)
-        else:
-            vulns = VulnScanResult.objects.all()
-            info_results = ScanResult.objects.all()
-
-        # 准备HTML内容
-        html_content = ReportGenerator._render_comprehensive_report_html(report, assets, vulns, info_results)
-
-        # 生成PDF文件名
-        filename = f"security_report_{report.id}_{int(time.time())}.pdf"
-        output_path = os.path.join(REPORTS_DIR, filename)
-
-        # 使用选定的库生成PDF
-        if use_weasyprint:
-            return ReportGenerator._html_to_pdf_weasyprint(html_content, output_path)
-        else:
-            return ReportGenerator._html_to_pdf_xhtml2pdf(html_content, output_path)
-
-    @staticmethod
-    def _html_to_pdf_xhtml2pdf(html_content, output_path):
-        """使用xhtml2pdf将HTML内容转换为PDF
-
-        增强中文支持的版本
-        """
-        # 为HTML内容添加适当的编码和字体声明
-        enhanced_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                @font-face {{
-                    font-family: 'SimSun';
-                    src: url('{settings.STATIC_ROOT}/fonts/simsun.ttc');
-                }}
-                body {{
-                    font-family: SimSun, Arial, sans-serif;
-                }}
-            </style>
-        </head>
-        <body>
-        {html_content}
-        </body>
-        </html>
-        """
-
-        # 确保html_content是字符串
-        if not isinstance(enhanced_html, str):
-            enhanced_html = str(enhanced_html)
-
-        # 转换HTML为PDF并直接写入文件
-        with open(output_path, "wb") as result_file:
-            # 转换 HTML 为 PDF
-            pisa_status = pisa.CreatePDF(
-                BytesIO(enhanced_html.encode("UTF-8")),  # HTML内容
-                dest=result_file  # 输出文件
+            # 创建文档
+            doc = SimpleDocTemplate(
+                output_path,
+                pagesize=A4,
+                rightMargin=72,
+                leftMargin=72,
+                topMargin=72,
+                bottomMargin=72
             )
 
-        # 返回状态
-        if not pisa_status.err:
-            return output_path
-        else:
-            raise Exception("HTML到PDF的转换失败: " + str(pisa_status.err))
+            # 创建样式
+            styles = getSampleStyleSheet()
+            styles.add(ParagraphStyle(
+                name='ChineseTitle',
+                fontName='SimSunBd',
+                fontSize=18,
+                alignment=1,  # 居中
+                spaceAfter=12
+            ))
+            styles.add(ParagraphStyle(
+                name='ChineseHeading1',
+                fontName='SimSunBd',
+                fontSize=16,
+                spaceAfter=10
+            ))
+            styles.add(ParagraphStyle(
+                name='ChineseHeading2',
+                fontName='SimSunBd',
+                fontSize=14,
+                spaceAfter=8
+            ))
+            styles.add(ParagraphStyle(
+                name='ChineseNormal',
+                fontName='SimSun',
+                fontSize=10,
+                spaceAfter=6
+            ))
+            styles.add(ParagraphStyle(
+                name='ChineseSmall',
+                fontName='SimSun',
+                fontSize=8,
+                spaceAfter=3
+            ))
 
-    @staticmethod
-    def _html_to_pdf_weasyprint(html_content, output_path):
-        """使用WeasyPrint将HTML内容转换为PDF
+            # 开始构建内容
+            story = []
 
-        WeasyPrint通常对中文有更好的支持
-        """
-        # 添加适当的中文字体支持
-        css_content = """
-        @font-face {
-            font-family: 'NotoSansSC';
-            src: url('/static/fonts/NotoSansCJKsc-Regular.otf') format('opentype');
-            font-weight: normal;
-            font-style: normal;
-        }
-        @font-face {
-            font-family: 'NotoSansSC';
-            src: url('/static/fonts/NotoSansCJKsc-Bold.otf') format('opentype');
-            font-weight: bold;
-            font-style: normal;
-        }
-        body {
-            font-family: 'NotoSansSC', sans-serif;
-        }
-        """
+            # 添加标题
+            title = Paragraph(report.title, styles['ChineseTitle'])
+            story.append(title)
+            story.append(Spacer(1, 0.1 * inch))
 
-        # 创建临时HTML文件
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8') as temp:
-            temp.write(f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Report</title>
-                <style>
-                    {css_content}
-                </style>
-            </head>
-            <body>
-                {html_content}
-            </body>
-            </html>
-            """)
-            temp_path = temp.name
+            # 添加报告基本信息
+            basic_info = [
+                Paragraph(f"报告生成时间: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['ChineseNormal']),
+                Paragraph(f"报告描述: {report.description or '无描述'}", styles['ChineseNormal']),
+                Paragraph(
+                    f"报告类型: {report.get_report_type_display() if hasattr(report, 'get_report_type_display') else report.report_type}",
+                    styles['ChineseNormal'])
+            ]
+            for info in basic_info:
+                story.append(info)
 
-        try:
-            # 使用WeasyPrint生成PDF
-            HTML(temp_path).write_pdf(output_path)
-            return output_path
-        finally:
-            # 删除临时文件
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
+            story.append(Spacer(1, 0.2 * inch))
 
-    @staticmethod
-    def _render_asset_report_html(report, assets):
-        """渲染资产报告HTML"""
-        # HTML标准头部
-        html_content = f"""
-        <h1>{report.title}</h1>
-        <p>报告生成时间: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>{report.description or '无描述'}</p>
+            # 添加安全概述
+            story.append(Paragraph("安全概述", styles['ChineseHeading1']))
+            story.append(Spacer(1, 0.1 * inch))
 
-        <div style="background-color: #f9f9f9; padding: 10px; margin-bottom: 20px;">
-            <h2>资产概述</h2>
-            <p>总资产数: {assets.count()}</p>
-        </div>
+            # 导入必要的模型
+            try:
+                from data_collection.models import ScanResult, Asset
+                from vuln_scan.models import VulnScanResult
 
-        <h2>资产列表</h2>
-        <table border="1" style="width: 100%; border-collapse: collapse;">
-            <tr style="background-color: #f2f2f2;">
-                <th>ID</th>
-                <th>主机</th>
-                <th>首次发现</th>
-                <th>最后发现</th>
-                <th>信息收集结果数</th>
-                <th>漏洞数量</th>
-            </tr>
-        """
+                # 获取资产信息
+                if report.assets.exists():
+                    assets = report.assets.all()
+                    asset_ids = [asset.id for asset in assets]
 
-        # 添加资产数据行
-        for asset in assets:
-            info_count = asset.scan_results.count()
-            vuln_count = asset.vuln_scan_results.count() if hasattr(asset, 'vuln_scan_results') else 0
+                    story.append(Paragraph(f"资产信息:", styles['ChineseHeading2']))
 
-            html_content += f"""
-            <tr>
-                <td>{asset.id}</td>
-                <td>{asset.host}</td>
-                <td>{asset.first_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.first_seen else '未知'}</td>
-                <td>{asset.last_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.last_seen else '未知'}</td>
-                <td>{info_count}</td>
-                <td>{vuln_count}</td>
-            </tr>
-            """
+                    # 创建资产表格
+                    asset_data = [['ID', '主机', '首次发现', '最后发现', '信息收集结果', '漏洞数量']]
 
-        html_content += """
-        </table>
+                    for asset in assets:
+                        # 获取此资产的信息收集结果和漏洞数量
+                        try:
+                            info_count = ScanResult.objects.filter(asset=asset).count()
+                        except Exception:
+                            info_count = 0
 
-        <h2>资产详情</h2>
-        """
+                        try:
+                            vuln_count = VulnScanResult.objects.filter(asset=asset).count()
+                        except Exception:
+                            vuln_count = 0
 
-        # 添加每个资产的详细信息
-        for asset in assets:
-            html_content += f"""
-            <div style="border: 1px solid #eee; padding: 10px; margin-bottom: 15px;">
-                <div style="font-weight: bold; background-color: #f5f5f5; padding: 5px; margin-bottom: 10px;">
-                    资产: {asset.host} (ID: {asset.id})
-                </div>
+                        asset_data.append([
+                            str(asset.id),
+                            asset.host,
+                            asset.first_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.first_seen else '未知',
+                            asset.last_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.last_seen else '未知',
+                            str(info_count),
+                            str(vuln_count)
+                        ])
 
-                <h3>信息收集结果</h3>
-            """
+                    # 创建表格
+                    if len(asset_data) > 1:  # 确保有数据行
+                        asset_table = Table(asset_data, repeatRows=1)
+                        asset_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'SimSunBd'),
+                            ('FONTNAME', (0, 1), (-1, -1), 'SimSun'),
+                            ('FONTSIZE', (0, 0), (-1, -1), 9),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                        ]))
+                        story.append(asset_table)
+                    else:
+                        story.append(Paragraph("无资产数据", styles['ChineseNormal']))
 
-            # 获取信息收集结果
-            info_results = asset.scan_results.all()
+                    # 首先获取统计信息，再获取详细结果
+                    # 信息收集统计
+                    try:
+                        # 首先进行分组统计
+                        info_module_stats = ScanResult.objects.filter(asset_id__in=asset_ids).values('module').annotate(
+                            count=Count('id'))
 
-            if info_results.exists():
-                html_content += """
-                <table border="1" style="width: 100%; border-collapse: collapse;">
-                    <tr style="background-color: #f2f2f2;">
-                        <th>ID</th>
-                        <th>模块</th>
-                        <th>描述</th>
-                        <th>扫描时间</th>
-                    </tr>
-                """
+                        network_count = 0
+                        os_count = 0
+                        component_count = 0
 
-                for info in info_results[:20]:  # 限制为20条
-                    module = info.get_module_display() if hasattr(info, 'get_module_display') else info.module
+                        for stat in info_module_stats:
+                            if stat['module'] == 'network':
+                                network_count = stat['count']
+                            elif stat['module'] == 'os':
+                                os_count = stat['count']
+                            elif stat['module'] == 'component':
+                                component_count = stat['count']
 
-                    html_content += f"""
-                    <tr>
-                        <td>{info.id}</td>
-                        <td>{module}</td>
-                        <td>{info.description}</td>
-                        <td>{info.scan_date.strftime('%Y-%m-%d %H:%M:%S') if info.scan_date else '未知'}</td>
-                    </tr>
-                    """
+                        total_info_count = sum(item['count'] for item in info_module_stats)
 
-                html_content += """
-                </table>
-                """
+                        info_stats = [
+                            f"网络信息: {network_count}条",
+                            f"操作系统信息: {os_count}条",
+                            f"组件与服务信息: {component_count}条",
+                            f"总计: {total_info_count}条"
+                        ]
 
-                # 如果结果太多，显示提示
-                if info_results.count() > 20:
-                    html_content += f"<p>只显示了前20条记录，总共有 {info_results.count()} 条信息收集结果。</p>"
-            else:
-                html_content += "<p>暂无信息收集结果</p>"
+                        story.append(Paragraph("信息收集统计:", styles['ChineseHeading2']))
+                        for stat in info_stats:
+                            story.append(Paragraph(f"• {stat}", styles['ChineseNormal']))
 
-            # 获取漏洞结果
-            if hasattr(asset, 'vuln_scan_results'):
-                vuln_results = asset.vuln_scan_results.all()
+                        story.append(Spacer(1, 0.1 * inch))
 
-                html_content += "<h3>漏洞检测结果</h3>"
+                        # 获取信息收集详细结果（在统计之后）
+                        info_results = ScanResult.objects.filter(asset_id__in=asset_ids).order_by('-scan_date')[:30]
+                    except Exception as e:
+                        logger.error(f"获取信息收集统计时出错: {str(e)}")
+                        info_results = []
 
-                if vuln_results.exists():
-                    html_content += """
-                    <table border="1" style="width: 100%; border-collapse: collapse;">
-                        <tr style="background-color: #f2f2f2;">
-                            <th>ID</th>
-                            <th>漏洞名称</th>
-                            <th>漏洞类型</th>
-                            <th>严重程度</th>
-                            <th>URL</th>
-                            <th>扫描时间</th>
-                        </tr>
-                    """
+                    # 漏洞统计
+                    try:
+                        # 按严重程度统计
+                        vuln_severity_stats = VulnScanResult.objects.filter(asset_id__in=asset_ids).values(
+                            'severity').annotate(count=Count('id'))
 
-                    for vuln in vuln_results[:10]:  # 限制为10条
-                        vuln_type = vuln.get_vuln_type_display() if hasattr(vuln,
-                                                                            'get_vuln_type_display') else vuln.vuln_type
-                        severity = vuln.get_severity_display() if hasattr(vuln,
-                                                                          'get_severity_display') else vuln.severity
+                        high_count = 0
+                        medium_count = 0
+                        low_count = 0
 
-                        html_content += f"""
-                        <tr>
-                            <td>{vuln.id}</td>
-                            <td>{vuln.name}</td>
-                            <td>{vuln_type}</td>
-                            <td>{severity}</td>
-                            <td>{vuln.url or '无'}</td>
-                            <td>{vuln.scan_date.strftime('%Y-%m-%d %H:%M:%S') if vuln.scan_date else '未知'}</td>
-                        </tr>
-                        """
+                        for stat in vuln_severity_stats:
+                            if stat['severity'] == 'high':
+                                high_count = stat['count']
+                            elif stat['severity'] == 'medium':
+                                medium_count = stat['count']
+                            elif stat['severity'] == 'low':
+                                low_count = stat['count']
 
-                    html_content += """
-                    </table>
-                    """
+                        # 按类型统计
+                        vuln_type_stats = VulnScanResult.objects.filter(asset_id__in=asset_ids).values(
+                            'vuln_type').annotate(count=Count('id'))
 
-                    # 如果结果太多，显示提示
-                    if vuln_results.count() > 10:
-                        html_content += f"<p>只显示了前10条记录，总共有 {vuln_results.count()} 条漏洞检测结果。</p>"
+                        sql_count = 0
+                        xss_count = 0
+                        file_count = 0
+                        rce_count = 0
+                        ssrf_count = 0
+
+                        for stat in vuln_type_stats:
+                            if stat['vuln_type'] == 'sql_injection':
+                                sql_count = stat['count']
+                            elif stat['vuln_type'] == 'xss':
+                                xss_count = stat['count']
+                            elif stat['vuln_type'] == 'file_inclusion':
+                                file_count = stat['count']
+                            elif stat['vuln_type'] == 'command_injection':
+                                rce_count = stat['count']
+                            elif stat['vuln_type'] == 'ssrf':
+                                ssrf_count = stat['count']
+
+                        total_vuln_count = sum(item['count'] for item in vuln_severity_stats)
+
+                        vuln_stats = [
+                            f"高危漏洞: {high_count}个",
+                            f"中危漏洞: {medium_count}个",
+                            f"低危漏洞: {low_count}个",
+                            f"SQL注入: {sql_count}个",
+                            f"XSS跨站脚本: {xss_count}个",
+                            f"文件包含: {file_count}个",
+                            f"命令注入: {rce_count}个",
+                            f"SSRF: {ssrf_count}个",
+                            f"总计: {total_vuln_count}个"
+                        ]
+
+                        story.append(Paragraph("漏洞扫描统计:", styles['ChineseHeading2']))
+                        for stat in vuln_stats:
+                            story.append(Paragraph(f"• {stat}", styles['ChineseNormal']))
+
+                        story.append(Spacer(1, 0.1 * inch))
+
+                        # 获取漏洞详细结果（在统计之后）
+                        vuln_results = VulnScanResult.objects.filter(asset_id__in=asset_ids).order_by('-scan_date')[:20]
+                    except Exception as e:
+                        logger.error(f"获取漏洞统计时出错: {str(e)}")
+                        vuln_results = []
                 else:
-                    html_content += "<p>暂无漏洞检测结果</p>"
+                    # 没有指定资产，获取所有数据
+                    all_assets = Asset.objects.all()
 
-            html_content += """
-            </div>
-            """
+                    story.append(Paragraph(f"资产统计:", styles['ChineseHeading2']))
+                    story.append(Paragraph(f"• 总资产数: {all_assets.count()}个", styles['ChineseNormal']))
 
-        # 添加页脚
-        html_content += """
-        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-            <p>此报告由半自动化漏洞扫描系统生成</p>
-            <p>© 2025 安全检测报告</p>
-        </div>
-        """
+                    # 信息收集统计
+                    try:
+                        # 先获取统计信息
+                        info_module_stats = ScanResult.objects.values('module').annotate(count=Count('id'))
 
-        return html_content
+                        network_count = 0
+                        os_count = 0
+                        component_count = 0
+
+                        for stat in info_module_stats:
+                            if stat['module'] == 'network':
+                                network_count = stat['count']
+                            elif stat['module'] == 'os':
+                                os_count = stat['count']
+                            elif stat['module'] == 'component':
+                                component_count = stat['count']
+
+                        total_info_count = sum(item['count'] for item in info_module_stats)
+
+                        info_stats = [
+                            f"网络信息: {network_count}条",
+                            f"操作系统信息: {os_count}条",
+                            f"组件与服务信息: {component_count}条",
+                            f"总计: {total_info_count}条"
+                        ]
+
+                        story.append(Paragraph("信息收集统计:", styles['ChineseHeading2']))
+                        for stat in info_stats:
+                            story.append(Paragraph(f"• {stat}", styles['ChineseNormal']))
+
+                        story.append(Spacer(1, 0.1 * inch))
+
+                        # 获取详细结果（在统计之后）
+                        info_results = ScanResult.objects.order_by('-scan_date')[:30]
+                    except Exception as e:
+                        logger.error(f"获取所有信息收集统计时出错: {str(e)}")
+                        info_results = []
+
+                    # 漏洞统计
+                    try:
+                        # 按严重程度统计
+                        vuln_severity_stats = VulnScanResult.objects.values('severity').annotate(count=Count('id'))
+
+                        high_count = 0
+                        medium_count = 0
+                        low_count = 0
+
+                        for stat in vuln_severity_stats:
+                            if stat['severity'] == 'high':
+                                high_count = stat['count']
+                            elif stat['severity'] == 'medium':
+                                medium_count = stat['count']
+                            elif stat['severity'] == 'low':
+                                low_count = stat['count']
+
+                        # 按类型统计
+                        vuln_type_stats = VulnScanResult.objects.values('vuln_type').annotate(count=Count('id'))
+
+                        sql_count = 0
+                        xss_count = 0
+                        file_count = 0
+                        rce_count = 0
+                        ssrf_count = 0
+
+                        for stat in vuln_type_stats:
+                            if stat['vuln_type'] == 'sql_injection':
+                                sql_count = stat['count']
+                            elif stat['vuln_type'] == 'xss':
+                                xss_count = stat['count']
+                            elif stat['vuln_type'] == 'file_inclusion':
+                                file_count = stat['count']
+                            elif stat['vuln_type'] == 'command_injection':
+                                rce_count = stat['count']
+                            elif stat['vuln_type'] == 'ssrf':
+                                ssrf_count = stat['count']
+
+                        total_vuln_count = sum(item['count'] for item in vuln_severity_stats)
+
+                        vuln_stats = [
+                            f"高危漏洞: {high_count}个",
+                            f"中危漏洞: {medium_count}个",
+                            f"低危漏洞: {low_count}个",
+                            f"SQL注入: {sql_count}个",
+                            f"XSS跨站脚本: {xss_count}个",
+                            f"文件包含: {file_count}个",
+                            f"命令注入: {rce_count}个",
+                            f"SSRF: {ssrf_count}个",
+                            f"总计: {total_vuln_count}个"
+                        ]
+
+                        story.append(Paragraph("漏洞扫描统计:", styles['ChineseHeading2']))
+                        for stat in vuln_stats:
+                            story.append(Paragraph(f"• {stat}", styles['ChineseNormal']))
+
+                        story.append(Spacer(1, 0.1 * inch))
+
+                        # 获取详细结果（在统计之后）
+                        vuln_results = VulnScanResult.objects.order_by('-scan_date')[:20]
+                    except Exception as e:
+                        logger.error(f"获取所有漏洞统计时出错: {str(e)}")
+                        vuln_results = []
+            except Exception as e:
+                logger.error(f"获取基本数据时出错: {str(e)}")
+                info_results = []
+                vuln_results = []
+
+            story.append(Spacer(1, 0.3 * inch))
+
+            # 添加详细的信息收集结果
+            try:
+                if 'info_results' in locals() and info_results and len(info_results) > 0:
+                    story.append(Paragraph("信息收集详细结果", styles['ChineseHeading1']))
+
+                    # 创建表格数据
+                    info_data = [['ID', '资产', '模块', '描述', '扫描时间']]
+
+                    for info in info_results:
+                        try:
+                            asset_host = info.asset.host if info.asset else "未知"
+                            module = info.get_module_display() if hasattr(info, 'get_module_display') else info.module
+
+                            info_data.append([
+                                str(info.id),
+                                asset_host,
+                                module,
+                                info.description[:50] + ('...' if len(info.description) > 50 else ''),  # 截断过长描述
+                                info.scan_date.strftime('%Y-%m-%d %H:%M:%S') if info.scan_date else '未知'
+                            ])
+                        except Exception as e:
+                            logger.error(f"处理信息收集结果时出错: {str(e)}")
+                            continue
+
+                    # 创建表格
+                    if len(info_data) > 1:  # 确保有数据行
+                        info_table = Table(info_data, repeatRows=1)
+                        info_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'SimSunBd'),
+                            ('FONTNAME', (0, 1), (-1, -1), 'SimSun'),
+                            ('FONTSIZE', (0, 0), (-1, -1), 8),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+                        ]))
+                        story.append(info_table)
+
+                        # 如果有更多结果，显示提示
+                        if len(info_results) >= 30:
+                            story.append(Spacer(1, 0.1 * inch))
+                            story.append(Paragraph(f"（仅显示前30条记录）", styles['ChineseSmall']))
+
+                story.append(Spacer(1, 0.3 * inch))
+            except Exception as e:
+                logger.error(f"添加信息收集详细结果时出错: {str(e)}")
+
+            # 添加详细的漏洞扫描结果
+            try:
+                if 'vuln_results' in locals() and vuln_results and len(vuln_results) > 0:
+                    story.append(Paragraph("漏洞扫描详细结果", styles['ChineseHeading1']))
+
+                    # 创建表格数据
+                    vuln_data = [['ID', '资产', '漏洞名称', '类型', '严重程度', 'URL']]
+
+                    for vuln in vuln_results:
+                        try:
+                            asset_host = vuln.asset.host if vuln.asset else "未知"
+                            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln,
+                                                                                'get_vuln_type_display') else vuln.vuln_type
+                            severity = vuln.get_severity_display() if hasattr(vuln,
+                                                                              'get_severity_display') else vuln.severity
+
+                            # 截断过长的URL
+                            url_display = vuln.url
+                            if url_display and len(url_display) > 30:
+                                url_display = url_display[:30] + '...'
+
+                            vuln_data.append([
+                                str(vuln.id),
+                                asset_host,
+                                vuln.name[:30] + ('...' if len(vuln.name) > 30 else ''),  # 截断过长名称
+                                vuln_type,
+                                severity,
+                                url_display or '无'
+                            ])
+                        except Exception as e:
+                            logger.error(f"处理漏洞扫描结果时出错: {str(e)}")
+                            continue
+
+                    # 创建表格
+                    if len(vuln_data) > 1:  # 确保有数据行
+                        vuln_table = Table(vuln_data, repeatRows=1)
+                        vuln_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'SimSunBd'),
+                            ('FONTNAME', (0, 1), (-1, -1), 'SimSun'),
+                            ('FONTSIZE', (0, 0), (-1, -1), 8),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+                        ]))
+                        story.append(vuln_table)
+
+                        # 如果有更多结果，显示提示
+                        if len(vuln_results) >= 20:
+                            story.append(Spacer(1, 0.1 * inch))
+                            story.append(Paragraph(f"（仅显示前20条记录）", styles['ChineseSmall']))
+
+                story.append(Spacer(1, 0.3 * inch))
+            except Exception as e:
+                logger.error(f"添加漏洞扫描详细结果时出错: {str(e)}")
+
+            # 添加安全建议
+            story.append(Paragraph("安全建议", styles['ChineseHeading1']))
+
+            security_tips = [
+                "定期更新系统和应用程序，以修复已知的安全漏洞",
+                "实施最小权限原则，限制用户和进程的权限",
+                "加强网络访问控制，使用防火墙和入侵检测系统",
+                "实施安全编码实践，预防常见的安全漏洞",
+                "定期进行安全培训，提高安全意识",
+                "建立安全事件响应计划，及时应对安全事件"
+            ]
+
+            for tip in security_tips:
+                story.append(Paragraph(f"- {tip}", styles['ChineseNormal']))
+
+            # 构建PDF文档
+            doc.build(story, onFirstPage=ReportGenerator._add_page_number,
+                      onLaterPages=ReportGenerator._add_page_number)
+
+            return True
+        except Exception as e:
+            logger.error(f"创建PDF失败: {str(e)}")
+            logger.error(f"错误详情:", exc_info=True)
+            raise
 
     @staticmethod
-    def _render_vuln_report_html(report, vulns):
-        """渲染漏洞报告HTML"""
-        # 漏洞统计
-        high_vulns = vulns.filter(severity='high').count()
-        medium_vulns = vulns.filter(severity='medium').count()
-        low_vulns = vulns.filter(severity='low').count()
+    def _add_page_number(canvas, doc):
+        """添加页码和页脚"""
+        canvas.saveState()
+        canvas.setFont('SimSun', 8)
 
-        # 按类型统计漏洞
-        vuln_types = {}
-        for vuln in vulns:
-            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln, 'get_vuln_type_display') else vuln.vuln_type
-            if vuln_type in vuln_types:
-                vuln_types[vuln_type] += 1
-            else:
-                vuln_types[vuln_type] = 1
-
-        # 创建HTML内容
-        html_content = f"""
-        <h1>{report.title}</h1>
-        <p>报告生成时间: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>{report.description or '无描述'}</p>
-
-        <div style="background-color: #f9f9f9; padding: 10px; margin-bottom: 20px;">
-            <h2>漏洞概述</h2>
-            <p>总漏洞数: {vulns.count()}</p>
-            <p>高危漏洞: <span style="color: #d9534f; font-weight: bold;">{high_vulns}</span></p>
-            <p>中危漏洞: <span style="color: #f0ad4e; font-weight: bold;">{medium_vulns}</span></p>
-            <p>低危漏洞: <span style="color: #5bc0de;">{low_vulns}</span></p>
-        </div>
-
-        <h2>漏洞类型分布</h2>
-        <table border="1" style="width: 100%; border-collapse: collapse;">
-            <tr style="background-color: #f2f2f2;">
-                <th>漏洞类型</th>
-                <th>数量</th>
-            </tr>
-        """
-
-        # 添加漏洞类型统计
-        for vuln_type, count in vuln_types.items():
-            html_content += f"""
-            <tr>
-                <td>{vuln_type}</td>
-                <td>{count}</td>
-            </tr>
-            """
-
-        html_content += """
-        </table>
-
-        <h2>漏洞列表</h2>
-        <table border="1" style="width: 100%; border-collapse: collapse;">
-            <tr style="background-color: #f2f2f2;">
-                <th>ID</th>
-                <th>资产</th>
-                <th>漏洞名称</th>
-                <th>类型</th>
-                <th>严重程度</th>
-                <th>URL</th>
-                <th>发现时间</th>
-                <th>已验证</th>
-            </tr>
-        """
-
-        # 添加漏洞数据行
-        for vuln in vulns:
-            asset_host = vuln.asset.host if vuln.asset else "未知"
-            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln, 'get_vuln_type_display') else vuln.vuln_type
-            severity = vuln.get_severity_display() if hasattr(vuln, 'get_severity_display') else vuln.severity
-            severity_style = ""
-
-            if severity == 'high' or severity == '高':
-                severity_style = "color: #d9534f; font-weight: bold;"
-            elif severity == 'medium' or severity == '中':
-                severity_style = "color: #f0ad4e; font-weight: bold;"
-            elif severity == 'low' or severity == '低':
-                severity_style = "color: #5bc0de;"
-
-            html_content += f"""
-            <tr>
-                <td>{vuln.id}</td>
-                <td>{asset_host}</td>
-                <td>{vuln.name}</td>
-                <td>{vuln_type}</td>
-                <td style="{severity_style}">{severity}</td>
-                <td>{vuln.url or '无'}</td>
-                <td>{vuln.scan_date.strftime('%Y-%m-%d %H:%M:%S') if vuln.scan_date else '未知'}</td>
-                <td>{'是' if vuln.is_verified else '否'}</td>
-            </tr>
-            """
-
-        html_content += """
-        </table>
-
-        <h2>漏洞详情</h2>
-        """
-
-        # 添加每个漏洞的详细信息
-        for vuln in vulns:
-            asset_host = vuln.asset.host if vuln.asset else "未知"
-            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln, 'get_vuln_type_display') else vuln.vuln_type
-            severity = vuln.get_severity_display() if hasattr(vuln, 'get_severity_display') else vuln.severity
-            severity_style = ""
-
-            if severity == 'high' or severity == '高':
-                severity_style = "color: #d9534f; font-weight: bold;"
-            elif severity == 'medium' or severity == '中':
-                severity_style = "color: #f0ad4e; font-weight: bold;"
-            elif severity == 'low' or severity == '低':
-                severity_style = "color: #5bc0de;"
-
-            html_content += f"""
-            <div style="border: 1px solid #eee; padding: 10px; margin-bottom: 15px;">
-                <div style="font-weight: bold; background-color: #f5f5f5; padding: 5px; margin-bottom: 10px;">
-                    {vuln.name} (ID: {vuln.id})
-                </div>
-                <p><strong>资产:</strong> {asset_host}</p>
-                <p><strong>类型:</strong> {vuln_type}</p>
-                <p><strong>严重程度:</strong> <span style="{severity_style}">{severity}</span></p>
-                <p><strong>URL:</strong> {vuln.url or '无'}</p>
-                <p><strong>描述:</strong> {vuln.description or '无描述'}</p>
-                <p><strong>发现时间:</strong> {vuln.scan_date.strftime('%Y-%m-%d %H:%M:%S') if vuln.scan_date else '未知'}</p>
-                <p><strong>已验证:</strong> {'是' if vuln.is_verified else '否'}</p>
-            </div>
-            """
+        # 添加页码
+        page_num = canvas.getPageNumber()
+        text = f"第 {page_num} 页"
+        canvas.drawRightString(
+            doc.pagesize[0] - 72,
+            72 / 2,
+            text
+        )
 
         # 添加页脚
-        html_content += """
-        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-            <p>此报告由半自动化漏洞扫描系统生成</p>
-            <p>© 2025 安全检测报告</p>
-        </div>
-        """
+        footer_text = "此报告由半自动化漏洞扫描系统生成  © 2025 安全检测报告"
+        canvas.drawCentredString(
+            doc.pagesize[0] / 2,
+            72 / 4,
+            footer_text
+        )
 
-        return html_content
+        # 添加页眉
+        header_text = "安全扫描报告"
+        canvas.drawCentredString(
+            doc.pagesize[0] / 2,
+            doc.pagesize[1] - 40,
+            header_text
+        )
 
-    @staticmethod
-    def _render_comprehensive_report_html(report, assets, vulns, info_results):
-        """渲染综合报告HTML"""
-        # 漏洞统计
-        high_vulns = vulns.filter(severity='high').count()
-        medium_vulns = vulns.filter(severity='medium').count()
-        low_vulns = vulns.filter(severity='low').count()
+        # 添加下划线
+        canvas.line(72, 55, doc.pagesize[0] - 72, 55)
 
-        # 漏洞类型统计
-        vuln_types = {}
-        for vuln in vulns:
-            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln, 'get_vuln_type_display') else vuln.vuln_type
-            if vuln_type in vuln_types:
-                vuln_types[vuln_type] += 1
-            else:
-                vuln_types[vuln_type] = 1
-
-        # 创建HTML内容
-        html_content = f"""
-        <h1>{report.title}</h1>
-        <p>报告生成时间: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>{report.description or '无描述'}</p>
-
-        <div style="background-color: #f9f9f9; padding: 10px; margin-bottom: 20px;">
-            <h2>安全概述</h2>
-            <p>总资产数: {assets.count()}</p>
-            <p>总漏洞数: {vulns.count()}</p>
-            <p>高危漏洞: <span style="color: #d9534f; font-weight: bold;">{high_vulns}</span></p>
-            <p>中危漏洞: <span style="color: #f0ad4e; font-weight: bold;">{medium_vulns}</span></p>
-            <p>低危漏洞: <span style="color: #5bc0de;">{low_vulns}</span></p>
-            <p>信息收集结果: {info_results.count()}</p>
-        </div>
-
-        <div style="margin-bottom: 30px;">
-            <h2>漏洞类型分布</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse;">
-                <tr style="background-color: #f2f2f2;">
-                    <th>漏洞类型</th>
-                    <th>数量</th>
-                </tr>
-        """
-
-        # 添加漏洞类型统计
-        for vuln_type, count in vuln_types.items():
-            html_content += f"""
-                <tr>
-                    <td>{vuln_type}</td>
-                    <td>{count}</td>
-                </tr>
-            """
-
-        html_content += """
-            </table>
-        </div>
-
-        <div style="margin-bottom: 30px;">
-            <h2>资产列表</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse;">
-                <tr style="background-color: #f2f2f2;">
-                    <th>ID</th>
-                    <th>主机</th>
-                    <th>首次发现</th>
-                    <th>最后发现</th>
-                    <th>信息收集结果数</th>
-                    <th>漏洞数量</th>
-                </tr>
-        """
-
-        # 添加资产数据行
-        for asset in assets:
-            info_count = asset.scan_results.count()
-            vuln_count = asset.vuln_scan_results.count() if hasattr(asset, 'vuln_scan_results') else 0
-
-            html_content += f"""
-                <tr>
-                    <td>{asset.id}</td>
-                    <td>{asset.host}</td>
-                    <td>{asset.first_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.first_seen else '未知'}</td>
-                    <td>{asset.last_seen.strftime('%Y-%m-%d %H:%M:%S') if asset.last_seen else '未知'}</td>
-                    <td>{info_count}</td>
-                    <td>{vuln_count}</td>
-                </tr>
-            """
-
-        html_content += """
-            </table>
-        </div>
-
-        <div style="margin-bottom: 30px;">
-            <h2>漏洞列表</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse;">
-                <tr style="background-color: #f2f2f2;">
-                    <th>ID</th>
-                    <th>资产</th>
-                    <th>漏洞名称</th>
-                    <th>类型</th>
-                    <th>严重程度</th>
-                    <th>URL</th>
-                    <th>发现时间</th>
-                </tr>
-        """
-
-        # 添加漏洞数据行
-        for vuln in vulns:
-            asset_host = vuln.asset.host if vuln.asset else "未知"
-            vuln_type = vuln.get_vuln_type_display() if hasattr(vuln, 'get_vuln_type_display') else vuln.vuln_type
-            severity = vuln.get_severity_display() if hasattr(vuln, 'get_severity_display') else vuln.severity
-            severity_style = ""
-
-            if severity == 'high' or severity == '高':
-                severity_style = "color: #d9534f; font-weight: bold;"
-            elif severity == 'medium' or severity == '中':
-                severity_style = "color: #f0ad4e; font-weight: bold;"
-            elif severity == 'low' or severity == '低':
-                severity_style = "color: #5bc0de;"
-
-            html_content += f"""
-                <tr>
-                    <td>{vuln.id}</td>
-                    <td>{asset_host}</td>
-                    <td>{vuln.name}</td>
-                    <td>{vuln_type}</td>
-                    <td style="{severity_style}">{severity}</td>
-                    <td>{vuln.url or '无'}</td>
-                    <td>{vuln.scan_date.strftime('%Y-%m-%d %H:%M:%S') if vuln.scan_date else '未知'}</td>
-                </tr>
-            """
-
-        html_content += """
-            </table>
-        </div>
-
-        <div style="margin-bottom: 30px;">
-            <h2>信息收集结果</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse;">
-                <tr style="background-color: #f2f2f2;">
-                    <th>ID</th>
-                    <th>资产</th>
-                    <th>模块</th>
-                    <th>描述</th>
-                    <th>扫描时间</th>
-                </tr>
-        """
-
-        # 添加信息收集数据行，限制为100条
-        for i, info in enumerate(info_results.order_by('-scan_date')[:100]):
-            asset_host = info.asset.host if info.asset else "未知"
-            module = info.get_module_display() if hasattr(info, 'get_module_display') else info.module
-
-            html_content += f"""
-                <tr>
-                    <td>{info.id}</td>
-                    <td>{asset_host}</td>
-                    <td>{module}</td>
-                    <td>{info.description}</td>
-                    <td>{info.scan_date.strftime('%Y-%m-%d %H:%M:%S') if info.scan_date else '未知'}</td>
-                </tr>
-            """
-
-        # 如果结果太多，显示提示
-        if info_results.count() > 100:
-            html_content += f"""
-            </table>
-            <p>只显示了前100条记录，总共有 {info_results.count()} 条信息收集结果。</p>
-            """
-        else:
-            html_content += """
-            </table>
-            """
-
-        # 添加安全建议
-        html_content += """
-        <div style="margin-bottom: 30px;">
-            <h2>安全建议</h2>
-            <div style="background-color: #f9f9f9; padding: 15px; border-left: 3px solid #5bc0de;">
-                <p>根据扫描结果，建议采取以下安全措施：</p>
-                <ol>
-                    <li style="margin-bottom: 10px;">优先修复高危漏洞，特别是可能导致远程代码执行的漏洞</li>
-                    <li style="margin-bottom: 10px;">定期更新系统和应用程序，以修复已知的安全漏洞</li>
-                    <li style="margin-bottom: 10px;">实施最小权限原则，限制用户和进程的权限</li>
-                    <li style="margin-bottom: 10px;">加强网络访问控制，使用防火墙和入侵检测系统</li>
-                    <li style="margin-bottom: 10px;">实施安全编码实践，预防常见的安全漏洞</li>
-                    <li style="margin-bottom: 10px;">定期进行安全培训，提高安全意识</li>
-                    <li style="margin-bottom: 10px;">建立安全事件响应计划，及时应对安全事件</li>
-                </ol>
-            </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-            <p>此报告由半自动化漏洞扫描系统生成</p>
-            <p>© 2025 安全检测报告</p>
-        </div>
-        """
-
-        return html_content
+        canvas.restoreState()
