@@ -85,16 +85,6 @@
       </el-table-column>
 
       <el-table-column
-        label="响应时间"
-        width="100"
-      >
-        <template #default="scope">
-          <span v-if="isTimeBasedInjection(scope.row)">{{ getResponseTime(scope.row) }}</span>
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-
-      <el-table-column
         label="响应码"
         width="80"
       >
@@ -187,11 +177,6 @@ export default {
       return row.vuln_subtype === 'error_based';
     },
 
-    // 是否为基于时间的盲注
-    isTimeBasedInjection(row) {
-      return row.vuln_subtype === 'blind' && (row.proof || '').includes('时间');
-    },
-
     // 从proof中提取匹配值
     getMatchValueFromProof(proof) {
       if (!proof) return '无';
@@ -271,16 +256,6 @@ export default {
         return 'warning';
       }
       return 'info';
-    },
-
-    // 获取响应时间
-    getResponseTime(row) {
-      const proof = row.proof || '';
-      const timeMatch = proof.match(/响应时间达到\s*(\d+(\.\d+)?)\s*秒/);
-      if (timeMatch && timeMatch[1]) {
-        return timeMatch[1] + 's';
-      }
-      return '延时';
     },
 
     // 获取响应长度

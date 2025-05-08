@@ -45,24 +45,6 @@
       ></el-table-column>
 
       <el-table-column
-        label="SSRF类型"
-        width="120"
-      >
-        <template #default="scope">
-          <el-tooltip
-            :content="getSsrfTypeDescription(scope.row)"
-            placement="top"
-            effect="light"
-          >
-            <el-tag :type="getSsrfTagType(scope.row)">
-              {{ getSsrfTypeName(scope.row) }}
-              <i class="el-icon-info" style="margin-left: 3px;"></i>
-            </el-tag>
-          </el-tooltip>
-        </template>
-      </el-table-column>
-
-      <el-table-column
         label="匹配特征"
         width="200"
         show-overflow-tooltip
@@ -96,21 +78,23 @@
         width="120"
       >
         <template #default="scope">
-          <el-button
-            @click="$emit('view-detail', scope.row)"
-            type="text"
-            size="small"
-          >
-            详情
-          </el-button>
-          <el-button
-            @click="$emit('delete-vuln', scope.row.id)"
-            type="text"
-            size="small"
-            class="delete-btn"
-          >
-            删除
-          </el-button>
+          <div class="operation-buttons">
+            <el-button
+              @click="$emit('view-detail', scope.row)"
+              type="text"
+              size="small"
+            >
+              详情
+            </el-button>
+            <el-button
+              @click="$emit('delete-vuln', scope.row.id)"
+              type="text"
+              size="small"
+              class="delete-btn"
+            >
+              删除
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -165,48 +149,6 @@ export default {
       if (!dateString) return '';
       const date = new Date(dateString);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-    },
-
-    // 获取SSRF类型名称
-    getSsrfTypeName(row) {
-      if (row.vuln_subtype === 'internal_network') {
-        return '内网访问';
-      } else if (row.vuln_subtype === 'file_protocol') {
-        return '文件协议';
-      } else if (row.vuln_subtype === 'blind_ssrf') {
-        return '盲SSRF';
-      } else if (row.vuln_subtype === 'dns_rebinding') {
-        return 'DNS重绑定';
-      }
-      return 'SSRF';
-    },
-
-    // 获取SSRF类型的详细说明
-    getSsrfTypeDescription(row) {
-      const descriptions = {
-        'internal_network': '内网访问型SSRF允许攻击者访问内部网络资源，如内部服务器、数据库等，可能导致内网信息泄露或横向移动攻击。',
-        'file_protocol': '文件协议型SSRF允许攻击者读取服务器本地文件，可能导致敏感配置文件、密码文件等信息泄露。',
-        'blind_ssrf': '盲SSRF是指攻击者无法直接看到响应内容，但可以通过时间延迟或外部回连等方式确认漏洞存在。',
-        'dns_rebinding': 'DNS重绑定型SSRF通过DNS响应变化绕过同源策略限制，实现对内部资源的访问。',
-        'general_ssrf': '通用SSRF漏洞允许服务器访问攻击者控制的资源，可能导致信息泄露、内网探测或服务器资源消耗。'
-      };
-
-      const subtype = row.vuln_subtype || 'general_ssrf';
-      return descriptions[subtype] || descriptions['general_ssrf'];
-    },
-
-    // 获取SSRF类型对应的标签样式
-    getSsrfTagType(row) {
-      if (row.vuln_subtype === 'internal_network') {
-        return 'danger';
-      } else if (row.vuln_subtype === 'file_protocol') {
-        return 'warning';
-      } else if (row.vuln_subtype === 'blind_ssrf') {
-        return 'info';
-      } else if (row.vuln_subtype === 'dns_rebinding') {
-        return 'warning';
-      }
-      return 'danger';
     },
 
     // 获取匹配到的特征
@@ -277,6 +219,12 @@ export default {
 .pagination {
   margin-top: 20px;
   text-align: right;
+}
+
+.operation-buttons {
+  display: flex;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .delete-btn {

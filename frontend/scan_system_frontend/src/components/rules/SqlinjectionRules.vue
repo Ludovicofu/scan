@@ -1,4 +1,4 @@
-// frontend/scan_system_frontend/src/components/rules/SqlinjectionRules.vue
+<!-- frontend/scan_system_frontend/src/components/rules/SqlinjectionRules.vue -->
 <template>
   <div class="sqlinjection-rules">
     <h3>SQL注入扫描设置</h3>
@@ -66,74 +66,6 @@
             ></el-input>
             <div class="hint">
               样例: ', " UNION SELECT 1,2,3--, ' OR '1'='1
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 无回显型SQL注入载荷 -->
-      <div class="rule-section">
-        <div class="rules-header">
-          <div class="rule-info">
-            <span class="rule-title">无回显型SQL注入载荷</span>
-            <span class="rule-desc">添加基于时间延迟等无明显回显的注入测试载荷</span>
-          </div>
-          <div class="rule-actions">
-            <el-button
-              type="primary"
-              size="small"
-              @click="editBlindPayloads"
-              v-if="!isEditingBlind">
-              修改
-            </el-button>
-            <template v-else>
-              <el-button
-                type="success"
-                size="small"
-                @click="saveBlindPayloads">
-                保存
-              </el-button>
-              <el-button
-                type="info"
-                size="small"
-                @click="cancelEditBlind">
-                取消
-              </el-button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="isLoadingBlind" class="loading-state">
-          <el-skeleton :rows="3" animated />
-        </div>
-        <div v-else-if="loadBlindFailed" class="error-state">
-          <el-alert
-            title="加载无回显型SQL注入规则失败"
-            type="error"
-            description="使用默认配置"
-            :closable="false"
-            show-icon
-          />
-        </div>
-
-        <div v-else class="rules-content">
-          <div v-if="!isEditingBlind" class="payloads-list">
-            <div v-for="(payload, index) in blindPayloads" :key="index" class="payload-item">
-              {{ payload }}
-            </div>
-            <div v-if="blindPayloads.length === 0" class="no-payload">
-              没有配置无回显型SQL注入载荷，点击"修改"添加载荷
-            </div>
-          </div>
-          <div v-else class="payloads-edit">
-            <el-input
-              type="textarea"
-              v-model="blindPayloadsText"
-              :rows="8"
-              placeholder="请输入无回显型SQL注入载荷，每行一个"
-            ></el-input>
-            <div class="hint">
-              样例: ' OR (SELECT SLEEP(5))--, '; WAITFOR DELAY '0:0:5'--
             </div>
           </div>
         </div>
@@ -294,14 +226,6 @@ export default {
       errorPayloadsText: '',
       errorRuleId: null,  // 用于存储规则ID，便于更新
 
-      // 无回显型SQL注入载荷
-      isEditingBlind: false,
-      isLoadingBlind: false,
-      loadBlindFailed: false,
-      blindPayloads: [],
-      blindPayloadsText: '',
-      blindRuleId: null,  // 用于存储规则ID，便于更新
-
       // HTTP头注入设置
       isEditingHeaders: false,
       isLoadingHeaders: false,
@@ -326,7 +250,6 @@ export default {
     async fetchSqlinjectionRules() {
       // 获取所有SQL注入规则
       this.fetchErrorBasedRules();
-      this.fetchBlindRules();
       this.fetchHttpHeaderRules();
       this.fetchErrorPatternRules();
     },
@@ -386,60 +309,6 @@ export default {
         ElMessage.error('获取回显型SQL注入规则失败，使用默认配置');
       } finally {
         this.isLoadingError = false;
-      }
-    },
-
-    async fetchBlindRules() {
-      this.isLoadingBlind = true;
-      this.loadBlindFailed = false;
-
-      try {
-        // 获取无回显型SQL注入规则
-        const rules = await this.fetchVulnScanRulesByType('sql_injection', 'blind');
-
-        if (rules.length > 0) {
-          // 找到无回显型规则
-          const rule = rules[0];  // 使用第一条规则
-          this.blindRuleId = rule.id;
-
-          // 解析载荷
-          this.blindPayloads = this.parseRuleContent(rule.rule_content);
-          this.blindPayloadsText = this.blindPayloads.join('\n');
-
-          console.log("找到无回显型SQL注入规则:", rule);
-        } else {
-          console.log("未找到无回显型SQL注入规则，使用默认值");
-          // 如果没有找到规则，使用默认值
-          this.blindPayloads = [
-            "' OR (SELECT SLEEP(5))--",
-            "'; SELECT SLEEP(5)--",
-            "'; WAITFOR DELAY '0:0:5'--",
-            "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
-            "' AND 1=dbms_pipe.receive_message('RDS',10)--"
-          ];
-          this.blindPayloadsText = this.blindPayloads.join('\n');
-          this.blindRuleId = null;
-
-          // 尝试创建默认规则
-          await this.createDefaultBlindRule();
-        }
-      } catch (error) {
-        console.error('获取无回显型SQL注入规则失败', error);
-        this.loadBlindFailed = true;
-
-        // 使用默认值
-        this.blindPayloads = [
-          "' OR (SELECT SLEEP(5))--",
-          "'; SELECT SLEEP(5)--",
-          "'; WAITFOR DELAY '0:0:5'--",
-          "' AND (SELECT COUNT(*) FROM ALL_USERS t1,ALL_USERS t2)>0--",
-          "' AND 1=dbms_pipe.receive_message('RDS',10)--"
-        ];
-        this.blindPayloadsText = this.blindPayloads.join('\n');
-
-        ElMessage.error('获取无回显型SQL注入规则失败，使用默认配置');
-      } finally {
-        this.isLoadingBlind = false;
       }
     },
 
@@ -627,15 +496,6 @@ export default {
       this.errorPayloadsText = this.errorPayloads.join('\n');
     },
 
-    editBlindPayloads() {
-      this.isEditingBlind = true;
-    },
-
-    cancelEditBlind() {
-      this.isEditingBlind = false;
-      this.blindPayloadsText = this.blindPayloads.join('\n');
-    },
-
     editHttpHeaders() {
       this.isEditingHeaders = true;
     },
@@ -657,7 +517,7 @@ export default {
     // 创建默认规则方法
     async createDefaultErrorBasedRule() {
       try {
-        // 准备规则数据 - 移除scan_type
+        // 准备规则数据
         const ruleData = {
           vuln_type: 'sql_injection',
           name: '回显型SQL注入规则',
@@ -678,33 +538,6 @@ export default {
         return response;
       } catch (error) {
         console.error('创建默认回显型SQL注入规则失败', error);
-        return null;
-      }
-    },
-
-    async createDefaultBlindRule() {
-      try {
-        // 准备规则数据 - 移除scan_type
-        const ruleData = {
-          vuln_type: 'sql_injection',
-          name: '无回显型SQL注入规则',
-          description: '用于检测无回显型SQL注入漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'blind',
-            payloads: this.blindPayloads
-          })
-        };
-
-        console.log("创建默认无回显型SQL注入规则:", ruleData);
-
-        // 创建规则
-        const response = await rulesAPI.createVulnScanRule(ruleData);
-        console.log("默认无回显型SQL注入规则创建成功:", response);
-        this.blindRuleId = response.id;
-
-        return response;
-      } catch (error) {
-        console.error('创建默认无回显型SQL注入规则失败', error);
         return null;
       }
     },
@@ -802,47 +635,6 @@ export default {
       } catch (error) {
         console.error('保存回显型SQL注入规则失败', error);
         ElMessage.error('保存回显型SQL注入规则失败');
-      }
-    },
-
-    async saveBlindPayloads() {
-      try {
-        // 处理文本框中的内容，分割为载荷数组
-        const payloads = this.blindPayloadsText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line);
-
-        // 准备规则数据
-        const ruleData = {
-          vuln_type: 'sql_injection',
-          name: '无回显型SQL注入规则',
-          description: '用于检测无回显型SQL注入漏洞的规则',
-          rule_content: JSON.stringify({
-            subType: 'blind',
-            payloads: payloads
-          })
-        };
-
-        console.log("准备保存无回显型SQL注入规则:", ruleData);
-
-        if (this.blindRuleId) {
-          // 如果已有规则，则更新
-          await rulesAPI.updateVulnScanRule(this.blindRuleId, ruleData);
-          ElMessage.success('无回显型SQL注入规则更新成功');
-        } else {
-          // 如果没有规则，则创建
-          const response = await rulesAPI.createVulnScanRule(ruleData);
-          this.blindRuleId = response.id;
-          ElMessage.success('无回显型SQL注入规则创建成功');
-        }
-
-        // 更新显示
-        this.blindPayloads = payloads;
-        this.isEditingBlind = false;
-      } catch (error) {
-        console.error('保存无回显型SQL注入规则失败', error);
-        ElMessage.error('保存无回显型SQL注入规则失败');
       }
     },
 
