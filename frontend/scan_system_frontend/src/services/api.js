@@ -329,11 +329,61 @@ const assetAPI = {
 };
 
 
+// 报告管理API
+const reportAPI = {
+  // 获取报告模板
+  getTemplates(params) {
+    return api.get('report_management/templates/', { params });
+  },
+
+  // 上传报告模板
+  uploadTemplate(formData) {
+    return api.post('report_management/templates/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  // 删除报告模板
+  deleteTemplate(id) {
+    return api.delete(`report_management/templates/${id}/`);
+  },
+
+  // 获取报告列表
+  getReports(params) {
+    return api.get('report_management/reports/', { params });
+  },
+
+  // 获取报告详情
+  getReportDetail(id) {
+    return api.get(`report_management/reports/${id}/`);
+  },
+
+  // 生成报告 - 修复URL路径
+  generateReport(data) {
+    return api.post('report_management/reports/generate/', data);
+  },
+
+  // 下载报告
+  downloadReport(id) {
+    return api.get(`report_management/reports/${id}/download/`, {
+      responseType: 'blob'
+    });
+  },
+
+  // 删除报告
+  deleteReport(id) {
+    return api.delete(`report_management/reports/${id}/`);
+  }
+};
+
 // 导出所有API服务
 export {
   infoCollectionAPI,
   vulnScanAPI,
   rulesAPI,
   settingsAPI,
-  assetAPI
+  assetAPI,
+  reportAPI  // 添加报告API
 };

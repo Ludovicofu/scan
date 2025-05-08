@@ -26,8 +26,19 @@ INSTALLED_APPS = [
     'data_collection',
     'rules',
     'vuln_scan',
-    'asset_management',  # 添加资产管理应用
+    'asset_management',
+    'report_management',
 ]
+
+# 添加媒体文件配置 - 用于存储报告文件
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# 配置报告生成所需的依赖项
+REPORT_CONFIG = {
+    'templates_dir': os.path.join(MEDIA_ROOT, 'report_templates'),
+    'output_dir': os.path.join(MEDIA_ROOT, 'reports'),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
