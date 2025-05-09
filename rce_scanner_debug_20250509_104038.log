@@ -1,0 +1,524 @@
+=== RCE扫描器调试日志 - 开始于 2025-05-09 10:40:38 ===
+
+格式说明：
+[时间] [操作类型] 详细信息
+
+[2025-05-09 10:40:38] [INIT] RCE扫描器初始化完成
+[2025-05-09 10:40:38] [RULES] 开始加载RCE规则...
+[2025-05-09 10:40:38] [RULES] 尝试获取RCE载荷规则...
+[2025-05-09 10:40:38] [DB] 正在从数据库获取规则，类型: command_injection，子类型: payload
+[2025-05-09 10:40:38] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:40:38] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:40:38] [DB] 规则子类型: match_patterns
+[2025-05-09 10:40:38] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: payload
+[2025-05-09 10:40:38] [DB] 已添加匹配的规则，ID: 12
+[2025-05-09 10:40:38] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: match_pattern
+[2025-05-09 10:40:38] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: os_command
+[2025-05-09 10:40:38] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:40:38] [RULES] 已加载 1 条命令/代码执行载荷
+[2025-05-09 10:40:38] [PAYLOAD] [1] |echo rce_test_cmd
+[2025-05-09 10:40:38] [RULES] 尝试获取RCE匹配模式规则...
+[2025-05-09 10:40:38] [DB] 正在从数据库获取规则，类型: command_injection，子类型: match_pattern
+[2025-05-09 10:40:38] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:40:38] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:40:38] [DB] 规则子类型: match_patterns
+[2025-05-09 10:40:38] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: payload
+[2025-05-09 10:40:38] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: match_pattern
+[2025-05-09 10:40:38] [DB] 已添加匹配的规则，ID: 13
+[2025-05-09 10:40:38] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:40:38] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:40:38] [DB] 规则子类型: os_command
+[2025-05-09 10:40:38] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:40:38] [RULES] 已加载 1 条命令/代码执行匹配模式
+[2025-05-09 10:40:38] [PATTERN] [1] rce_test_cmd
+[2025-05-09 10:40:38] [RULES] RCE规则加载成功
+[2025-05-09 10:41:02] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/sqli/sqli_str.php
+[2025-05-09 10:41:02] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:02] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:02] [SCAN] 开始扫描URL: http://pikachu/vul/sqli/sqli_str.php, 方法: GET
+[2025-05-09 10:41:02] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:02] [SCAN] 已标记URL为已扫描: http://pikachu/vul/sqli/sqli_str.php
+[2025-05-09 10:41:02] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:02] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:02] [SCAN] 扫描完成: http://pikachu/vul/sqli/sqli_str.php，总共发现 0 个漏洞
+[2025-05-09 10:41:04] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/bootstrap.min.css
+[2025-05-09 10:41:04] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:04] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:04] [SCAN] 开始扫描URL: http://pikachu/assets/css/bootstrap.min.css, 方法: GET
+[2025-05-09 10:41:04] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:04] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/bootstrap.min.css
+[2025-05-09 10:41:04] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:04] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:04] [SCAN] 扫描完成: http://pikachu/assets/css/bootstrap.min.css，总共发现 0 个漏洞
+[2025-05-09 10:41:04] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css
+[2025-05-09 10:41:04] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:04] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:04] [SCAN] 开始扫描URL: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css, 方法: GET
+[2025-05-09 10:41:04] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:04] [SCAN] 已标记URL为已扫描: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css
+[2025-05-09 10:41:04] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:04] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:04] [SCAN] 扫描完成: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css，总共发现 0 个漏洞
+[2025-05-09 10:41:04] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/fonts.googleapis.com.css
+[2025-05-09 10:41:04] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:04] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:04] [SCAN] 开始扫描URL: http://pikachu/assets/css/fonts.googleapis.com.css, 方法: GET
+[2025-05-09 10:41:04] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:04] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/fonts.googleapis.com.css
+[2025-05-09 10:41:04] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:04] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:04] [SCAN] 扫描完成: http://pikachu/assets/css/fonts.googleapis.com.css，总共发现 0 个漏洞
+[2025-05-09 10:41:04] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace-rtl.min.css
+[2025-05-09 10:41:04] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:04] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:04] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace-rtl.min.css, 方法: GET
+[2025-05-09 10:41:04] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:04] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace-rtl.min.css
+[2025-05-09 10:41:04] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:04] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:04] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:04] [SCAN] 扫描完成: http://pikachu/assets/css/ace-rtl.min.css，总共发现 0 个漏洞
+[2025-05-09 10:41:05] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace-skins.min.css
+[2025-05-09 10:41:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:05] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:05] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace-skins.min.css, 方法: GET
+[2025-05-09 10:41:05] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:05] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace-skins.min.css
+[2025-05-09 10:41:05] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:05] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:05] [SCAN] 扫描完成: http://pikachu/assets/css/ace-skins.min.css，总共发现 0 个漏洞
+[2025-05-09 10:41:05] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace-extra.min.js
+[2025-05-09 10:41:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:05] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:05] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace-extra.min.js, 方法: GET
+[2025-05-09 10:41:05] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:05] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace-extra.min.js
+[2025-05-09 10:41:05] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:05] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:05] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:05] [SCAN] 扫描完成: http://pikachu/assets/js/ace-extra.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:11] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:41:11] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:11] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:11] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-2.1.4.min.js, 方法: GET
+[2025-05-09 10:41:11] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:11] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:41:11] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:11] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:11] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:11] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:11] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:11] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-2.1.4.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:12] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/bootstrap.min.js
+[2025-05-09 10:41:12] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:12] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:12] [SCAN] 开始扫描URL: http://pikachu/assets/js/bootstrap.min.js, 方法: GET
+[2025-05-09 10:41:12] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:12] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/bootstrap.min.js
+[2025-05-09 10:41:12] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:12] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:12] [SCAN] 扫描完成: http://pikachu/assets/js/bootstrap.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:12] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace.min.css
+[2025-05-09 10:41:12] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:12] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:12] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace.min.css, 方法: GET
+[2025-05-09 10:41:12] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:12] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace.min.css
+[2025-05-09 10:41:12] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:12] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:12] [SCAN] 扫描完成: http://pikachu/assets/css/ace.min.css，总共发现 0 个漏洞
+[2025-05-09 10:41:12] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/images/avatars/pikachu1.png
+[2025-05-09 10:41:12] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:12] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:12] [SCAN] 开始扫描URL: http://pikachu/assets/images/avatars/pikachu1.png, 方法: GET
+[2025-05-09 10:41:12] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:12] [SCAN] 已标记URL为已扫描: http://pikachu/assets/images/avatars/pikachu1.png
+[2025-05-09 10:41:12] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:12] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:12] [SCAN] 扫描完成: http://pikachu/assets/images/avatars/pikachu1.png，总共发现 0 个漏洞
+[2025-05-09 10:41:12] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:41:12] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:12] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:12] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-ui.custom.min.js, 方法: GET
+[2025-05-09 10:41:12] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:12] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:41:12] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:12] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:12] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:12] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-ui.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:13] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:41:13] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:13] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:13] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.ui.touch-punch.min.js, 方法: GET
+[2025-05-09 10:41:13] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:13] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:41:13] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:13] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:13] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.ui.touch-punch.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:13] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:41:13] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:13] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:13] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.easypiechart.min.js, 方法: GET
+[2025-05-09 10:41:13] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:13] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:41:13] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:13] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:13] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.easypiechart.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:13] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:41:13] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:13] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:13] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.sparkline.index.min.js, 方法: GET
+[2025-05-09 10:41:13] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:13] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:41:13] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:13] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:13] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.sparkline.index.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:13] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.min.js
+[2025-05-09 10:41:13] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:13] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:13] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.min.js, 方法: GET
+[2025-05-09 10:41:13] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:13] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.min.js
+[2025-05-09 10:41:13] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:13] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:13] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:13] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:14] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:41:14] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:14] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:14] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.resize.min.js, 方法: GET
+[2025-05-09 10:41:14] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:14] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:41:14] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:14] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:14] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:14] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:14] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:14] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.resize.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:15] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:41:15] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:15] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:15] [SCAN] 开始扫描URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0, 方法: GET
+[2025-05-09 10:41:15] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:15] [SCAN] 已标记URL为已扫描: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:41:15] [SCAN] 检测URL参数中的RCE: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:41:15] [URL_SCAN] 解析URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:41:15] [URL_SCAN] 查询参数: {"v": ["4.5.0"]}
+[2025-05-09 10:41:15] [URL_SCAN] 不使用代理
+[2025-05-09 10:41:15] [URL_SCAN] 测试参数: v，原始值: 4.5.0
+[2025-05-09 10:41:15] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:41:15] [URL_SCAN] 测试URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0%7Cecho+rce_test_cmd
+[2025-05-09 10:41:15] [REQUEST] 发送GET请求: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0%7Cecho+rce_test_cmd
+[2025-05-09 10:41:15] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace.min.js
+[2025-05-09 10:41:15] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:15] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:15] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace.min.js, 方法: GET
+[2025-05-09 10:41:15] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:15] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace.min.js
+[2025-05-09 10:41:15] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:15] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:15] [SCAN] 扫描完成: http://pikachu/assets/js/ace.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:15] [RESPONSE] 状态码: 200, 响应时间: 0.16秒
+[2025-05-09 10:41:15] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:41:15 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+Last-Modified: Sat, 01 Jul 2023 15:14:35 GMT
+Etag: "10440-5ff6e64222cc0"
+Accept-Ranges: bytes
+Content-Length: 66624
+[2025-05-09 10:41:15] [RESPONSE] 响应长度: 63099字节
+[2025-05-09 10:41:15] [RESPONSE_CONTENT] 响应内容预览:
+wOF2    @    *� �                     ?FFTM ` �r
+����56$�
+�  �� ?webf[�����@֌�nC��˜�tTL�ɡ�f��t��Ȱq ��5����?=i�l�ґ\�vl �T���b�� �1fú�7�T�Q�
+��D;:�Ю1�l׾jv��e���n�E��ߠk5>�d7Q�l�Ba��
+�u�x].������W�C����$�8v#��y`��F1aM�8��諠��w�=|'є�0��T|��2/�M�%�b� �tY$!�ʐ���5cb̚���(&�-A/mY�����/y�o\�������Z=���5c�k�_�n3�㌾�(WɃ�������Nag+���O樴R�'���5���=?����mΩ�L����:�ދ*�_V�������z+zc�1`�Q#j��/�Z0��-��F�i�bF"2�<EEŨ�;��"u?ќ������RفZ�HR�D���x�Y,5...
+[2025-05-09 10:41:15] [RESPONSE_TEXT] 响应内容预览：wOF2    @    *� �                     ?FFTM ` �r
+����56$�
+�  �� ?webf[�����@֌�nC��˜�tTL�ɡ�f��t��Ȱq ��5����?=i�l�ґ\�vl �T���b�� �1fú�7�T�Q�
+��D;:�Ю1�l׾jv��e���n�E��ߠk5>�d7Q�l�Ba��
+�u�x].������W�C����$�8v#��y`��F1aM�8��諠��w�=|'є�0��T|��2/�M�%�b� �tY$!�ʐ���5cb̚���(&�-A/mY�����/y�o\�������Z=���5c�k�_�n3�㌾�(WɃ�������Nag+���O樴R�'���5���=?����mΩ�L����:�ދ*�_V�������z+zc�1`�Q#j��/�Z0��-��F�i�bF"2�<EEŨ�;��"u?ќ������RفZ�HR�D���x�Y,5...
+[2025-05-09 10:41:15] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:41:15] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:41:15] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:41:15] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:41:15] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:41:15] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:15] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:15] [SCAN] 扫描完成: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0，总共发现 0 个漏洞
+[2025-05-09 10:41:15] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace-elements.min.js
+[2025-05-09 10:41:15] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:15] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:15] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace-elements.min.js, 方法: GET
+[2025-05-09 10:41:15] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:15] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace-elements.min.js
+[2025-05-09 10:41:15] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:15] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:15] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:15] [SCAN] 扫描完成: http://pikachu/assets/js/ace-elements.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:16] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2
+[2025-05-09 10:41:16] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:16] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:16] [SCAN] 开始扫描URL: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2, 方法: GET
+[2025-05-09 10:41:16] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:16] [SCAN] 已标记URL为已扫描: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2
+[2025-05-09 10:41:16] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:16] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:16] [SCAN] 扫描完成: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2，总共发现 0 个漏洞
+[2025-05-09 10:41:16] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/respond.min.js
+[2025-05-09 10:41:16] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:16] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:16] [SCAN] 开始扫描URL: http://pikachu/assets/js/respond.min.js, 方法: GET
+[2025-05-09 10:41:16] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:16] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/respond.min.js
+[2025-05-09 10:41:16] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:16] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:16] [SCAN] 扫描完成: http://pikachu/assets/js/respond.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:16] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/html5shiv.min.js
+[2025-05-09 10:41:16] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:16] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:16] [SCAN] 开始扫描URL: http://pikachu/assets/js/html5shiv.min.js, 方法: GET
+[2025-05-09 10:41:16] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:16] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/html5shiv.min.js
+[2025-05-09 10:41:16] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:16] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:16] [SCAN] 扫描完成: http://pikachu/assets/js/html5shiv.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:16] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:41:16] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:16] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:16] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-1.11.3.min.js, 方法: GET
+[2025-05-09 10:41:16] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:16] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:41:16] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:16] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:16] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:16] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-1.11.3.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:17] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:41:17] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:17] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:17] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.mobile.custom.min.js, 方法: GET
+[2025-05-09 10:41:17] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:17] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:41:17] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:17] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:17] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.mobile.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:17] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/excanvas.min.js
+[2025-05-09 10:41:17] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:17] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:17] [SCAN] 开始扫描URL: http://pikachu/assets/js/excanvas.min.js, 方法: GET
+[2025-05-09 10:41:17] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:17] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/excanvas.min.js
+[2025-05-09 10:41:17] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:17] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:17] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:17] [SCAN] 扫描完成: http://pikachu/assets/js/excanvas.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:18] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:18] [SCAN] 开始扫描URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2, 方法: GET
+[2025-05-09 10:41:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:18] [SCAN] 已标记URL为已扫描: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [URL_SCAN] 解析URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [URL_SCAN] 查询参数: {"name": ["1'"], "submit": ["\u67e5\u8be2"]}
+[2025-05-09 10:41:18] [URL_SCAN] 不使用代理
+[2025-05-09 10:41:18] [URL_SCAN] 测试参数: name，原始值: 1'
+[2025-05-09 10:41:18] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:41:18] [URL_SCAN] 测试URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27%7Cecho+rce_test_cmd&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [REQUEST] 发送GET请求: http://pikachu/vul/sqli/sqli_str.php?name=1%27%7Cecho+rce_test_cmd&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:41:18] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:41:18 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID=k9i4qee5rn12r8377ti0bqmmuq; path=/
+Transfer-Encoding: chunked
+Content-Type: text/html;charset=utf-8
+[2025-05-09 10:41:18] [RESPONSE] 响应长度: 30633字节
+[2025-05-09 10:41:18] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:41:18] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_SUCCESS] 正则表达式匹配成功: 模式=rce_test_cmd, 匹配文本=rce_test_cmd
+[2025-05-09 10:41:18] [MATCH] 发现匹配项: rce_test_cmd
+[2025-05-09 10:41:18] [VULN_FOUND] 在URL参数 name 中发现RCE漏洞
+[2025-05-09 10:41:18] [URL_SCAN] 测试参数: submit，原始值: 查询
+[2025-05-09 10:41:18] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:41:18] [URL_SCAN] 测试URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2%7Cecho+rce_test_cmd
+[2025-05-09 10:41:18] [REQUEST] 发送GET请求: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2%7Cecho+rce_test_cmd
+[2025-05-09 10:41:18] [RESPONSE] 状态码: 200, 响应时间: 0.06秒
+[2025-05-09 10:41:18] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:41:18 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID=aj2av89k630v68f9pr9hbtpc1m; path=/
+Transfer-Encoding: chunked
+Content-Type: text/html;charset=utf-8
+[2025-05-09 10:41:18] [RESPONSE] 响应长度: 30624字节
+[2025-05-09 10:41:18] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:41:18] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:41:18] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:41:18] [SCAN] URL参数RCE检测完成，发现 1 个漏洞
+[2025-05-09 10:41:18] [SCAN] 扫描完成: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2，总共发现 1 个漏洞
+[2025-05-09 10:41:18] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:41:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:18] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.pie.min.js, 方法: GET
+[2025-05-09 10:41:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:18] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:41:18] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:18] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:18] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:18] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:18] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:18] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.pie.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:30] [SCAN] 开始RCE扫描，URL: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff
+[2025-05-09 10:41:30] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:30] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:30] [SCAN] 开始扫描URL: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff, 方法: GET
+[2025-05-09 10:41:30] [SCAN] 资产ID: 26, 主机: fonts.gstatic.com
+[2025-05-09 10:41:30] [SCAN] 已标记URL为已扫描: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff
+[2025-05-09 10:41:30] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:30] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:30] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:30] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:30] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:30] [SCAN] 扫描完成: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff，总共发现 0 个漏洞

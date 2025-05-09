@@ -45,24 +45,57 @@ class VulnScanner:
     def _init_rce_scanner(self):
         """初始化RCE扫描器，处理可能的导入错误"""
         try:
-            print("开始初始化RCE扫描器...")
+            print("============= 开始初始化RCE扫描器... =============")
+            # 清晰的初始化日志
+
+            # 验证类是否成功导入
+            try:
+                rce_scanner_type = type(RceScanner)
+                print(f"RCE扫描器类型: {rce_scanner_type}")
+            except Exception as type_err:
+                print(f"获取RCE扫描器类型失败: {str(type_err)}")
+                import traceback
+                traceback.print_exc()
+
+            # 创建扫描器实例
             rce_scanner = RceScanner()
-            # 移除对RulesApiProxy的依赖，不传参数调用load_payloads
-            # 注意：这里改为同步初始化，便于调试
-            if hasattr(rce_scanner, 'load_payloads'):
+            print(f"RCE扫描器实例创建成功: {rce_scanner}")
+
+            # 检查关键方法
+            has_load_method = hasattr(rce_scanner, 'load_payloads')
+            has_scan_method = hasattr(rce_scanner, 'scan')
+            print(f"RCE扫描器方法检查 - load_payloads: {has_load_method}, scan: {has_scan_method}")
+
+            # 异步加载规则
+            if has_load_method:
                 try:
-                    # 创建异步任务，但使用日志记录任务状态
+                    # 创建异步任务并记录结果
                     task = asyncio.create_task(rce_scanner.load_payloads())
-                    task.add_done_callback(
-                        lambda t: print(f"RCE规则加载{'成功' if not t.exception() else '失败: ' + str(t.exception())}")
-                    )
+
+                    def log_result(future):
+                        try:
+                            result = future.result()
+                            print(f"RCE规则加载结果: {result}")
+                        except Exception as future_err:
+                            print(f"RCE规则加载异步任务出错: {str(future_err)}")
+                            import traceback
+                            traceback.print_exc()
+
+                    task.add_done_callback(log_result)
+                    print("RCE规则加载任务已创建")
                 except Exception as load_err:
                     print(f"创建RCE规则加载任务失败: {str(load_err)}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("警告: RCE扫描器没有load_payloads方法")
 
-            print("RCE扫描器初始化成功")
+            print("============= RCE扫描器初始化成功 =============")
             return rce_scanner
         except ImportError as e:
             print(f"导入RCE扫描器模块失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
         except Exception as e:
             print(f"RCE扫描器初始化失败: {str(e)}")
@@ -276,10 +309,18 @@ class VulnScanner:
                 # 添加RCE扫描任务，增加错误处理
                 if self.rce_scanner:  # 检查RCE扫描器是否成功初始化
                     try:
+                        # 详细检查RCE扫描器状态
+                        print(f"RCE扫描器对象: {self.rce_scanner}")
+                        print(f"RCE扫描器类型: {type(self.rce_scanner)}")
+                        print(f"RCE扫描器是否有scan方法: {hasattr(self.rce_scanner, 'scan')}")
+                        print(f"RCE扫描器规则是否已加载: {getattr(self.rce_scanner, 'rules_loaded', False)}")
+                        print(f"RCE载荷数量: {len(getattr(self.rce_scanner, 'rce_payloads', []))}")
+                        print(f"RCE匹配模式数量: {len(getattr(self.rce_scanner, 'match_patterns', []))}")
+
                         # 检查RCE扫描器scan方法是否可用
                         if hasattr(self.rce_scanner, 'scan'):
                             print(f"尝试添加RCE扫描任务: {url}")
-                            # 验证scan方法是否可调用
+                            # 首先验证scan方法是否可调用
                             if callable(getattr(self.rce_scanner, 'scan')):
                                 tasks.append(self.rce_scanner.scan(context))
                                 print(f"成功添加RCE扫描任务: {url}")

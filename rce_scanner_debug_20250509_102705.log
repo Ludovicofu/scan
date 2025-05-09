@@ -1,0 +1,2779 @@
+=== RCE扫描器调试日志 - 开始于 2025-05-09 10:27:05 ===
+
+格式说明：
+[时间] [操作类型] 详细信息
+
+[2025-05-09 10:27:05] [INIT] RCE扫描器初始化完成
+[2025-05-09 10:27:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:05] [RULES] 尝试获取RCE载荷规则...
+[2025-05-09 10:27:05] [DB] 正在从数据库获取规则，类型: command_injection，子类型: payload
+[2025-05-09 10:27:05] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:27:05] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:27:05] [DB] 规则子类型: match_patterns
+[2025-05-09 10:27:05] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: payload
+[2025-05-09 10:27:05] [DB] 已添加匹配的规则，ID: 12
+[2025-05-09 10:27:05] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: match_pattern
+[2025-05-09 10:27:05] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: os_command
+[2025-05-09 10:27:05] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:27:05] [RULES] 已加载 1 条命令/代码执行载荷
+[2025-05-09 10:27:05] [PAYLOAD] [1] |echo rce_test_cmd
+[2025-05-09 10:27:05] [RULES] 尝试获取RCE匹配模式规则...
+[2025-05-09 10:27:05] [DB] 正在从数据库获取规则，类型: command_injection，子类型: match_pattern
+[2025-05-09 10:27:05] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:27:05] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:27:05] [DB] 规则子类型: match_patterns
+[2025-05-09 10:27:05] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: payload
+[2025-05-09 10:27:05] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: match_pattern
+[2025-05-09 10:27:05] [DB] 已添加匹配的规则，ID: 13
+[2025-05-09 10:27:05] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:27:05] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:27:05] [DB] 规则子类型: os_command
+[2025-05-09 10:27:05] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:27:05] [RULES] 已加载 1 条命令/代码执行匹配模式
+[2025-05-09 10:27:05] [PATTERN] [1] rce_test_cmd
+[2025-05-09 10:27:05] [RULES] RCE规则加载成功
+[2025-05-09 10:27:18] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/bootstrap.min.css
+[2025-05-09 10:27:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:18] [SCAN] 开始扫描URL: http://pikachu/assets/css/bootstrap.min.css, 方法: GET
+[2025-05-09 10:27:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:18] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/bootstrap.min.css
+[2025-05-09 10:27:18] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:18] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:18] [SCAN] 扫描完成: http://pikachu/assets/css/bootstrap.min.css，总共发现 0 个漏洞
+[2025-05-09 10:27:18] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace-extra.min.js
+[2025-05-09 10:27:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:18] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace-extra.min.js, 方法: GET
+[2025-05-09 10:27:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:18] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace-extra.min.js
+[2025-05-09 10:27:18] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:18] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:18] [SCAN] 扫描完成: http://pikachu/assets/js/ace-extra.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:18] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css
+[2025-05-09 10:27:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:18] [SCAN] 开始扫描URL: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css, 方法: GET
+[2025-05-09 10:27:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:18] [SCAN] 已标记URL为已扫描: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css
+[2025-05-09 10:27:18] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:18] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:18] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:18] [SCAN] 扫描完成: http://pikachu/assets/font-awesome/4.5.0/css/font-awesome.min.css，总共发现 0 个漏洞
+[2025-05-09 10:27:19] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/fonts.googleapis.com.css
+[2025-05-09 10:27:19] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:19] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:19] [SCAN] 开始扫描URL: http://pikachu/assets/css/fonts.googleapis.com.css, 方法: GET
+[2025-05-09 10:27:19] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:19] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/fonts.googleapis.com.css
+[2025-05-09 10:27:19] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:19] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:19] [SCAN] 扫描完成: http://pikachu/assets/css/fonts.googleapis.com.css，总共发现 0 个漏洞
+[2025-05-09 10:27:19] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace-skins.min.css
+[2025-05-09 10:27:19] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:19] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:19] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace-skins.min.css, 方法: GET
+[2025-05-09 10:27:19] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:19] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace-skins.min.css
+[2025-05-09 10:27:19] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:19] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:19] [SCAN] 扫描完成: http://pikachu/assets/css/ace-skins.min.css，总共发现 0 个漏洞
+[2025-05-09 10:27:19] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace-rtl.min.css
+[2025-05-09 10:27:19] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:19] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:19] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace-rtl.min.css, 方法: GET
+[2025-05-09 10:27:19] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:19] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace-rtl.min.css
+[2025-05-09 10:27:19] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:19] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:19] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:19] [SCAN] 扫描完成: http://pikachu/assets/css/ace-rtl.min.css，总共发现 0 个漏洞
+[2025-05-09 10:27:21] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/css/ace.min.css
+[2025-05-09 10:27:21] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:21] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:21] [SCAN] 开始扫描URL: http://pikachu/assets/css/ace.min.css, 方法: GET
+[2025-05-09 10:27:21] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:21] [SCAN] 已标记URL为已扫描: http://pikachu/assets/css/ace.min.css
+[2025-05-09 10:27:21] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:21] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:21] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:21] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:21] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:21] [SCAN] 扫描完成: http://pikachu/assets/css/ace.min.css，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-2.1.4.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-2.1.4.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/bootstrap.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/bootstrap.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/bootstrap.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/bootstrap.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/images/avatars/pikachu1.png
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/images/avatars/pikachu1.png, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/images/avatars/pikachu1.png
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/images/avatars/pikachu1.png，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-ui.custom.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-ui.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.ui.touch-punch.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.ui.touch-punch.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.pie.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.pie.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:27] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:27:27] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:27] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:27] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.resize.min.js, 方法: GET
+[2025-05-09 10:27:27] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:27] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:27:27] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:27] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:27] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:27] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.resize.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/fonts/glyphicons-halflings-regular.woff2，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace-elements.min.js
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace-elements.min.js, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace-elements.min.js
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/js/ace-elements.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/ace.min.js
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/js/ace.min.js, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/ace.min.js
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/js/ace.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:27:28] [SCAN] 检测URL参数中的RCE: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:27:28] [URL_SCAN] 解析URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0
+[2025-05-09 10:27:28] [URL_SCAN] 查询参数: {"v": ["4.5.0"]}
+[2025-05-09 10:27:28] [URL_SCAN] 不使用代理
+[2025-05-09 10:27:28] [URL_SCAN] 测试参数: v，原始值: 4.5.0
+[2025-05-09 10:27:28] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:27:28] [URL_SCAN] 测试URL: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0%7Cecho+rce_test_cmd
+[2025-05-09 10:27:28] [REQUEST] 发送GET请求: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0%7Cecho+rce_test_cmd
+[2025-05-09 10:27:28] [RESPONSE] 状态码: 200, 响应时间: 0.01秒
+[2025-05-09 10:27:28] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:27:28 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+Last-Modified: Sat, 01 Jul 2023 15:14:35 GMT
+Etag: "10440-5ff6e64222cc0"
+Accept-Ranges: bytes
+Content-Length: 66624
+[2025-05-09 10:27:28] [RESPONSE] 响应长度: 63099字节
+[2025-05-09 10:27:28] [RESPONSE_CONTENT] 响应内容预览:
+wOF2    @    *� �                     ?FFTM ` �r
+����56$�
+�  �� ?webf[�����@֌�nC��˜�tTL�ɡ�f��t��Ȱq ��5����?=i�l�ґ\�vl �T���b�� �1fú�7�T�Q�
+��D;:�Ю1�l׾jv��e���n�E��ߠk5>�d7Q�l�Ba��
+�u�x].������W�C����$�8v#��y`��F1aM�8��諠��w�=|'є�0��T|��2/�M�%�b� �tY$!�ʐ���5cb̚���(&�-A/mY�����/y�o\�������Z=���5c�k�_�n3�㌾�(WɃ�������Nag+���O樴R�'���5���=?����mΩ�L����:�ދ*�_V�������z+zc�1`�Q#j��/�Z0��-��F�i�bF"2�<EEŨ�;��"u?ќ������RفZ�HR�D���x�Y,5...
+[2025-05-09 10:27:28] [RESPONSE_TEXT] 响应内容预览：wOF2    @    *� �                     ?FFTM ` �r
+����56$�
+�  �� ?webf[�����@֌�nC��˜�tTL�ɡ�f��t��Ȱq ��5����?=i�l�ґ\�vl �T���b�� �1fú�7�T�Q�
+��D;:�Ю1�l׾jv��e���n�E��ߠk5>�d7Q�l�Ba��
+�u�x].������W�C����$�8v#��y`��F1aM�8��諠��w�=|'є�0��T|��2/�M�%�b� �tY$!�ʐ���5cb̚���(&�-A/mY�����/y�o\�������Z=���5c�k�_�n3�㌾�(WɃ�������Nag+���O樴R�'���5���=?����mΩ�L����:�ދ*�_V�������z+zc�1`�Q#j��/�Z0��-��F�i�bF"2�<EEŨ�;��"u?ќ������RفZ�HR�D���x�Y,5...
+[2025-05-09 10:27:28] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:27:28] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:27:28] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:27:28] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:27:28] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:27:28] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/font-awesome/4.5.0/fonts/fontawesome-webfont.woff2?v=4.5.0，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/html5shiv.min.js
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/js/html5shiv.min.js, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/html5shiv.min.js
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/js/html5shiv.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:28] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/respond.min.js
+[2025-05-09 10:27:28] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:28] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:28] [SCAN] 开始扫描URL: http://pikachu/assets/js/respond.min.js, 方法: GET
+[2025-05-09 10:27:28] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:28] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/respond.min.js
+[2025-05-09 10:27:28] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:28] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:28] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:28] [SCAN] 扫描完成: http://pikachu/assets/js/respond.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery-1.11.3.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/jquery-1.11.3.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.mobile.custom.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.mobile.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/excanvas.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/excanvas.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/excanvas.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/excanvas.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.easypiechart.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.easypiechart.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.sparkline.index.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.sparkline.index.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://pikachu/assets/js/jquery.flot.min.js
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://pikachu/assets/js/jquery.flot.min.js, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://pikachu/assets/js/jquery.flot.min.js
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://pikachu/assets/js/jquery.flot.min.js，总共发现 0 个漏洞
+[2025-05-09 10:27:29] [SCAN] 开始RCE扫描，URL: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff
+[2025-05-09 10:27:29] [RULES] 开始加载RCE规则...
+[2025-05-09 10:27:29] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:27:29] [SCAN] 开始扫描URL: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff, 方法: GET
+[2025-05-09 10:27:29] [SCAN] 资产ID: 26, 主机: fonts.gstatic.com
+[2025-05-09 10:27:29] [SCAN] 已标记URL为已扫描: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff
+[2025-05-09 10:27:29] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:27:29] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:27:29] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:27:29] [SCAN] 扫描完成: http://fonts.gstatic.com/s/opensans/v13/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff，总共发现 0 个漏洞
+[2025-05-09 10:29:17] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:29:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:29:19] [SCAN] 开始扫描URL: http://pikachu/vul/rce/rce_ping.php, 方法: POST
+[2025-05-09 10:29:19] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:29:20] [SCAN] 已标记URL为已扫描: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:21] [SCAN] 检测POST参数中的RCE: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:22] [POST_SCAN] 解析URL: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:22] [POST_SCAN] 请求内容类型: application/x-www-form-urlencoded
+[2025-05-09 10:29:22] [POST_SCAN] 请求内容长度: 45字节
+[2025-05-09 10:29:23] [POST_SCAN] 请求内容预览: ipaddress=1%7Cecho%2Brce_test_cmd&submit=ping...
+[2025-05-09 10:29:23] [POST_SCAN] 解析表单数据: {"ipaddress": ["1|echo+rce_test_cmd"], "submit": ["ping"]}
+[2025-05-09 10:29:23] [POST_SCAN] 不使用代理
+[2025-05-09 10:29:24] [POST_SCAN] 测试参数: ipaddress，原始值: 1|echo+rce_test_cmd
+[2025-05-09 10:29:27] [POST_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:29:29] [POST_SCAN] 生成表单请求体: ipaddress=1%7Cecho%2Brce_test_cmd%7Cecho+rce_test_cmd&submit=ping
+[2025-05-09 10:29:36] [REQUEST] 发送POST请求: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:36] [REQUEST] 请求头: {'Content-Type': 'application/x-www-form-urlencoded'}
+[2025-05-09 10:29:36] [REQUEST] 请求体: ipaddress=1%7Cecho%2Brce_test_cmd%7Cecho+rce_test_cmd&submit=ping
+[2025-05-09 10:29:39] [RESPONSE] 状态码: 200, 响应时间: 3.10秒
+[2025-05-09 10:29:39] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:29:36 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:29:39] [RESPONSE] 响应长度: 33265字节
+[2025-05-09 10:29:39] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:29:39] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:29:39] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:29:39] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:29:39] [MATCH_SUCCESS] 正则表达式匹配成功: 模式=rce_test_cmd, 匹配文本=rce_test_cmd
+[2025-05-09 10:29:39] [MATCH] 发现匹配项: rce_test_cmd
+[2025-05-09 10:29:39] [VULN_FOUND] 在POST参数 ipaddress 中发现RCE漏洞
+[2025-05-09 10:29:39] [POST_SCAN] 测试参数: submit，原始值: ping
+[2025-05-09 10:29:39] [POST_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:29:39] [POST_SCAN] 生成表单请求体: ipaddress=1%7Cecho%2Brce_test_cmd&submit=ping%7Cecho+rce_test_cmd
+[2025-05-09 10:29:39] [REQUEST] 发送POST请求: http://pikachu/vul/rce/rce_ping.php
+[2025-05-09 10:29:39] [REQUEST] 请求头: {'Content-Type': 'application/x-www-form-urlencoded'}
+[2025-05-09 10:29:39] [REQUEST] 请求体: ipaddress=1%7Cecho%2Brce_test_cmd&submit=ping%7Cecho+rce_test_cmd
+[2025-05-09 10:29:42] [RESPONSE] 状态码: 200, 响应时间: 3.08秒
+[2025-05-09 10:29:42] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:29:39 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:29:42] [RESPONSE] 响应长度: 33265字节
+[2025-05-09 10:29:42] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:29:42] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:29:42] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:29:42] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:29:42] [MATCH_SUCCESS] 正则表达式匹配成功: 模式=rce_test_cmd, 匹配文本=rce_test_cmd
+[2025-05-09 10:29:42] [MATCH] 发现匹配项: rce_test_cmd
+[2025-05-09 10:29:42] [VULN_FOUND] 在POST参数 submit 中发现RCE漏洞
+[2025-05-09 10:29:42] [SCAN] POST参数RCE检测完成，发现 2 个漏洞
+[2025-05-09 10:29:42] [SCAN] 扫描完成: http://pikachu/vul/rce/rce_ping.php，总共发现 2 个漏洞
+[2025-05-09 10:36:37] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php
+[2025-05-09 10:36:37] [RULES] 开始加载RCE规则...
+[2025-05-09 10:36:37] [RULES] 尝试获取RCE载荷规则...
+[2025-05-09 10:36:37] [DB] 正在从数据库获取规则，类型: command_injection，子类型: payload
+[2025-05-09 10:36:37] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:36:37] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:36:37] [DB] 规则子类型: match_patterns
+[2025-05-09 10:36:37] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: payload
+[2025-05-09 10:36:37] [DB] 已添加匹配的规则，ID: 12
+[2025-05-09 10:36:37] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: match_pattern
+[2025-05-09 10:36:37] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: os_command
+[2025-05-09 10:36:37] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:36:37] [RULES] 已加载 1 条命令/代码执行载荷
+[2025-05-09 10:36:37] [PAYLOAD] [1] |echo rce_test_cmd
+[2025-05-09 10:36:37] [RULES] 尝试获取RCE匹配模式规则...
+[2025-05-09 10:36:37] [DB] 正在从数据库获取规则，类型: command_injection，子类型: match_pattern
+[2025-05-09 10:36:37] [DB] 查询到 4 条类型为 command_injection 的规则
+[2025-05-09 10:36:37] [DB] 解析规则 1, ID: 10, 名称: RCE匹配模式规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"match_patterns","patterns":{"os_command":["cmd_inj_test"],"code_injection":[]}}
+[2025-05-09 10:36:37] [DB] 规则子类型: match_patterns
+[2025-05-09 10:36:37] [DB] 解析规则 2, ID: 12, 名称: 命令/代码执行规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"payload","payloads":["|echo rce_test_cmd"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: payload
+[2025-05-09 10:36:37] [DB] 解析规则 3, ID: 13, 名称: 执行结果匹配模式
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"match_pattern","payloads":["rce_test_cmd"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: match_pattern
+[2025-05-09 10:36:37] [DB] 已添加匹配的规则，ID: 13
+[2025-05-09 10:36:37] [DB] 解析规则 4, ID: 11, 名称: 系统命令执行规则
+[2025-05-09 10:36:37] [DB] 规则内容预览: {"subType":"os_command","payloads":["|echo cmd_inj_test"]}
+[2025-05-09 10:36:37] [DB] 规则子类型: os_command
+[2025-05-09 10:36:37] [DB] 最终匹配到 1 条规则
+[2025-05-09 10:36:37] [RULES] 已加载 1 条命令/代码执行匹配模式
+[2025-05-09 10:36:37] [PATTERN] [1] rce_test_cmd
+[2025-05-09 10:36:37] [RULES] RCE规则加载成功
+[2025-05-09 10:36:37] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php, 方法: GET
+[2025-05-09 10:36:37] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:36:37] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php
+[2025-05-09 10:36:37] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:36:37] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:36:37] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:36:37] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:36:37] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:36:37] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php，总共发现 0 个漏洞
+[2025-05-09 10:36:56] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php
+[2025-05-09 10:36:56] [RULES] 开始加载RCE规则...
+[2025-05-09 10:36:56] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:36:56] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php, 方法: GET
+[2025-05-09 10:36:56] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:36:56] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php
+[2025-05-09 10:36:56] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php
+[2025-05-09 10:36:56] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php
+[2025-05-09 10:36:56] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/info1.php"]}
+[2025-05-09 10:36:56] [URL_SCAN] 不使用代理
+[2025-05-09 10:36:56] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/info1.php
+[2025-05-09 10:36:56] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:36:56] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2Finfo1.php%7Cecho+rce_test_cmd
+[2025-05-09 10:36:56] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2Finfo1.php%7Cecho+rce_test_cmd
+[2025-05-09 10:36:56] [RESPONSE] 状态码: 200, 响应时间: 0.06秒
+[2025-05-09 10:36:56] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:36:56 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:36:56] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:36:56] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:36:56] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:36:56] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:36:56] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:36:56] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:36:56] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:36:56] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:36:56] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:36:56] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:36:56] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:36:56] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:36:56] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:36:56] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:36:56] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/info1.php，总共发现 0 个漏洞
+[2025-05-09 10:37:03] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js
+[2025-05-09 10:37:03] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:03] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:03] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js, 方法: GET
+[2025-05-09 10:37:03] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:03] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js
+[2025-05-09 10:37:03] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js
+[2025-05-09 10:37:03] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js
+[2025-05-09 10:37:03] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js"]}
+[2025-05-09 10:37:03] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:03] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js
+[2025-05-09 10:37:03] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:03] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face-extra.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:03] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face-extra.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:03] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:03] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:03 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:03] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:03] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:03] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:03] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:03] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:03] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:03] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:03] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:03] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:03] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:03] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:03] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:03] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:03] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:03] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-extra.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:05] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:05] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:05] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js, 方法: GET
+[2025-05-09 10:37:05] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:05] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:05] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js"]}
+[2025-05-09 10:37:05] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:05] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:05] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-1.11.3.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:05] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-1.11.3.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:05] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:05] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:05 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:05] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:05] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:05] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:05] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:05] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:05] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:05] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:05] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:05] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:05] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:05] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-1.11.3.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:05] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:05] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:05] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js, 方法: GET
+[2025-05-09 10:37:05] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:05] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:05] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js"]}
+[2025-05-09 10:37:05] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:05] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:05] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-2.1.4.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:05] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-2.1.4.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:05] [RESPONSE] 状态码: 200, 响应时间: 0.03秒
+[2025-05-09 10:37:05] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:05 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:05] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:05] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:05] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:05] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:05] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:05] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:05] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:05] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:05] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:05] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:05] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:05] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-2.1.4.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:05] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:05] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:05] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:05] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js, 方法: GET
+[2025-05-09 10:37:05] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:05] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:05] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js"]}
+[2025-05-09 10:37:05] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:05] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:05] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:05] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.mobile.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:05] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.mobile.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:06] [RESPONSE] 状态码: 200, 响应时间: 0.14秒
+[2025-05-09 10:37:06] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:06 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:06] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:06] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:06] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:06] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:06] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:06] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:06] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:06] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:06] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:06] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:06] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.mobile.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:06] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js
+[2025-05-09 10:37:06] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:06] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:06] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js, 方法: GET
+[2025-05-09 10:37:06] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:06] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js
+[2025-05-09 10:37:06] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js
+[2025-05-09 10:37:06] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js
+[2025-05-09 10:37:06] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js"]}
+[2025-05-09 10:37:06] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:06] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js
+[2025-05-09 10:37:06] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:06] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Frespond.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:06] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Frespond.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:06] [RESPONSE] 状态码: 200, 响应时间: 0.04秒
+[2025-05-09 10:37:06] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:06 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:06] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:06] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:06] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:06] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:06] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:06] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:06] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:06] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:06] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:06] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:06] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:06] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/respond.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:07] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:07] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:07] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:07] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js, 方法: GET
+[2025-05-09 10:37:07] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:07] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:07] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js"]}
+[2025-05-09 10:37:07] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:07] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:07] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.sparkline.index.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:07] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.sparkline.index.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:07] [RESPONSE] 状态码: 200, 响应时间: 0.14秒
+[2025-05-09 10:37:07] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:07 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:07] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:07] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:07] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:07] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:07] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:07] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:07] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:07] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:07] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:07] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:07] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.sparkline.index.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:07] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js
+[2025-05-09 10:37:07] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:07] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:07] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js, 方法: GET
+[2025-05-09 10:37:07] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:07] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js
+[2025-05-09 10:37:07] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js"]}
+[2025-05-09 10:37:07] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:07] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js
+[2025-05-09 10:37:07] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:07] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fhtml5shiv.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:07] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fhtml5shiv.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:07] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:07] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:07 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:07] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:07] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:07] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:07] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:07] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:07] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:07] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:07] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:07] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:07] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:07] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:07] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/html5shiv.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:08] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:08] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:08] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:08] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js, 方法: GET
+[2025-05-09 10:37:08] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:08] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:08] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js"]}
+[2025-05-09 10:37:08] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:08] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:08] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.pie.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:08] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.pie.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:08] [RESPONSE] 状态码: 200, 响应时间: 0.22秒
+[2025-05-09 10:37:08] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:08 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:08] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:08] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:08] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:08] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:08] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:08] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:08] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:08] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:08] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:08] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:08] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.pie.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:08] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:08] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:08] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:08] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js, 方法: GET
+[2025-05-09 10:37:08] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:08] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:08] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js"]}
+[2025-05-09 10:37:08] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:08] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:08] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:08] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fbootstrap.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:08] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fbootstrap.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:08] [RESPONSE] 状态码: 200, 响应时间: 0.12秒
+[2025-05-09 10:37:08] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:08 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:08] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:08] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:08] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:08] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:08] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:08] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:08] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:08] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:08] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:08] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:08] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:08] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/bootstrap.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:09] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:09] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:09] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:09] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js, 方法: GET
+[2025-05-09 10:37:09] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:09] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:09] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:09] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:09] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js"]}
+[2025-05-09 10:37:09] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:09] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:09] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:09] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.easypiechart.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:09] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.easypiechart.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:09] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:09] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:09 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:09] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:09] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:09] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:09] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:09] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:09] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:09] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:09] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:09] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:09] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:09] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:09] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:09] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:09] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:09] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.easypiechart.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:10] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:10] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:10] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:10] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js, 方法: GET
+[2025-05-09 10:37:10] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:10] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:10] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js"]}
+[2025-05-09 10:37:10] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:10] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:10] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-ui.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:10] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery-ui.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:10] [RESPONSE] 状态码: 200, 响应时间: 0.09秒
+[2025-05-09 10:37:10] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:10 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:10] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:10] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:10] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:10] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:10] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:10] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:10] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:10] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:10] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:10] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:10] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery-ui.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:10] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:10] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:10] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:10] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js, 方法: GET
+[2025-05-09 10:37:10] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:10] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:10] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js"]}
+[2025-05-09 10:37:10] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:10] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:10] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fexcanvas.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:10] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fexcanvas.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:10] [RESPONSE] 状态码: 200, 响应时间: 0.06秒
+[2025-05-09 10:37:10] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:10 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:10] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:10] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:10] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:10] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:10] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:10] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:10] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:10] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:10] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:10] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:10] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:10] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/excanvas.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:10] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:10] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:10] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:10] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js, 方法: GET
+[2025-05-09 10:37:10] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:10] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:10] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js"]}
+[2025-05-09 10:37:10] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:10] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:10] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:10] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.ui.touch-punch.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:10] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.ui.touch-punch.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:11] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:11] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:11 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:11] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:11] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:11] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:11] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:11] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:11] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:11] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:11] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:11] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:11] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:11] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:11] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:11] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:11] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:11] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.ui.touch-punch.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:13] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:13] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:13] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:13] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js, 方法: GET
+[2025-05-09 10:37:13] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:13] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:13] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:13] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:13] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js"]}
+[2025-05-09 10:37:13] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:13] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:13] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:13] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:13] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:13] [RESPONSE] 状态码: 200, 响应时间: 0.01秒
+[2025-05-09 10:37:13] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:13 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:13] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:13] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:13] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:13] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:13] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:13] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:13] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:13] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:13] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:13] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:13] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:13] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:13] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:13] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:13] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:14] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js
+[2025-05-09 10:37:14] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:14] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:14] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js, 方法: GET
+[2025-05-09 10:37:14] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:14] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js
+[2025-05-09 10:37:14] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js"]}
+[2025-05-09 10:37:14] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:14] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:14] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:14] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:14] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:14] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js, 方法: GET
+[2025-05-09 10:37:14] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:14] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:14] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js"]}
+[2025-05-09 10:37:14] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:14] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:14] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:14] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face-elements.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Face-elements.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/
+[2025-05-09 10:37:14] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:14] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:14] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/, 方法: GET
+[2025-05-09 10:37:14] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:14] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/
+[2025-05-09 10:37:14] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/
+[2025-05-09 10:37:14] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/
+[2025-05-09 10:37:14] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/"]}
+[2025-05-09 10:37:14] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:14] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/
+[2025-05-09 10:37:14] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:14] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F%7Cecho+rce_test_cmd
+[2025-05-09 10:37:14] [RESPONSE] 状态码: 200, 响应时间: 0.08秒
+[2025-05-09 10:37:14] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:14 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:14] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:14] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:14] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:14] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:14] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:14] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:14] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:14] [RESPONSE] 状态码: 200, 响应时间: 0.06秒
+[2025-05-09 10:37:14] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:14 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:14] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:14] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:14] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:14] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:14] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:14] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:14] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/ace-elements.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:14] [RESPONSE] 状态码: 200, 响应时间: 0.28秒
+[2025-05-09 10:37:14] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:14 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:14] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:14] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:14] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:14] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:14] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:14] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:14] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:14] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:14] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:14] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/，总共发现 0 个漏洞
+[2025-05-09 10:37:23] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:23] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:23] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:23] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js, 方法: GET
+[2025-05-09 10:37:23] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:23] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:23] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:23] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:23] [URL_SCAN] 查询参数: {"url": ["http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js"]}
+[2025-05-09 10:37:23] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:23] [URL_SCAN] 测试参数: url，原始值: http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:23] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:23] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.resize.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:23] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=http%3A%2F%2F127.0.0.1%2Fvul%2Fssrf%2Fssrf_info%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.resize.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:23] [RESPONSE] 状态码: 200, 响应时间: 0.10秒
+[2025-05-09 10:37:23] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:23 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:23] [RESPONSE] 响应长度: 34886字节
+[2025-05-09 10:37:23] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:23] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:23] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:23] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:23] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:23] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:23] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:23] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:23] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:23] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:23] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:23] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:23] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:23] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=http://127.0.0.1/vul/ssrf/ssrf_info/../../assets/js/jquery.flot.resize.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:24] [SCAN] 开始RCE扫描，URL: http://www.baidu.com/img/bd_logo1.png
+[2025-05-09 10:37:24] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:24] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:24] [SCAN] 开始扫描URL: http://www.baidu.com/img/bd_logo1.png, 方法: GET
+[2025-05-09 10:37:24] [SCAN] 资产ID: 27, 主机: www.baidu.com
+[2025-05-09 10:37:24] [SCAN] 已标记URL为已扫描: http://www.baidu.com/img/bd_logo1.png
+[2025-05-09 10:37:24] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:24] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:24] [SCAN] 扫描完成: http://www.baidu.com/img/bd_logo1.png，总共发现 0 个漏洞
+[2025-05-09 10:37:24] [SCAN] 开始RCE扫描，URL: http://www.baidu.com/img/gs.gif
+[2025-05-09 10:37:24] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:24] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:24] [SCAN] 开始扫描URL: http://www.baidu.com/img/gs.gif, 方法: GET
+[2025-05-09 10:37:24] [SCAN] 资产ID: 27, 主机: www.baidu.com
+[2025-05-09 10:37:24] [SCAN] 已标记URL为已扫描: http://www.baidu.com/img/gs.gif
+[2025-05-09 10:37:24] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:24] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:24] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:24] [SCAN] 扫描完成: http://www.baidu.com/img/gs.gif，总共发现 0 个漏洞
+[2025-05-09 10:37:30] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:30] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:30] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:30] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js, 方法: GET
+[2025-05-09 10:37:30] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:30] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:30] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:30] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:30] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js"]}
+[2025-05-09 10:37:30] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:30] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js
+[2025-05-09 10:37:30] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:30] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-ui.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:30] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-ui.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:31] [RESPONSE] 状态码: 200, 响应时间: 0.35秒
+[2025-05-09 10:37:31] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:31 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:31] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:31] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:31] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:31] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:31] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:31] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:31] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:31] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:31] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:31] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:31] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:31] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:31] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:31] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:31] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-ui.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:31] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:31] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:31] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:31] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js, 方法: GET
+[2025-05-09 10:37:31] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:31] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:31] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js"]}
+[2025-05-09 10:37:31] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:31] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:31] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-2.1.4.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:31] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-2.1.4.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:31] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js
+[2025-05-09 10:37:31] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:31] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:31] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js, 方法: GET
+[2025-05-09 10:37:31] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:31] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js
+[2025-05-09 10:37:31] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/respond.min.js"]}
+[2025-05-09 10:37:31] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:31] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/respond.min.js
+[2025-05-09 10:37:31] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:31] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Frespond.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:31] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Frespond.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:31] [RESPONSE] 状态码: 200, 响应时间: 0.33秒
+[2025-05-09 10:37:31] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:31 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:31] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:31] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:31] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:31] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:31] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:31] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:31] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:31] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:32] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:32] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:32] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-2.1.4.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.sparkline.index.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.sparkline.index.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.easypiechart.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.easypiechart.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [RESPONSE] 状态码: 200, 响应时间: 0.62秒
+[2025-05-09 10:37:32] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:32] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:32] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:32] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:32] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:32] [RESPONSE] 状态码: 200, 响应时间: 0.34秒
+[2025-05-09 10:37:32] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:32] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:32] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:32] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:32] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:32] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:32] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:32] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/respond.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:32] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:32] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.sparkline.index.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:32] [RESPONSE] 状态码: 200, 响应时间: 0.39秒
+[2025-05-09 10:37:32] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:32] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:32] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:32] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:32] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:32] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:32] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:32] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:32] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:32] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:32] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.easypiechart.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/ace.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/ace.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Face.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Face.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.resize.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.resize.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.pie.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.pie.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.mobile.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.mobile.custom.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:32] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:32] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:32] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js, 方法: GET
+[2025-05-09 10:37:32] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:32] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:32] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.flot.min.js"]}
+[2025-05-09 10:37:32] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:32] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.flot.min.js
+[2025-05-09 10:37:32] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:32] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:32] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.flot.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.35秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.39秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.resize.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.37秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.pie.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.32秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.mobile.custom.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.25秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:32 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.flot.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:33] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:33] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:33] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js, 方法: GET
+[2025-05-09 10:37:33] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:33] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:33] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js"]}
+[2025-05-09 10:37:33] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:33] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:33] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.ui.touch-punch.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:33] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery.ui.touch-punch.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:33] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:33] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:33] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:33] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js, 方法: GET
+[2025-05-09 10:37:33] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:33] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:33] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/ace-elements.min.js"]}
+[2025-05-09 10:37:33] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:33] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/ace-elements.min.js
+[2025-05-09 10:37:33] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:33] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Face-elements.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:33] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Face-elements.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.30秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:33 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery.ui.touch-punch.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:33] [RESPONSE] 状态码: 200, 响应时间: 0.24秒
+[2025-05-09 10:37:33] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:33 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:33] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:33] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:33] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:33] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:33] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:33] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:33] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:33] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:33] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:33] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/ace-elements.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:34] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:34] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:34] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:34] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js, 方法: GET
+[2025-05-09 10:37:34] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:34] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:34] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:34] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:34] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/bootstrap.min.js"]}
+[2025-05-09 10:37:34] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:34] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/bootstrap.min.js
+[2025-05-09 10:37:34] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:34] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fbootstrap.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:34] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fbootstrap.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:34] [RESPONSE] 状态码: 200, 响应时间: 0.27秒
+[2025-05-09 10:37:34] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:34 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:34] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:34] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:34] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:34] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:34] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:34] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:34] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:34] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:34] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:34] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:34] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:34] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:34] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:34] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:34] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/bootstrap.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:35] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:35] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:35] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:35] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js, 方法: GET
+[2025-05-09 10:37:35] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:35] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:35] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:35] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:35] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js"]}
+[2025-05-09 10:37:35] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:35] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js
+[2025-05-09 10:37:35] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:35] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-1.11.3.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:35] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fjquery-1.11.3.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:35] [RESPONSE] 状态码: 200, 响应时间: 0.26秒
+[2025-05-09 10:37:35] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:35 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:35] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:35] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:35] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:35] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:35] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:35] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:35] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:35] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:35] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:35] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:35] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:35] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:35] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:35] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:35] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/jquery-1.11.3.min.js，总共发现 0 个漏洞
+[2025-05-09 10:37:36] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:36] [RULES] 开始加载RCE规则...
+[2025-05-09 10:37:36] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:37:36] [SCAN] 开始扫描URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js, 方法: GET
+[2025-05-09 10:37:36] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:37:36] [SCAN] 已标记URL为已扫描: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:36] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:36] [URL_SCAN] 解析URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:36] [URL_SCAN] 查询参数: {"url": ["https://www.baidu.com/../../assets/js/excanvas.min.js"]}
+[2025-05-09 10:37:36] [URL_SCAN] 不使用代理
+[2025-05-09 10:37:36] [URL_SCAN] 测试参数: url，原始值: https://www.baidu.com/../../assets/js/excanvas.min.js
+[2025-05-09 10:37:36] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:37:36] [URL_SCAN] 测试URL: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fexcanvas.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:36] [REQUEST] 发送GET请求: http://pikachu/vul/ssrf/ssrf_curl.php?url=https%3A%2F%2Fwww.baidu.com%2F..%2F..%2Fassets%2Fjs%2Fexcanvas.min.js%7Cecho+rce_test_cmd
+[2025-05-09 10:37:36] [RESPONSE] 状态码: 200, 响应时间: 0.29秒
+[2025-05-09 10:37:36] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:37:36 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+[2025-05-09 10:37:36] [RESPONSE] 响应长度: 32936字节
+[2025-05-09 10:37:36] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:36] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:37:36] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:37:36] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:37:36] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:37:36] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:37:36] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:37:36] [SCAN] URL参数RCE检测完成，发现 0 个漏洞
+[2025-05-09 10:37:36] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:37:36] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:37:36] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:37:36] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:37:36] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:37:36] [SCAN] 扫描完成: http://pikachu/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com/../../assets/js/excanvas.min.js，总共发现 0 个漏洞
+[2025-05-09 10:41:02] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/sqli/sqli_str.php
+[2025-05-09 10:41:02] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:02] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:02] [SCAN] 开始扫描URL: http://pikachu/vul/sqli/sqli_str.php, 方法: GET
+[2025-05-09 10:41:02] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:02] [SCAN] 已标记URL为已扫描: http://pikachu/vul/sqli/sqli_str.php
+[2025-05-09 10:41:02] [SCAN_DEBUG] 没有检测到任何漏洞，考虑以下可能的原因:
+[2025-05-09 10:41:02] [SCAN_DEBUG] 1. URL不存在RCE漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 2. 载荷不足以触发漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 3. 匹配模式不足以检测漏洞
+[2025-05-09 10:41:02] [SCAN_DEBUG] 4. 请求发送或响应处理过程有问题
+[2025-05-09 10:41:02] [SCAN] 扫描完成: http://pikachu/vul/sqli/sqli_str.php，总共发现 0 个漏洞
+[2025-05-09 10:41:18] [SCAN] 开始RCE扫描，URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [RULES] 开始加载RCE规则...
+[2025-05-09 10:41:18] [RULES] 规则已经加载且未超过检查间隔，跳过重新加载
+[2025-05-09 10:41:18] [SCAN] 开始扫描URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2, 方法: GET
+[2025-05-09 10:41:18] [SCAN] 资产ID: 25, 主机: pikachu
+[2025-05-09 10:41:18] [SCAN] 已标记URL为已扫描: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [SCAN] 检测URL参数中的RCE: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [URL_SCAN] 解析URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [URL_SCAN] 查询参数: {"name": ["1'"], "submit": ["\u67e5\u8be2"]}
+[2025-05-09 10:41:18] [URL_SCAN] 不使用代理
+[2025-05-09 10:41:18] [URL_SCAN] 测试参数: name，原始值: 1'
+[2025-05-09 10:41:18] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:41:18] [URL_SCAN] 测试URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27%7Cecho+rce_test_cmd&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [REQUEST] 发送GET请求: http://pikachu/vul/sqli/sqli_str.php?name=1%27%7Cecho+rce_test_cmd&submit=%E6%9F%A5%E8%AF%A2
+[2025-05-09 10:41:18] [RESPONSE] 状态码: 200, 响应时间: 0.10秒
+[2025-05-09 10:41:18] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:41:18 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID=0mc16c7f63pccupmqmcmsfmc6t; path=/
+Transfer-Encoding: chunked
+Content-Type: text/html;charset=utf-8
+[2025-05-09 10:41:18] [RESPONSE] 响应长度: 30633字节
+[2025-05-09 10:41:18] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:41:18] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_SUCCESS] 正则表达式匹配成功: 模式=rce_test_cmd, 匹配文本=rce_test_cmd
+[2025-05-09 10:41:18] [MATCH] 发现匹配项: rce_test_cmd
+[2025-05-09 10:41:18] [VULN_FOUND] 在URL参数 name 中发现RCE漏洞
+[2025-05-09 10:41:18] [URL_SCAN] 测试参数: submit，原始值: 查询
+[2025-05-09 10:41:18] [URL_SCAN] 测试载荷: |echo rce_test_cmd
+[2025-05-09 10:41:18] [URL_SCAN] 测试URL: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2%7Cecho+rce_test_cmd
+[2025-05-09 10:41:18] [REQUEST] 发送GET请求: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2%7Cecho+rce_test_cmd
+[2025-05-09 10:41:18] [RESPONSE] 状态码: 200, 响应时间: 0.06秒
+[2025-05-09 10:41:18] [RESPONSE_HEADERS] 响应头:
+Date: Fri, 09 May 2025 02:41:18 GMT
+Server: Apache/2.4.39 (Win64) OpenSSL/1.1.1b mod_fcgid/2.3.9a mod_log_rotate/1.02
+X-Powered-By: PHP/7.3.4
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID=32ogu3e18b7g6gql67qv7rr6gn; path=/
+Transfer-Encoding: chunked
+Content-Type: text/html;charset=utf-8
+[2025-05-09 10:41:18] [RESPONSE] 响应长度: 30624字节
+[2025-05-09 10:41:18] [RESPONSE_CONTENT] 响应内容预览:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [RESPONSE_TEXT] 响应内容预览：<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta charset="utf-8" />
+    <title>Get the pikachu</title>
+
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- bootstrap & fontawesome -->
+    <link rel="stylesheet" href="../../assets/css/bootstrap.min.css" / >
+    <link rel="stylesheet" href="../../assets/font-aweso...
+[2025-05-09 10:41:18] [MATCH_CHECK] 开始检查 1 个匹配模式
+[2025-05-09 10:41:18] [MATCH_CHECK] 尝试匹配模式: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_FAIL] 字符串匹配失败: rce_test_cmd
+[2025-05-09 10:41:18] [MATCH_CHECK] 所有模式均未匹配
+[2025-05-09 10:41:18] [MATCH] 未找到匹配项，已尝试 1 个匹配模式
+[2025-05-09 10:41:18] [SCAN] URL参数RCE检测完成，发现 1 个漏洞
+[2025-05-09 10:41:18] [SCAN] 扫描完成: http://pikachu/vul/sqli/sqli_str.php?name=1%27&submit=%E6%9F%A5%E8%AF%A2，总共发现 1 个漏洞

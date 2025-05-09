@@ -39,38 +39,27 @@
 
       <el-table-column
         prop="payload"
-        label="目标URL"
+        label="Payload"
         width="180"
         show-overflow-tooltip
       ></el-table-column>
 
       <el-table-column
-        label="匹配特征"
+        label="匹配值"
         width="200"
         show-overflow-tooltip
       >
         <template #default="scope">
-          <span class="matched-feature">{{ getMatchedFeature(scope.row) }}</span>
+          <span class="match-value">{{ getMatchValue(scope.row) }}</span>
         </template>
       </el-table-column>
 
       <el-table-column
-        label="检测详情"
-        width="200"
-      >
-        <template #default="scope">
-          <div v-if="getAccessDetail(scope.row)">
-            <el-tooltip
-              :content="getAccessDetail(scope.row)"
-              placement="top"
-              effect="light"
-            >
-              <span class="access-detail">{{ getAccessDetail(scope.row, true) }}</span>
-            </el-tooltip>
-          </div>
-          <span v-else class="no-detail">无详细信息</span>
-        </template>
-      </el-table-column>
+        prop="url"
+        label="URL"
+        width="280"
+        show-overflow-tooltip
+      ></el-table-column>
 
       <el-table-column
         fixed="right"
@@ -151,53 +140,28 @@ export default {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     },
 
-    // 获取匹配到的特征
-    getMatchedFeature(row) {
+    // 获取匹配值 - 类似RCE显示格式
+    getMatchValue(row) {
       // 从proof中提取匹配特征
       const proof = row.proof || '';
+
+      // 尝试提取匹配文本
       const featureMatch = proof.match(/响应中包含匹配特征:\s*(.+?)(?=，|$)/i);
 
       if (featureMatch && featureMatch[1]) {
-        const feature = featureMatch[1].trim();
-        // 截取特征前30个字符，如果超过则添加省略号
-        return feature.length > 30 ? feature.slice(0, 30) + '...' : feature;
+        return featureMatch[1].trim();
       }
 
-      // 如果没有提取到特征，尝试其他方法
+      // 根据子类型返回默认值
       if (row.vuln_subtype === 'file_protocol') {
-        return '文件内容特征匹配';
+        return 'file_content';
       } else if (row.vuln_subtype === 'internal_network') {
-        return '内网服务响应特征';
-      }
-
-      return '响应特征匹配';
-    },
-
-    // 获取访问详情
-    getAccessDetail(row, truncate = false) {
-      // 从proof中提取访问结果
-      const proof = row.proof || '';
-      const accessMatch = proof.match(/访问结果:\s*(.+?)(?=，|$)/i);
-
-      if (accessMatch && accessMatch[1]) {
-        const result = accessMatch[1].trim();
-        // 如果需要截断，截取前20个字符
-        if (truncate && result.length > 20) {
-          return result.slice(0, 20) + '...';
-        }
-        return result;
-      }
-
-      // 根据子类型判断默认结果
-      if (row.vuln_subtype === 'file_protocol') {
-        return '成功读取文件内容';
-      } else if (row.vuln_subtype === 'internal_network') {
-        return '成功访问内网资源';
+        return 'internal_service';
       } else if (row.vuln_subtype === 'blind_ssrf') {
-        return '外部服务器收到请求';
+        return 'blind_ssrf_detected';
       }
 
-      return '请求成功且匹配特征';
+      return 'ssrf_detected'; // 默认值
     },
 
     // 分页事件处理
@@ -235,17 +199,8 @@ export default {
   color: #f78989;
 }
 
-.matched-feature {
+.match-value {
   color: #E6A23C;
   font-weight: bold;
-}
-
-.access-detail {
-  color: #409EFF;
-}
-
-.no-detail {
-  color: #909399;
-  font-style: italic;
 }
 </style>
