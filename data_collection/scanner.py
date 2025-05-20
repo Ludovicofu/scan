@@ -38,7 +38,8 @@ class DataCollectionScanner:
         self.helpers = ScanHelpers()
 
         # 添加全局级别的结果缓存，防止同一次扫描中产生重复结果
-        self.global_result_cache = set()  # 格式: (asset_id, module, description, rule_type)
+        # 格式: (asset_id, module, description, rule_type, match_value_hash)
+        self.global_result_cache = set()
 
         # 添加已扫描资产跟踪
         self.scanned_assets = set()  # 记录已扫描资产ID
@@ -46,11 +47,16 @@ class DataCollectionScanner:
         # 添加结果缓存跟踪
         self.result_cache = set()  # 记录已发送的结果ID
 
+        # 添加进行中的扫描任务跟踪
+        # 格式: {url: Future}
+        self.pending_scans = {}
+
     # 增强的重置扫描状态方法
     def reset_scan_state(self, clear_global_cache=True):
         """重置扫描状态，清除缓存"""
         self.scanned_assets.clear()  # 清除资产记录
         self.result_cache.clear()  # 清除结果缓存
+        self.pending_scans.clear()  # 清除进行中的扫描任务
 
         if clear_global_cache:
             self.global_result_cache.clear()  # 清除全局结果缓存
@@ -71,8 +77,8 @@ class DataCollectionScanner:
 
         print("扫描状态已重置")
 
-    # 检查结果是否已存在于全局缓存中
-    def is_result_in_cache(self, asset_id, module, description, rule_type, match_value):
+    # 检查结果是否已存在于全局缓存中，增加match_value参数
+    def is_result_in_cache(self, asset_id, module, description, rule_type, match_value=""):
         """
         检查结果是否已存在于全局缓存中
 
@@ -81,26 +87,44 @@ class DataCollectionScanner:
             module: 模块名称 (network, os, component)
             description: 规则描述
             rule_type: 规则类型
-            match_value: 匹配值
+            match_value: 匹配值(可选)
 
         返回:
             是否存在于缓存中
         """
-        # 创建缓存键
-        cache_key = (asset_id, module, description, rule_type)
+        # 基本缓存键
+        basic_cache_key = (asset_id, module, description, rule_type)
 
-        # 检查是否存在于全局缓存中
-        return cache_key in self.global_result_cache
+        # 首先检查基本键
+        if basic_cache_key in self.global_result_cache:
+            return True
 
-    # 添加结果到全局缓存
-    def add_result_to_cache(self, asset_id, module, description, rule_type, match_value):
+        # 如果提供了match_value，生成详细缓存键
+        if match_value:
+            # 对较长的match_value使用哈希值，避免存储过长的字符串
+            match_value_hash = hash(match_value) if len(match_value) > 100 else match_value
+            detailed_cache_key = basic_cache_key + (match_value_hash,)
+            return detailed_cache_key in self.global_result_cache
+
+        return False
+
+    # 添加结果到全局缓存，增加match_value参数
+    def add_result_to_cache(self, asset_id, module, description, rule_type, match_value=""):
         """将结果添加到全局缓存"""
-        # 创建缓存键
-        cache_key = (asset_id, module, description, rule_type)
+        # 基本缓存键
+        basic_cache_key = (asset_id, module, description, rule_type)
 
-        # 添加到全局缓存
-        self.global_result_cache.add(cache_key)
-        print(f"结果已添加到全局缓存: {cache_key}")
+        # 添加基本键到全局缓存
+        self.global_result_cache.add(basic_cache_key)
+
+        # 如果提供了match_value，添加详细缓存键
+        if match_value:
+            # 对较长的match_value使用哈希值
+            match_value_hash = hash(match_value) if len(match_value) > 100 else match_value
+            detailed_cache_key = basic_cache_key + (match_value_hash,)
+            self.global_result_cache.add(detailed_cache_key)
+
+        print(f"结果已添加到全局缓存: {basic_cache_key}")
 
     async def scan_data(self, channel_layer, asset_id, url, method, status_code, req_headers, req_content, resp_headers,
                         resp_content):
@@ -130,6 +154,16 @@ class DataCollectionScanner:
             print(f"跳过目标: {host} (在跳过列表中)")
             return
 
+        # 检查是否有相同URL的扫描正在进行
+        if url in self.pending_scans:
+            pending_scan = self.pending_scans[url]
+            if not pending_scan.done():
+                print(f"跳过URL: {url}, 已有相同URL的扫描正在进行")
+                return
+            else:
+                # 清理已完成的任务
+                self.pending_scans.pop(url, None)
+
         # 获取资产
         asset = await self.helpers.get_asset(asset_id)
         if not asset:
@@ -138,6 +172,27 @@ class DataCollectionScanner:
 
         print(f"成功获取资产: {asset.host}, ID: {asset.id}")
 
+        # 创建扫描任务并记录
+        scan_task = asyncio.create_task(self._do_scan(
+            channel_layer, asset, url, method, status_code,
+            req_headers, req_content, resp_headers, resp_content
+        ))
+        self.pending_scans[url] = scan_task
+
+        try:
+            # 等待扫描完成
+            await scan_task
+        except Exception as e:
+            print(f"扫描任务出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # 清理进行中的扫描记录
+            self.pending_scans.pop(url, None)
+
+    async def _do_scan(self, channel_layer, asset, url, method, status_code,
+                      req_headers, req_content, resp_headers, resp_content):
+        """实际执行扫描的内部方法"""
         # 使用信号量控制并发扫描数量
         async with self.semaphore:
             # 设置信号量大小（可能在运行时被修改）
@@ -160,10 +215,8 @@ class DataCollectionScanner:
                     'use_proxy': self.use_proxy,
                     'proxy_address': self.proxy_address,
                     'scan_timeout': self.scan_timeout,
-                    # 添加全局结果缓存和检查方法供子模块使用
-                    'is_result_in_cache': self.is_result_in_cache,
-                    'add_result_to_cache': self.add_result_to_cache,
-                    'scanner': self  # 添加对扫描器自身的引用
+                    # 添加对扫描器自身的引用
+                    'scanner': self
                 }
 
                 # 发送扫描开始事件
@@ -173,7 +226,7 @@ class DataCollectionScanner:
                         'type': 'scan_progress',
                         'data': {
                             'status': 'scanning',
-                            'message': f'正在扫描 {host}',
+                            'message': f'正在扫描 {asset.host}',
                             'url': url,
                             'progress': 0
                         }
@@ -203,7 +256,7 @@ class DataCollectionScanner:
                         'type': 'scan_progress',
                         'data': {
                             'status': 'completed',
-                            'message': f'扫描完成: {host}',
+                            'message': f'扫描完成: {asset.host}',
                             'url': url,
                             'progress': 100
                         }

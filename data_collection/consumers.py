@@ -17,6 +17,8 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
     """
     # 添加静态缓存用于跨连接去重
     _global_result_cache = set()  # 格式: (asset_host, module, description, rule_type)
+    # 添加保护静态缓存的锁
+    _cache_lock = asyncio.Lock()
 
     async def connect(self):
         """处理WebSocket连接"""
@@ -183,21 +185,31 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             return
 
         # 创建结果缓存键 - 使用asset_host而不是asset
+        asset_host = result_data.get('asset_host', '')
+        if not asset_host and isinstance(result_data.get('asset'), str):
+            asset_host = result_data.get('asset')
+
+        # 避免空asset_host
+        if not asset_host:
+            asset_host = '未知资产'
+
         cache_key = (
-            result_data.get('asset_host', ''),  # 使用asset_host而不是asset
+            asset_host,  # 使用asset_host而不是asset
             result_data.get('module', ''),
             result_data.get('description', ''),
             result_data.get('rule_type', '')
         )
 
-        # 检查全局缓存和本地缓存中是否存在
-        if cache_key in DataCollectionConsumer._global_result_cache or cache_key in self.local_result_cache:
-            print(f"跳过重复结果: {cache_key}")
-            return
+        # 使用锁保护全局缓存访问
+        async with DataCollectionConsumer._cache_lock:
+            # 检查全局缓存和本地缓存中是否存在
+            if cache_key in DataCollectionConsumer._global_result_cache or cache_key in self.local_result_cache:
+                print(f"跳过重复结果: {cache_key}")
+                return
 
-        # 添加到全局缓存和本地缓存
-        DataCollectionConsumer._global_result_cache.add(cache_key)
-        self.local_result_cache.add(cache_key)
+            # 添加到全局缓存和本地缓存
+            DataCollectionConsumer._global_result_cache.add(cache_key)
+            self.local_result_cache.add(cache_key)
 
         # 添加结果ID如果存在
         if 'id' in result_data:
@@ -223,8 +235,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
 
         # 如果需要，清除全局缓存
         if reset_global:
-            DataCollectionConsumer._global_result_cache.clear()
-            print("已重置全局结果缓存")
+            async with DataCollectionConsumer._cache_lock:
+                DataCollectionConsumer._global_result_cache.clear()
+                print("已重置全局结果缓存")
 
         print("已重置本地结果缓存和扫描器状态")
 
@@ -387,6 +400,10 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                     )
                 )
                 print(f"扫描任务已创建: {url}")
+
+                # 这里可以选择不等待任务完成
+                # await task
+
             else:
                 print("资产创建/更新失败，无法启动扫描")
 

@@ -1,3 +1,4 @@
+// frontend/scan_system_frontend/src/views/InfoResultsPage.vue
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
@@ -14,6 +15,20 @@
         <el-radio-button label="passive">被动扫描结果</el-radio-button>
         <el-radio-button label="active">主动扫描结果</el-radio-button>
       </el-radio-group>
+
+      <!-- 添加手动刷新和WebSocket状态指示 -->
+      <div class="ws-status-area">
+        <el-button type="primary" @click="fetchResults" :loading="loading" size="small" icon="Refresh">
+          刷新
+        </el-button>
+        <el-tag
+          :type="isWebSocketConnected ? 'success' : 'danger'"
+          size="small"
+          class="ws-status-tag"
+        >
+          {{ isWebSocketConnected ? 'WebSocket已连接' : 'WebSocket未连接' }}
+        </el-tag>
+      </div>
     </div>
 
     <!-- 根据当前扫描类型显示对应的结果组件 -->
@@ -96,8 +111,18 @@ export default {
       resultIdSet: new Set(), // 用于跟踪已显示的结果ID
 
       // 通知节流控制
-      notificationThrottleTime: 2000, // 相同类型通知的最小间隔(ms)
-      lastNotificationTime: {} // 记录每种类型通知的最后时间
+      notificationThrottleTime: 5000, // 增加到5秒 - 相同类型通知的最小间隔(ms)
+      lastNotificationTime: {}, // 记录每种类型通知的最后时间
+
+      // WebSocket状态
+      isWebSocketConnected: false,
+
+      // WebSocket重连尝试计时器
+      wsReconnectTimer: null,
+
+      // 限制扫描结果更新频率
+      resultUpdateThrottleTime: 3000, // 新增，3秒内只处理一次同类型结果
+      lastResultUpdateTime: {} // 新增，记录上次结果更新时间
     };
   },
   created() {
@@ -106,9 +131,13 @@ export default {
 
     // 从 localStorage 恢复缓存数据
     this.loadCacheFromStorage();
+
+    // 定期检查WebSocket连接状态 - 增加间隔到15秒
+    this.startWebSocketStatusCheck();
   },
   beforeUnmount() {
     this.closeWebSocket();
+    this.stopWebSocketStatusCheck();
 
     // 保存缓存数据到 localStorage
     this.saveCacheToStorage();
@@ -149,6 +178,40 @@ export default {
       }
     },
 
+    // 启动WebSocket状态检查
+    startWebSocketStatusCheck() {
+      // 清除可能存在的旧计时器
+      this.stopWebSocketStatusCheck();
+
+      // 创建15秒间隔的检查 - 增加间隔
+      this.wsStatusCheckTimer = setInterval(() => {
+        // 更新WebSocket连接状态
+        this.isWebSocketConnected = dataCollectionWS.isConnected;
+
+        // 如果检测到连接断开，尝试重新连接 - 但限制频率
+        if (!this.isWebSocketConnected && !this.wsReconnectTimer) {
+          console.log('检测到WebSocket连接断开，准备重新连接...');
+          this.wsReconnectTimer = setTimeout(() => {
+            this.wsReconnectTimer = null;
+            this.initWebSocket();
+          }, 8000); // 增加到8秒后重连
+        }
+      }, 15000); // 增加到每15秒检查一次
+    },
+
+    // 停止WebSocket状态检查
+    stopWebSocketStatusCheck() {
+      if (this.wsStatusCheckTimer) {
+        clearInterval(this.wsStatusCheckTimer);
+        this.wsStatusCheckTimer = null;
+      }
+
+      if (this.wsReconnectTimer) {
+        clearTimeout(this.wsReconnectTimer);
+        this.wsReconnectTimer = null;
+      }
+    },
+
     // WebSocket相关方法
     initWebSocket() {
       // 连接WebSocket
@@ -156,12 +219,15 @@ export default {
       dataCollectionWS.connect('ws://localhost:8000/ws/data_collection/')
         .then(() => {
           console.log("WebSocket连接成功!");
+          this.isWebSocketConnected = true;
 
           // 添加事件监听器
           dataCollectionWS.addListener('scan_result', this.handleScanResult);
+          dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
         })
         .catch(error => {
           console.error('连接WebSocket失败', error);
+          this.isWebSocketConnected = false;
           ElMessage.error('连接服务器失败，实时扫描结果将不可用');
         });
     },
@@ -169,13 +235,62 @@ export default {
     closeWebSocket() {
       // 移除事件监听器
       dataCollectionWS.removeListener('scan_result', this.handleScanResult);
+      dataCollectionWS.removeListener('scan_progress', this.handleScanProgress);
+      this.isWebSocketConnected = false;
     },
 
-    // 处理扫描结果的逻辑
+    // 处理扫描进度的逻辑 - 降低通知频率
+    handleScanProgress(data) {
+      if (!data || !data.data) return;
+
+      const progressData = data.data;
+      const now = Date.now();
+      const lastTime = this.lastNotificationTime['progress'] || 0;
+
+      // 对扫描进度消息进行节流，降低通知频率
+      if (now - lastTime < 5000) { // 5秒内不重复通知相同类型进度
+        return;
+      }
+
+      // 更新最后通知时间
+      this.lastNotificationTime['progress'] = now;
+
+      // 根据不同的状态显示不同的通知
+      switch(progressData.status) {
+        case 'scanning':
+          // 扫描中状态仅在控制台输出，不弹出通知
+          console.log('扫描中:', progressData.message || '正在进行扫描...');
+          break;
+
+        case 'completed':
+          ElNotification({
+            title: '扫描完成',
+            message: progressData.message || '扫描已完成',
+            type: 'success',
+            duration: 3000
+          });
+
+          // 扫描完成后刷新结果列表 - 增加延迟确保数据库已更新
+          setTimeout(() => {
+            this.fetchResults();
+          }, 1000);
+          break;
+
+        case 'error':
+          ElNotification({
+            title: '扫描错误',
+            message: progressData.message || '扫描过程中发生错误',
+            type: 'error',
+            duration: 5000
+          });
+          break;
+      }
+    },
+
+    // 处理扫描结果的逻辑 - 增加限流
     handleScanResult(data) {
       // 检查消息格式
       if (!data || !data.data) {
-        console.error("无效的扫描结果数据");
         return;
       }
 
@@ -186,7 +301,6 @@ export default {
 
       // 检查是否是当前显示的扫描类型
       if (resultData.scan_type !== this.currentScanType) {
-        console.log(`跳过不匹配当前扫描类型的结果: ${resultData.scan_type} != ${this.currentScanType}`);
         return;
       }
 
@@ -197,15 +311,28 @@ export default {
 
       // 检查结果ID是否已存在（如果有ID）
       if (resultId && this.resultIdSet.has(resultId)) {
-        console.log(`跳过已处理的结果ID: ${resultId}`);
         return;
       }
 
       // 检查结果唯一标识是否已存在于缓存中
       if (this.notificationCache.has(resultKey)) {
-        console.log(`跳过重复结果通知: ${resultKey}`);
         return;
       }
+
+      // 限制结果更新频率
+      const now = Date.now();
+      const moduleKey = resultData.module || 'unknown';
+      const lastUpdateTime = this.lastResultUpdateTime[moduleKey] || 0;
+
+      if (now - lastUpdateTime < this.resultUpdateThrottleTime) {
+        // 如果该模块的上次更新时间距离现在不足3秒，暂存此结果
+        // 此处可以实现结果缓冲区，稍后统一处理，但为简单起见仅跳过
+        console.log(`跳过短时间内的${moduleKey}类型结果更新`);
+        return;
+      }
+
+      // 更新该模块的最后更新时间
+      this.lastResultUpdateTime[moduleKey] = now;
 
       // 添加到缓存中
       if (resultId) {
@@ -221,14 +348,27 @@ export default {
       this.results.unshift(resultData);
       this.totalResults++;
 
-      // 构建通知消息并显示
+      // 构建通知消息并显示 - 但限制通知频率
       this.showResultNotification(resultData);
     },
 
-    // 添加一个专门的通知显示方法
+    // 添加一个专门的通知显示方法 - 通知节流增强
     showResultNotification(resultData) {
       // 获取当前时间戳
       const now = Date.now();
+
+      // 节流通知显示 - 对不同类型结果分别限流
+      const moduleKey = resultData.module || 'unknown';
+      const typeKey = resultData.is_port_scan ? 'port-scan' : moduleKey;
+      const lastTime = this.lastNotificationTime[typeKey] || 0;
+
+      if (now - lastTime < this.notificationThrottleTime) {
+        console.log(`跳过${typeKey}类型的通知，间隔过短`);
+        return;
+      }
+
+      // 更新最后通知时间
+      this.lastNotificationTime[typeKey] = now;
 
       // 确定通知类型
       let notificationType = 'info';
@@ -268,22 +408,13 @@ export default {
         }
       }
 
-      // 节流通知显示
-      const lastTime = this.lastNotificationTime[resultData.module] || 0;
-      if (now - lastTime > this.notificationThrottleTime) {
-        // 更新最后通知时间
-        this.lastNotificationTime[resultData.module] = now;
-
-        // 显示通知
-        ElNotification({
-          title: notificationTitle,
-          message: notificationMessage,
-          type: notificationType,
-          duration: 3000
-        });
-      } else {
-        console.log(`通知频率限制: ${resultData.module}, 跳过显示`);
-      }
+      // 显示通知
+      ElNotification({
+        title: notificationTitle,
+        message: notificationMessage,
+        type: notificationType,
+        duration: 3000
+      });
     },
 
     // 确保资产主机字段存在并有正确的值
@@ -322,8 +453,6 @@ export default {
           page: this.currentPage,
           page_size: this.pageSize
         };
-
-        console.log("查询参数:", params);
 
         if (this.currentScanType === 'passive') {
           response = await infoCollectionAPI.getPassiveScanResults(params);
@@ -485,6 +614,19 @@ h1 {
 
 .scan-type-tabs {
   margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ws-status-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ws-status-tag {
+  margin-left: 8px;
 }
 
 .result-container {
@@ -495,6 +637,12 @@ h1 {
   .scan-type-tabs {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .ws-status-area {
+    margin-top: 10px;
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

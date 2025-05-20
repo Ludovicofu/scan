@@ -4,6 +4,7 @@
 """
 from asgiref.sync import sync_to_async
 from django.utils import timezone
+from django.db import IntegrityError
 from ..models import Asset, ScanResult
 from rules.models import InfoCollectionRule
 
@@ -166,16 +167,23 @@ class ScanHelpers:
             return None
 
     @sync_to_async
-    def check_existing_result(self, asset, module, description, rule_type, match_value):
+    def check_existing_result(self, asset, module, description, rule_type, match_value=None):
         """检查是否已存在相同的扫描结果"""
         try:
-            return ScanResult.objects.filter(
-                asset=asset,
-                module=module,
-                description=description,
-                rule_type=rule_type,
-                match_value=match_value
-            ).exists()
+            # 基本查询条件
+            query = {
+                'asset': asset,
+                'module': module,
+                'description': description,
+                'rule_type': rule_type,
+            }
+
+            # 如果提供了match_value，也作为条件之一
+            if match_value:
+                query['match_value'] = match_value
+
+            # 检查是否存在
+            return ScanResult.objects.filter(**query).exists()
         except Exception as e:
             print(f"检查现有结果失败: {str(e)}")
             import traceback
@@ -225,6 +233,19 @@ class ScanHelpers:
                          response_data):
         """保存扫描结果"""
         try:
+            # 首先检查是否已存在相同的结果
+            existing_result = ScanResult.objects.filter(
+                asset=asset,
+                module=module,
+                description=description,
+                rule_type=rule_type
+            ).first()
+
+            # 如果存在，直接返回已有结果
+            if existing_result:
+                print(f"扫描结果已存在，返回现有结果: {asset.host} - {description}")
+                return existing_result
+
             # 创建扫描结果，同时保存请求和响应数据
             scan_result = ScanResult.objects.create(
                 asset=asset,
@@ -239,6 +260,23 @@ class ScanHelpers:
                 scan_date=timezone.now()
             )
             return scan_result
+        except IntegrityError as e:
+            # 处理唯一约束冲突
+            if "Duplicate entry" in str(e):
+                print(f"忽略重复结果: {asset.host}-{module}-{description}-{rule_type}")
+                # 再次尝试获取已存在的记录
+                try:
+                    return ScanResult.objects.get(
+                        asset=asset,
+                        module=module,
+                        description=description,
+                        rule_type=rule_type
+                    )
+                except:
+                    return None
+            else:
+                print(f"保存扫描结果失败: {str(e)}")
+                return None
         except Exception as e:
             # 如果保存失败（例如唯一约束冲突），则忽略错误
             print(f"保存扫描结果失败: {str(e)}")

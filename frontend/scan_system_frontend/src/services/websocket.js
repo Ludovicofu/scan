@@ -1,4 +1,4 @@
-// websocket.js - WebSocket服务
+// src/services/websocket.js - 修改版（降低刷新频率）
 class WebSocketService {
   constructor() {
     this.socket = null;
@@ -6,9 +6,12 @@ class WebSocketService {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectTimeout = null;
-    this.reconnectInterval = 3000; // 3秒重连间隔
+    this.reconnectInterval = 5000; // 增加到5秒重连间隔
     this.listeners = {};
     this.url = '';
+
+    // 添加连接状态监控
+    this.connectionMonitorInterval = null;
   }
 
   /**
@@ -16,43 +19,69 @@ class WebSocketService {
    * @param {string} url WebSocket URL
    * @returns {Promise} 连接成功的Promise
    */
-    // 改进连接方法
-    connect(url) {
-      console.log('尝试连接WebSocket:', url);
-      this.url = url;
-      return new Promise((resolve, reject) => {
-        try {
-          this.socket = new WebSocket(url);
+  connect(url) {
+    console.log('尝试连接WebSocket:', url);
+    this.url = url;
+    return new Promise((resolve, reject) => {
+      try {
+        this.socket = new WebSocket(url);
 
-          // 设置连接超时
-          const timeoutId = setTimeout(() => {
-            if (!this.isConnected) {
-              console.error('WebSocket连接超时');
-              reject(new Error('连接超时'));
-              this._attemptReconnect();
-            }
-          }, 5000); // 5秒超时
+        // 设置连接超时
+        const timeoutId = setTimeout(() => {
+          if (!this.isConnected) {
+            console.error('WebSocket连接超时');
+            reject(new Error('连接超时'));
+            this._attemptReconnect();
+          }
+        }, 8000); // 增加到8秒超时
 
-          this.socket.onopen = () => {
-            console.log('WebSocket连接成功');
-            this.isConnected = true;
-            this.reconnectAttempts = 0;
-            clearTimeout(timeoutId); // 清除超时
-            resolve();
-          };
+        this.socket.onopen = () => {
+          console.log('WebSocket连接成功');
+          this.isConnected = true;
+          this.reconnectAttempts = 0;
+          clearTimeout(timeoutId); // 清除超时
 
-          // 其他代码保持不变
-        } catch (error) {
-          console.error('创建WebSocket连接时出错', error);
-          reject(error);
-        }
-      });
-    }
+          // 设置连接状态监控
+          this._startConnectionMonitor();
+
+          resolve();
+        };
+
+        this.socket.onclose = (event) => {
+          console.log(`WebSocket连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
+          this.isConnected = false;
+
+          // 停止连接监控
+          this._stopConnectionMonitor();
+
+          // 尝试重新连接
+          this._attemptReconnect();
+        };
+
+        this.socket.onerror = (error) => {
+          console.error('WebSocket错误:', error);
+          if (!this.isConnected) {
+            reject(error);
+          }
+        };
+
+        this.socket.onmessage = (event) => {
+          this._handleMessage(event);
+        };
+      } catch (error) {
+        console.error('创建WebSocket连接时出错', error);
+        reject(error);
+      }
+    });
+  }
 
   /**
    * 断开WebSocket连接
    */
   disconnect() {
+    // 停止连接监控
+    this._stopConnectionMonitor();
+
     if (this.socket && this.isConnected) {
       this.socket.close();
       this.isConnected = false;
@@ -95,6 +124,7 @@ class WebSocketService {
       this.listeners[type] = [];
     }
     this.listeners[type].push(callback);
+    console.log(`已添加"${type}"类型的监听器，当前监听器数量: ${this.listeners[type].length}`);
   }
 
   /**
@@ -105,6 +135,7 @@ class WebSocketService {
   removeListener(type, callback) {
     if (this.listeners[type]) {
       this.listeners[type] = this.listeners[type].filter(cb => cb !== callback);
+      console.log(`已移除"${type}"类型的监听器，剩余监听器数量: ${this.listeners[type].length}`);
     }
   }
 
@@ -115,11 +146,23 @@ class WebSocketService {
    */
   _handleMessage(event) {
     try {
-      console.log('收到WebSocket消息:', event.data.substr(0, 100) + (event.data.length > 100 ? '...' : ''));
-      const message = JSON.parse(event.data);
+      const data = event.data;
+      // 减少日志输出，仅对关键消息记录
+      if (data.length < 200) { // 只记录短消息
+        console.log('收到WebSocket消息:', data);
+      } else {
+        console.log(`收到WebSocket消息 (${data.length} 字节)`);
+      }
+
+      const message = JSON.parse(data);
       const type = message.type;
 
-      if (this.listeners[type]) {
+      // 不处理ping响应
+      if (type === 'pong') {
+        return;
+      }
+
+      if (this.listeners[type] && this.listeners[type].length > 0) {
         this.listeners[type].forEach(callback => {
           try {
             callback(message);
@@ -153,6 +196,43 @@ class WebSocketService {
       }, this.reconnectInterval);
     } else {
       console.error('达到最大重连次数，放弃重连');
+    }
+  }
+
+  /**
+   * 启动连接状态监控
+   * @private
+   */
+  _startConnectionMonitor() {
+    // 清除可能存在的旧监控
+    this._stopConnectionMonitor();
+
+    // 创建新的监控间隔 - 增加到60秒
+    this.connectionMonitorInterval = setInterval(() => {
+      if (this.socket && this.isConnected) {
+        // 发送ping消息来检查连接是否仍然有效
+        try {
+          this.socket.send(JSON.stringify({ type: 'ping' }));
+          // 减少ping日志
+          // console.log('发送ping消息以保持连接');
+        } catch (error) {
+          console.error('无法发送ping消息，连接可能已断开', error);
+          this.isConnected = false;
+          this.socket.close();
+          this._attemptReconnect();
+        }
+      }
+    }, 60000); // 每60秒检查一次，降低频率
+  }
+
+  /**
+   * 停止连接状态监控
+   * @private
+   */
+  _stopConnectionMonitor() {
+    if (this.connectionMonitorInterval) {
+      clearInterval(this.connectionMonitorInterval);
+      this.connectionMonitorInterval = null;
     }
   }
 }

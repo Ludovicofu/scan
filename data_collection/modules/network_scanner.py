@@ -33,12 +33,17 @@ class NetworkScanner:
         # 添加全局锁，防止并发写入
         self.scan_lock = asyncio.Lock()
 
+        # 添加缓存，记录执行中的扫描，防止并发相同扫描
+        # 格式: {(asset_id, 'port'): Future}
+        self.running_scans = {}
+
     def clear_cache(self):
         """清除缓存"""
         self.result_cache.clear()
         self.port_scan_timestamps.clear()
         self.port_scan_cache.clear()
         self.discovered_ports.clear()
+        self.running_scans.clear()
         print("网络扫描器缓存已清除")
 
     async def scan(self, context):
@@ -120,6 +125,16 @@ class NetworkScanner:
                     print(f"跳过端口扫描，资产 {asset.host} 在 {time_diff:.2f} 秒前已扫描 (最小间隔: {self.port_scan_interval} 秒)")
                     continue
 
+                # 检查是否有正在进行的相同扫描
+                if port_scan_key in self.running_scans:
+                    running_task = self.running_scans[port_scan_key]
+                    if not running_task.done():
+                        print(f"跳过端口扫描，资产 {asset.host} 的端口扫描正在进行中")
+                        continue
+                    else:
+                        # 清理已完成的任务
+                        self.running_scans.pop(port_scan_key, None)
+
                 try:
                     # 解析URL获取主机名
                     parsed_url = urlparse(url)
@@ -131,8 +146,14 @@ class NetworkScanner:
 
                     print(f"准备对主机 {host} 进行端口扫描, 端口列表: {match_values}")
 
-                    # 开始端口扫描
-                    scan_result = await self.scan_ports(host, match_values, use_proxy, proxy_address)
+                    # 创建扫描任务并记录
+                    scan_task = asyncio.create_task(
+                        self.scan_ports(host, match_values, use_proxy, proxy_address)
+                    )
+                    self.running_scans[port_scan_key] = scan_task
+
+                    # 等待扫描完成
+                    scan_result = await scan_task
 
                     # 如果有匹配结果，保存扫描结果
                     if scan_result:
@@ -150,8 +171,7 @@ class NetworkScanner:
                                 asset=asset,
                                 module='network',
                                 description=description,
-                                rule_type=rule_type,
-                                match_value=match_value
+                                rule_type=rule_type
                             )
 
                             # 检查全局缓存
@@ -198,45 +218,47 @@ class NetworkScanner:
                                     response_data=port_response_data
                                 )
 
-                                print(f"保存端口扫描结果: 资产={asset.host}, 描述={description}, 匹配值={match_value}")
+                                # 只有当保存成功并返回了结果，才发送通知
+                                if scan_result:
+                                    print(f"保存端口扫描结果: 资产={asset.host}, 描述={description}, 匹配值={match_value}")
 
-                                # 提取端口号
-                                port_numbers = []
-                                for line in match_value.split('\n'):
-                                    if ':' in line:
-                                        port = line.split(':', 1)[0].strip()
-                                        if port.isdigit():
-                                            port_numbers.append(port)
+                                    # 提取端口号
+                                    port_numbers = []
+                                    for line in match_value.split('\n'):
+                                        if ':' in line:
+                                            port = line.split(':', 1)[0].strip()
+                                            if port.isdigit():
+                                                port_numbers.append(port)
 
-                                # 用于展示的端口号字符串
-                                port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
+                                    # 用于展示的端口号字符串
+                                    port_display = ", ".join(port_numbers) if port_numbers else "未知端口"
 
-                                # 发送扫描结果事件
-                                await channel_layer.group_send(
-                                    'data_collection_scanner',
-                                    {
-                                        'type': 'scan_result',
-                                        'data': {
-                                            'id': scan_result.id if scan_result else None,
-                                            'asset': asset.host,  # 使用主机名而不是ID
-                                            'asset_host': asset.host,  # 添加资产主机名
-                                            'module': 'network',
-                                            'module_display': '网络信息',
-                                            'scan_type': 'active',
-                                            'scan_type_display': '主动扫描',
-                                            'description': description,
-                                            'rule_type': rule_type,
-                                            'match_value': match_value,
-                                            'behavior': None,
-                                            'request_data': port_request_data,
-                                            'response_data': port_response_data,
-                                            'scan_date': None,  # 由Django生成
-                                            'is_port_scan': True,  # 标记为端口扫描结果
-                                            'port_numbers': port_numbers,
-                                            'port_display': port_display
+                                    # 发送扫描结果事件
+                                    await channel_layer.group_send(
+                                        'data_collection_scanner',
+                                        {
+                                            'type': 'scan_result',
+                                            'data': {
+                                                'id': scan_result.id if scan_result else None,
+                                                'asset': asset.host,  # 使用主机名而不是ID
+                                                'asset_host': asset.host,  # 添加资产主机名
+                                                'module': 'network',
+                                                'module_display': '网络信息',
+                                                'scan_type': 'active',
+                                                'scan_type_display': '主动扫描',
+                                                'description': description,
+                                                'rule_type': rule_type,
+                                                'match_value': match_value,
+                                                'behavior': None,
+                                                'request_data': port_request_data,
+                                                'response_data': port_response_data,
+                                                'scan_date': None,  # 由Django生成
+                                                'is_port_scan': True,  # 标记为端口扫描结果
+                                                'port_numbers': port_numbers,
+                                                'port_display': port_display
+                                            }
                                         }
-                                    }
-                                )
+                                    )
                             except Exception as db_error:
                                 print(f"保存端口扫描结果到数据库时出错: {str(db_error)}")
                                 import traceback
@@ -256,6 +278,9 @@ class NetworkScanner:
                     import traceback
                     traceback.print_exc()
                     continue
+                finally:
+                    # 清理运行中的扫描记录
+                    self.running_scans.pop(port_scan_key, None)
 
                 # 端口扫描规则处理完毕，继续下一个规则
                 continue

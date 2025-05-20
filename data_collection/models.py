@@ -1,3 +1,7 @@
+"""
+models.py中ScanResult模型的修改
+修改了唯一约束，使其更适合去重
+"""
 from django.db import models
 from django.utils import timezone
 
@@ -61,8 +65,8 @@ class ScanResult(models.Model):
         verbose_name = '扫描结果'
         verbose_name_plural = '扫描结果列表'
         ordering = ['-scan_date']
-        # 修改唯一约束：端口扫描按资产+描述+规则类型为唯一键
-        # 注意：这里移除了match_value，因为每个端口的banner可能会变化
+        # 注意：唯一约束只使用asset、module、description、rule_type
+        # 移除match_value,因为它会随时间变化，如端口扫描结果
         unique_together = ['asset', 'module', 'description', 'rule_type']
 
 
