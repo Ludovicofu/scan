@@ -1,4 +1,3 @@
-```python
 # vuln_scan/scanner.py
 import asyncio
 from urllib.parse import urlparse
@@ -545,4 +544,3 @@ class VulnScanner:
             payload=payload,
             scan_date=timezone.now()
         )
-```
