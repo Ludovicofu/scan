@@ -1,8 +1,9 @@
+```python
 # vuln_scan/scanner.py
 import asyncio
 from urllib.parse import urlparse
 from django.utils import timezone
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async  # 只导入 sync_to_async，移除 database_sync_to_async
 from data_collection.models import Asset
 from .models import VulnScanResult
 
@@ -498,7 +499,7 @@ class VulnScanner:
             traceback.print_exc()
             return None
 
-    @database_sync_to_async
+    @sync_to_async  # 将 database_sync_to_async 改为 sync_to_async
     def _get_existing_results(self, asset_id, vuln_type, vuln_subtype, url, name):
         """查询是否存在相同的漏洞结果"""
         from vuln_scan.models import VulnScanResult
@@ -523,7 +524,7 @@ class VulnScanner:
             print(f"查询已存在漏洞时出错: {str(e)}")
             return []
 
-    @database_sync_to_async
+    @sync_to_async  # 将 database_sync_to_async 改为 sync_to_async
     def _create_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
                             response, proof, parameter, payload):
         """创建新的漏洞记录"""
@@ -544,3 +545,4 @@ class VulnScanner:
             payload=payload,
             scan_date=timezone.now()
         )
+```
