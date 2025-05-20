@@ -37,12 +37,7 @@ class SsrfScanner:
 
     def _init_debug_log(self):
         """初始化调试日志"""
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        self.log_file = f"ssrf_scanner_debug_{timestamp}.log"
-        with open(self.log_file, "w") as f:
-            f.write(f"=== SSRF扫描器调试日志 - 开始于 {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n\n")
-            f.write("格式说明：\n")
-            f.write("[时间] [操作类型] 详细信息\n\n")
+
 
     def _log_debug(self, operation, message):
         """记录调试日志"""

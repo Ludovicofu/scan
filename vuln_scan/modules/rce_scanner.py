@@ -37,14 +37,7 @@ class RceScanner:
 
     def _init_debug_log(self):
         """初始化调试日志文件"""
-        try:
-            with open(self.debug_log_file, "w", encoding="utf-8") as f:
-                f.write(f"=== RCE扫描器调试日志 - 开始于 {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n\n")
-                f.write("格式说明：\n")
-                f.write("[时间] [操作类型] 详细信息\n\n")
-            print(f"已创建RCE扫描器调试日志文件: {self.debug_log_file}")
-        except Exception as e:
-            print(f"创建调试日志文件失败: {str(e)}")
+
 
     def log_debug(self, operation, message):
         """记录调试日志"""

@@ -1,3 +1,5 @@
+
+
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -11,6 +13,7 @@ from django.utils import timezone
 class VulnScanConsumer(AsyncWebsocketConsumer):
     """
     WebSocket消费者：处理漏洞扫描模块的WebSocket连接
+    改进版：添加心跳响应和WebSocket重连机制
     """
 
     async def connect(self):
@@ -30,6 +33,11 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         # 接受WebSocket连接
         await self.accept()
 
+        # 记录连接状态
+        self.is_connected = True
+        self.client_id = id(self)  # 生成唯一客户端ID
+        print(f"WebSocket客户端[{self.client_id}]已连接")
+
         # 初始化扫描器
         self.scanner = VulnScanner()
 
@@ -47,8 +55,23 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
             'data': skip_targets
         }))
 
+        # 发送欢迎消息
+        await self.send(text_data=json.dumps({
+            'type': 'connection',
+            'data': {
+                'status': 'connected',
+                'message': '成功连接到漏洞扫描WebSocket服务',
+                'client_id': self.client_id,
+                'server_time': timezone.now().isoformat()
+            }
+        }))
+
     async def disconnect(self, close_code):
         """处理WebSocket断开连接"""
+        # 记录断开状态
+        self.is_connected = False
+        print(f"WebSocket客户端[{self.client_id}]已断开连接，代码: {close_code}")
+
         # 将客户端从vuln_scan_scanner组移除
         await self.channel_layer.group_discard(
             'vuln_scan_scanner',
@@ -67,6 +90,22 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message_type = data.get('type')
 
+            # 处理心跳消息
+            if message_type == 'ping':
+                # 记录心跳时间
+                client_time = data.get('time', 0)
+                server_time = timezone.now().isoformat()
+
+                # 响应pong消息
+                await self.send(text_data=json.dumps({
+                    'type': 'pong',
+                    'client_time': client_time,
+                    'server_time': server_time,
+                    'server_timestamp': int(timezone.now().timestamp() * 1000)
+                }))
+                return
+
+            # 处理普通消息
             if message_type == 'start_scan':
                 # 开始扫描
                 scan_options = data.get('options', {})
@@ -85,12 +124,27 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
                     'data': results
                 }))
 
+            elif message_type == 'get_status':
+                # 获取状态信息
+                status_info = {
+                    'connected': self.is_connected,
+                    'client_id': self.client_id,
+                    'server_time': timezone.now().isoformat()
+                }
+                await self.send(text_data=json.dumps({
+                    'type': 'status',
+                    'data': status_info
+                }))
+
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': '无效的JSON数据'
             }))
         except Exception as e:
+            print(f"处理WebSocket消息时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': str(e)
@@ -140,18 +194,40 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
     async def scan_progress(self, event):
         """处理扫描进度更新事件"""
         # 发送扫描进度更新通知给客户端
-        await self.send(text_data=json.dumps({
-            'type': 'scan_progress',
-            'data': event['data']
-        }))
+        try:
+            # 添加时间戳
+            progress_data = event['data']
+            progress_data['timestamp'] = timezone.now().isoformat()
+
+            await self.send(text_data=json.dumps({
+                'type': 'scan_progress',
+                'data': progress_data
+            }))
+        except Exception as e:
+            print(f"发送扫描进度更新时出错: {str(e)}")
 
     async def scan_result(self, event):
-        """处理扫描结果事件"""
-        # 发送扫描结果通知给客户端
-        await self.send(text_data=json.dumps({
-            'type': 'scan_result',
-            'data': event['data']
-        }))
+        """处理扫描结果事件，增加去重机制"""
+        try:
+            # 克隆数据并添加时间戳
+            result_data = event['data'].copy()
+
+            # 添加接收时间戳，用于客户端去重
+            result_data['received_time'] = timezone.now().isoformat()
+
+            # 生成消息唯一标识
+            message_id = f"{result_data.get('vuln_type', '')}-{result_data.get('vuln_subtype', '')}-{result_data.get('id', '')}-{result_data.get('url', '')}"
+            result_data['message_id'] = message_id
+
+            # 发送扫描结果通知给客户端
+            await self.send(text_data=json.dumps({
+                'type': 'scan_result',
+                'data': result_data
+            }))
+        except Exception as e:
+            print(f"发送扫描结果时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     # 以下是数据库操作方法
 
@@ -192,6 +268,20 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
             queryset = queryset.filter(scan_date__gte=filters['date_from'])
         if 'date_to' in filters:
             queryset = queryset.filter(scan_date__lte=filters['date_to'])
+        if 'keyword' in filters and filters['keyword']:
+            keyword = filters['keyword']
+            queryset = queryset.filter(
+                asset__host__icontains=keyword
+            ) | queryset.filter(
+                name__icontains=keyword
+            ) | queryset.filter(
+                description__icontains=keyword
+            ) | queryset.filter(
+                url__icontains=keyword
+            )
+
+        # 排序
+        queryset = queryset.order_by('-scan_date')
 
         # 序列化结果
         results = []
@@ -234,7 +324,9 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'scan_status',
             'status': 'started',
-            'message': '扫描已开始'
+            'message': '扫描已开始',
+            'options': options,
+            'timestamp': timezone.now().isoformat()
         }))
 
     async def stop_scan(self):
@@ -246,7 +338,8 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'scan_status',
             'status': 'stopped',
-            'message': '扫描已停止'
+            'message': '扫描已停止',
+            'timestamp': timezone.now().isoformat()
         }))
 
     async def process_proxy_data(self, data):
@@ -280,6 +373,8 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"处理代理数据时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     @database_sync_to_async
     def update_asset(self, url):
@@ -317,3 +412,4 @@ class VulnScanConsumer(AsyncWebsocketConsumer):
         """移除扫描器跳过目标"""
         if target in self.scanner.skip_targets:
             self.scanner.skip_targets.remove(target)
+

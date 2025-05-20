@@ -457,23 +457,20 @@ class VulnScanner:
             print(f"获取资产失败: {str(e)}")
             return None
 
-    @sync_to_async
-    def save_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
-                         response, proof, parameter=None, payload=None):
-        """保存漏洞结果"""
+    async def save_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
+                               response, proof, parameter=None, payload=None):
+        """保存漏洞结果，增加去重逻辑"""
         try:
+            # 生成唯一Key用于查重
+            unique_key = f"{vuln_type}-{vuln_subtype}-{parameter}-{url}"
+
             # 检查是否已存在相同的漏洞结果
-            existing_results = VulnScanResult.objects.filter(
-                asset=asset,
-                vuln_type=vuln_type,
-                vuln_subtype=vuln_subtype,
-                url=url,
-                name=name
-            )
+            existing_results = await self._get_existing_results(asset.id, vuln_type, vuln_subtype, url, name)
 
             # 如果不存在相同的结果，才创建新记录
-            if not existing_results.exists():
-                return VulnScanResult.objects.create(
+            if not existing_results:
+                # 创建新的漏洞记录
+                result = await self._create_vuln_result(
                     asset=asset,
                     vuln_type=vuln_type,
                     vuln_subtype=vuln_subtype,
@@ -485,15 +482,65 @@ class VulnScanner:
                     response=response,
                     proof=proof,
                     parameter=parameter,
-                    payload=payload,
-                    scan_date=timezone.now()
+                    payload=payload
                 )
+
+                # 返回新创建的记录
+                return result
             else:
-                # 返回已存在的记录
-                return existing_results.first()
+                # 如果已存在，记录日志并返回已存在的记录
+                print(f"发现重复漏洞: {unique_key}，跳过")
+                return existing_results[0]
         except Exception as e:
             # 如果保存失败，记录错误
             print(f"保存漏洞结果失败: {str(e)}")
             import traceback
             traceback.print_exc()
             return None
+
+    @database_sync_to_async
+    def _get_existing_results(self, asset_id, vuln_type, vuln_subtype, url, name):
+        """查询是否存在相同的漏洞结果"""
+        from vuln_scan.models import VulnScanResult
+
+        try:
+            # 构建查询条件
+            query_kwargs = {
+                'asset_id': asset_id,
+                'vuln_type': vuln_type,
+                'url': url,
+            }
+
+            # 如果有子类型，添加到查询条件
+            if vuln_subtype:
+                query_kwargs['vuln_subtype'] = vuln_subtype
+
+            # 查询数据库
+            results = list(VulnScanResult.objects.filter(**query_kwargs)[:1])
+
+            return results
+        except Exception as e:
+            print(f"查询已存在漏洞时出错: {str(e)}")
+            return []
+
+    @database_sync_to_async
+    def _create_vuln_result(self, asset, vuln_type, vuln_subtype, name, description, severity, url, request,
+                            response, proof, parameter, payload):
+        """创建新的漏洞记录"""
+        from vuln_scan.models import VulnScanResult
+
+        return VulnScanResult.objects.create(
+            asset=asset,
+            vuln_type=vuln_type,
+            vuln_subtype=vuln_subtype,
+            name=name,
+            description=description,
+            severity=severity,
+            url=url,
+            request=request,
+            response=response,
+            proof=proof,
+            parameter=parameter,
+            payload=payload,
+            scan_date=timezone.now()
+        )
