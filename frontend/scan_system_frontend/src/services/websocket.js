@@ -1,17 +1,20 @@
-// src/services/websocket.js - 修改版（降低刷新频率）
+// src/services/websocket.js - 修改版（增加心跳检测和连接稳定性）
 class WebSocketService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
+    this.maxReconnectAttempts = 10; // 增加最大重连次数
     this.reconnectTimeout = null;
-    this.reconnectInterval = 5000; // 增加到5秒重连间隔
+    this.reconnectInterval = 3000; // 减少重连间隔以提高响应性
     this.listeners = {};
     this.url = '';
 
-    // 添加连接状态监控
-    this.connectionMonitorInterval = null;
+    // 心跳检测
+    this.heartbeatInterval = null;
+    this.heartbeatTimeout = null;
+    this.missedHeartbeats = 0;
+    this.maxMissedHeartbeats = 3;
   }
 
   /**
@@ -33,7 +36,7 @@ class WebSocketService {
             reject(new Error('连接超时'));
             this._attemptReconnect();
           }
-        }, 8000); // 增加到8秒超时
+        }, 5000);
 
         this.socket.onopen = () => {
           console.log('WebSocket连接成功');
@@ -41,8 +44,8 @@ class WebSocketService {
           this.reconnectAttempts = 0;
           clearTimeout(timeoutId); // 清除超时
 
-          // 设置连接状态监控
-          this._startConnectionMonitor();
+          // 启动心跳检测
+          this._startHeartbeat();
 
           resolve();
         };
@@ -51,8 +54,8 @@ class WebSocketService {
           console.log(`WebSocket连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
           this.isConnected = false;
 
-          // 停止连接监控
-          this._stopConnectionMonitor();
+          // 停止心跳
+          this._stopHeartbeat();
 
           // 尝试重新连接
           this._attemptReconnect();
@@ -79,8 +82,7 @@ class WebSocketService {
    * 断开WebSocket连接
    */
   disconnect() {
-    // 停止连接监控
-    this._stopConnectionMonitor();
+    this._stopHeartbeat();
 
     if (this.socket && this.isConnected) {
       this.socket.close();
@@ -106,6 +108,7 @@ class WebSocketService {
         this.socket.send(JSON.stringify(data));
       } catch (error) {
         console.error('发送WebSocket消息时出错', error);
+        this._reconnectNow(); // 如果发送失败，立即尝试重连
         throw error;
       }
     } else {
@@ -157,8 +160,9 @@ class WebSocketService {
       const message = JSON.parse(data);
       const type = message.type;
 
-      // 不处理ping响应
+      // 处理心跳响应
       if (type === 'pong') {
+        this._handleHeartbeatResponse();
         return;
       }
 
@@ -189,50 +193,112 @@ class WebSocketService {
       this.reconnectAttempts++;
       console.log(`尝试重新连接 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
 
+      // 使用指数退避策略
+      const delay = Math.min(this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1), 30000);
+
       this.reconnectTimeout = setTimeout(() => {
         this.connect(this.url).catch(() => {
           console.error('重新连接失败');
         });
-      }, this.reconnectInterval);
+      }, delay);
     } else {
       console.error('达到最大重连次数，放弃重连');
+      // 重置重连计数，允许用户手动刷新页面后再次尝试连接
+      setTimeout(() => {
+        this.reconnectAttempts = 0;
+      }, 60000); // 1分钟后重置
     }
   }
 
   /**
-   * 启动连接状态监控
+   * 立即重新连接
    * @private
    */
-  _startConnectionMonitor() {
-    // 清除可能存在的旧监控
-    this._stopConnectionMonitor();
-
-    // 创建新的监控间隔 - 增加到60秒
-    this.connectionMonitorInterval = setInterval(() => {
-      if (this.socket && this.isConnected) {
-        // 发送ping消息来检查连接是否仍然有效
-        try {
-          this.socket.send(JSON.stringify({ type: 'ping' }));
-          // 减少ping日志
-          // console.log('发送ping消息以保持连接');
-        } catch (error) {
-          console.error('无法发送ping消息，连接可能已断开', error);
-          this.isConnected = false;
-          this.socket.close();
-          this._attemptReconnect();
-        }
+  _reconnectNow() {
+    if (this.socket) {
+      try {
+        this.socket.close();
+      } catch (e) {
+        // 忽略关闭错误
       }
-    }, 60000); // 每60秒检查一次，降低频率
+    }
+    this.isConnected = false;
+    this._stopHeartbeat();
+
+    // 立即尝试重连
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    this.reconnectTimeout = setTimeout(() => {
+      this.connect(this.url).catch(() => {
+        console.error('立即重连失败');
+      });
+    }, 1000);
   }
 
   /**
-   * 停止连接状态监控
+   * 启动心跳检测
    * @private
    */
-  _stopConnectionMonitor() {
-    if (this.connectionMonitorInterval) {
-      clearInterval(this.connectionMonitorInterval);
-      this.connectionMonitorInterval = null;
+  _startHeartbeat() {
+    this._stopHeartbeat(); // 先清除可能存在的心跳
+
+    this.missedHeartbeats = 0;
+
+    // 每15秒发送一次心跳
+    this.heartbeatInterval = setInterval(() => {
+      if (this.isConnected) {
+        try {
+          this.missedHeartbeats++;
+
+          // 如果连续错过3次心跳，认为连接已断开
+          if (this.missedHeartbeats >= this.maxMissedHeartbeats) {
+            console.error(`连续错过${this.missedHeartbeats}次心跳响应，重新连接...`);
+            this._reconnectNow();
+            return;
+          }
+
+          // 发送心跳
+          this.send({ type: 'ping', timestamp: Date.now() });
+
+          // 设置心跳响应超时
+          this.heartbeatTimeout = setTimeout(() => {
+            console.warn('心跳响应超时');
+          }, 5000);
+
+        } catch (error) {
+          console.error('发送心跳消息失败', error);
+        }
+      }
+    }, 15000);
+  }
+
+  /**
+   * 停止心跳检测
+   * @private
+   */
+  _stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  }
+
+  /**
+   * 处理心跳响应
+   * @private
+   */
+  _handleHeartbeatResponse() {
+    this.missedHeartbeats = 0;
+
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
     }
   }
 }

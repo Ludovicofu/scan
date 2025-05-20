@@ -1,4 +1,3 @@
-// frontend/scan_system_frontend/src/views/InfoResultsPage.vue
 <template>
   <div class="info-results-page">
     <h1>信息收集结果</h1>
@@ -16,11 +15,8 @@
         <el-radio-button label="active">主动扫描结果</el-radio-button>
       </el-radio-group>
 
-      <!-- 添加手动刷新和WebSocket状态指示 -->
+      <!-- 仅保留WebSocket状态指示 -->
       <div class="ws-status-area">
-        <el-button type="primary" @click="fetchResults" :loading="loading" size="small" icon="Refresh">
-          刷新
-        </el-button>
         <el-tag
           :type="isWebSocketConnected ? 'success' : 'danger'"
           size="small"
@@ -132,17 +128,71 @@ export default {
     // 从 localStorage 恢复缓存数据
     this.loadCacheFromStorage();
 
-    // 定期检查WebSocket连接状态 - 增加间隔到15秒
+    // 定期检查WebSocket连接状态
     this.startWebSocketStatusCheck();
+
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   },
   beforeUnmount() {
     this.closeWebSocket();
     this.stopWebSocketStatusCheck();
 
+    // 移除页面可见性变化监听
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+
     // 保存缓存数据到 localStorage
     this.saveCacheToStorage();
   },
   methods: {
+    // 处理页面可见性变化
+    handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        // 页面变为可见时，检查WebSocket连接状态
+        console.log('页面变为可见，检查WebSocket连接状态');
+        this.checkWebSocketStatus();
+
+        // 刷新结果
+        this.fetchResults();
+      }
+    },
+
+    // 检查WebSocket连接状态
+    checkWebSocketStatus() {
+      // 检查WebSocket是否连接
+      const wasConnected = this.isWebSocketConnected;
+      this.isWebSocketConnected = dataCollectionWS.isConnected;
+
+      // 如果状态由已连接变为未连接，尝试重连
+      if (wasConnected && !this.isWebSocketConnected) {
+        console.log('检测到WebSocket连接断开，尝试重连');
+        this.reconnectWebSocket();
+      }
+
+      // 如果连接正常，尝试发送PING消息来验证连接
+      if (this.isWebSocketConnected) {
+        try {
+          dataCollectionWS.send({ type: 'ping', timestamp: Date.now() });
+          console.log('已发送PING消息以验证连接');
+        } catch (error) {
+          console.error('PING消息发送失败，连接可能已断开', error);
+          this.isWebSocketConnected = false;
+          this.reconnectWebSocket();
+        }
+      }
+    },
+
+    // 重连WebSocket
+    reconnectWebSocket() {
+      // 重置WebSocket客户端
+      dataCollectionWS.disconnect();
+
+      // 延迟1秒后重连
+      setTimeout(() => {
+        this.initWebSocket();
+      }, 1000);
+    },
+
     // 缓存持久化处理
     loadCacheFromStorage() {
       try {
@@ -183,20 +233,20 @@ export default {
       // 清除可能存在的旧计时器
       this.stopWebSocketStatusCheck();
 
-      // 创建15秒间隔的检查 - 增加间隔
+      // 创建15秒间隔的检查
       this.wsStatusCheckTimer = setInterval(() => {
         // 更新WebSocket连接状态
         this.isWebSocketConnected = dataCollectionWS.isConnected;
 
-        // 如果检测到连接断开，尝试重新连接 - 但限制频率
+        // 如果检测到连接断开，尝试重新连接
         if (!this.isWebSocketConnected && !this.wsReconnectTimer) {
           console.log('检测到WebSocket连接断开，准备重新连接...');
           this.wsReconnectTimer = setTimeout(() => {
             this.wsReconnectTimer = null;
             this.initWebSocket();
-          }, 8000); // 增加到8秒后重连
+          }, 3000); // 3秒后重连
         }
-      }, 15000); // 增加到每15秒检查一次
+      }, 15000); // 每15秒检查一次
     },
 
     // 停止WebSocket状态检查
@@ -224,11 +274,13 @@ export default {
           // 添加事件监听器
           dataCollectionWS.addListener('scan_result', this.handleScanResult);
           dataCollectionWS.addListener('scan_progress', this.handleScanProgress);
+
+          // 自动刷新结果
+          this.fetchResults();
         })
         .catch(error => {
           console.error('连接WebSocket失败', error);
           this.isWebSocketConnected = false;
-          ElMessage.error('连接服务器失败，实时扫描结果将不可用');
         });
     },
 
@@ -239,7 +291,7 @@ export default {
       this.isWebSocketConnected = false;
     },
 
-    // 处理扫描进度的逻辑 - 降低通知频率
+    // 处理扫描进度的逻辑
     handleScanProgress(data) {
       if (!data || !data.data) return;
 
@@ -247,7 +299,7 @@ export default {
       const now = Date.now();
       const lastTime = this.lastNotificationTime['progress'] || 0;
 
-      // 对扫描进度消息进行节流，降低通知频率
+      // 对扫描进度消息进行节流
       if (now - lastTime < 5000) { // 5秒内不重复通知相同类型进度
         return;
       }
@@ -270,10 +322,10 @@ export default {
             duration: 3000
           });
 
-          // 扫描完成后刷新结果列表 - 增加延迟确保数据库已更新
+          // 扫描完成后刷新结果列表
           setTimeout(() => {
             this.fetchResults();
-          }, 1000);
+          }, 500);  // 减少到500ms以更快地获取结果
           break;
 
         case 'error':
@@ -287,7 +339,7 @@ export default {
       }
     },
 
-    // 处理扫描结果的逻辑 - 增加限流
+    // 处理扫描结果的逻辑
     handleScanResult(data) {
       // 检查消息格式
       if (!data || !data.data) {
@@ -295,6 +347,9 @@ export default {
       }
 
       const resultData = data.data;
+
+      // 确保扫描日期字段存在并有效
+      this.ensureScanDate(resultData);
 
       // 确保资产主机字段存在
       this.ensureAssetHost(resultData);
@@ -304,7 +359,7 @@ export default {
         return;
       }
 
-      // 构建结果唯一标识 - 使用正确的资产显示值
+      // 构建结果唯一标识
       const resultId = resultData.id;
       const assetDisplay = resultData.asset_host || (typeof resultData.asset === 'string' ? resultData.asset : '未知资产');
       const resultKey = `${assetDisplay}-${resultData.module}-${resultData.description}-${resultData.rule_type}`;
@@ -325,8 +380,6 @@ export default {
       const lastUpdateTime = this.lastResultUpdateTime[moduleKey] || 0;
 
       if (now - lastUpdateTime < this.resultUpdateThrottleTime) {
-        // 如果该模块的上次更新时间距离现在不足3秒，暂存此结果
-        // 此处可以实现结果缓冲区，稍后统一处理，但为简单起见仅跳过
         console.log(`跳过短时间内的${moduleKey}类型结果更新`);
         return;
       }
@@ -345,19 +398,32 @@ export default {
         // 如果已达到页大小，移除末尾项
         this.results.pop();
       }
+
+      // 插入到结果列表头部
       this.results.unshift(resultData);
       this.totalResults++;
 
-      // 构建通知消息并显示 - 但限制通知频率
+      // 构建通知消息并显示
       this.showResultNotification(resultData);
     },
 
-    // 添加一个专门的通知显示方法 - 通知节流增强
+    // 确保scan_date字段存在并有效
+    ensureScanDate(result) {
+      if (!result) return;
+
+      // 如果没有scan_date字段或字段值无效，添加当前时间
+      if (!result.scan_date || result.scan_date === 'null' || result.scan_date === 'undefined') {
+        result.scan_date = new Date().toISOString();
+        console.log('为结果添加当前时间作为扫描日期');
+      }
+    },
+
+    // 添加一个专门的通知显示方法
     showResultNotification(resultData) {
       // 获取当前时间戳
       const now = Date.now();
 
-      // 节流通知显示 - 对不同类型结果分别限流
+      // 节流通知显示
       const moduleKey = resultData.module || 'unknown';
       const typeKey = resultData.is_port_scan ? 'port-scan' : moduleKey;
       const lastTime = this.lastNotificationTime[typeKey] || 0;
@@ -464,8 +530,9 @@ export default {
         this.results = response.results || [];
         this.totalResults = response.count || 0;
 
-        // 修复结果中可能缺失的asset_host字段
+        // 确保每个结果都有扫描日期和资产主机字段
         this.results.forEach(result => {
+          this.ensureScanDate(result);
           this.ensureAssetHost(result);
         });
 
@@ -594,8 +661,20 @@ export default {
     // 工具方法
     formatDate(dateString) {
       if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+      try {
+        const date = new Date(dateString);
+        // 检查是否是有效日期
+        if (isNaN(date.getTime())) {
+          console.warn('无效的日期:', dateString);
+          return '日期无效';
+        }
+
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      } catch (error) {
+        console.error('日期格式化错误:', error, dateString);
+        return '日期错误';
+      }
     }
   }
 };
@@ -622,7 +701,6 @@ h1 {
 .ws-status-area {
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 
 .ws-status-tag {

@@ -1,9 +1,10 @@
 """
 WebSocket消费者：处理数据收集模块的WebSocket连接
-重构版：支持新的扫描架构，增强缓存和去重功能
+重构版：支持新的扫描架构，增强缓存和去重功能，添加心跳机制
 """
 import json
 import asyncio
+import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .scanner import DataCollectionScanner
@@ -19,6 +20,12 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
     _global_result_cache = set()  # 格式: (asset_host, module, description, rule_type)
     # 添加保护静态缓存的锁
     _cache_lock = asyncio.Lock()
+    # 添加活跃客户端计数
+    _active_clients = 0
+    # 添加运行中任务集合
+    _running_tasks = set()
+    # 添加最大任务运行时间（秒）
+    _max_task_runtime = 120
 
     async def connect(self):
         """处理WebSocket连接"""
@@ -41,11 +48,18 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         await self.accept()
         print("WebSocket连接已接受")
 
+        # 更新活跃客户端计数
+        DataCollectionConsumer._active_clients += 1
+        print(f"当前活跃WebSocket客户端数: {DataCollectionConsumer._active_clients}")
+
         # 初始化扫描器
         self.scanner = DataCollectionScanner()
 
         # 添加实例级别的本地结果缓存
         self.local_result_cache = set()
+
+        # 添加实例任务集合
+        self.tasks = set()
 
         # 发送当前系统设置
         settings = await self.get_system_settings()
@@ -59,6 +73,13 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'skip_targets',
             'data': skip_targets
+        }))
+
+        # 发送连接状态消息
+        await self.send(text_data=json.dumps({
+            'type': 'connection_status',
+            'status': 'connected',
+            'message': 'WebSocket连接已建立'
         }))
 
     async def disconnect(self, close_code):
@@ -75,14 +96,38 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
+        # 取消所有正在运行的任务
+        for task in self.tasks:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    print(f"取消任务时出错: {str(e)}")
+
         # 断开连接时清理本地缓存
         self.local_result_cache.clear()
+
+        # 更新活跃客户端计数
+        DataCollectionConsumer._active_clients -= 1
+        print(f"客户端断开连接，当前活跃WebSocket客户端数: {DataCollectionConsumer._active_clients}")
 
     async def receive(self, text_data):
         """处理从WebSocket接收到的消息"""
         try:
             data = json.loads(text_data)
             message_type = data.get('type')
+
+            # 处理心跳请求
+            if message_type == 'ping':
+                await self.send(text_data=json.dumps({
+                    'type': 'pong',
+                    'timestamp': data.get('timestamp', 0),
+                    'server_time': timezone.now().timestamp()
+                }))
+                return
 
             if message_type == 'start_scan':
                 # 开始扫描
@@ -111,6 +156,19 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                     'message': '扫描缓存已重置'
                 }))
 
+            elif message_type == 'check_status':
+                # 检查状态
+                status = {
+                    'connected': True,
+                    'active_clients': DataCollectionConsumer._active_clients,
+                    'running_tasks': len(DataCollectionConsumer._running_tasks),
+                    'cache_size': len(self.local_result_cache)
+                }
+                await self.send(text_data=json.dumps({
+                    'type': 'status_report',
+                    'data': status
+                }))
+
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -118,7 +176,6 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             }))
         except Exception as e:
             print(f"接收WebSocket消息时出错: {str(e)}")
-            import traceback
             traceback.print_exc()
             await self.send(text_data=json.dumps({
                 'type': 'error',
@@ -131,7 +188,9 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
         data = event['data']
 
         # 处理数据（扫描）
-        await self.process_proxy_data(data)
+        task = asyncio.create_task(self.process_proxy_data(data))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
 
     async def settings_update(self, event):
         """处理系统设置更新事件"""
@@ -350,8 +409,16 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
 
     async def stop_scan(self):
         """停止扫描"""
-        # 停止扫描器
-        # (这里只是发送通知，实际的停止逻辑在scanner.py中)
+        # 取消所有正在运行的任务
+        for task in self.tasks:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    print(f"取消扫描任务时出错: {str(e)}")
 
         # 发送扫描停止通知
         await self.send(text_data=json.dumps({
@@ -385,9 +452,10 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             if asset:
                 print(f"准备扫描资产: {asset.host}, ID={asset.id}")
 
-                # 启动扫描任务
+                # 创建独立的扫描任务并添加到管理集合中
                 task = asyncio.create_task(
-                    self.scanner.scan_data(
+                    self._scan_with_timeout(
+                        self.scanner.scan_data,
                         self.channel_layer,
                         asset.id,
                         url,
@@ -399,18 +467,67 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
                         resp_content
                     )
                 )
-                print(f"扫描任务已创建: {url}")
+                self.tasks.add(task)
+                DataCollectionConsumer._running_tasks.add(task)
 
-                # 这里可以选择不等待任务完成
-                # await task
+                # 添加完成回调以从集合中移除
+                def task_done(t):
+                    self.tasks.discard(t)
+                    DataCollectionConsumer._running_tasks.discard(t)
+
+                task.add_done_callback(task_done)
+
+                print(f"扫描任务已创建: {url}")
 
             else:
                 print("资产创建/更新失败，无法启动扫描")
 
         except Exception as e:
             print(f"处理代理数据时出错: {str(e)}")
-            import traceback
             traceback.print_exc()
+
+    async def _scan_with_timeout(self, scan_func, *args, **kwargs):
+        """带超时的扫描函数包装器"""
+        try:
+            # 使用asyncio.wait_for设置超时
+            await asyncio.wait_for(
+                scan_func(*args, **kwargs),
+                timeout=DataCollectionConsumer._max_task_runtime
+            )
+        except asyncio.TimeoutError:
+            print(f"扫描任务超时（超过{DataCollectionConsumer._max_task_runtime}秒），已强制终止")
+            # 发送超时通知
+            await self.channel_layer.group_send(
+                'data_collection_scanner',
+                {
+                    'type': 'scan_progress',
+                    'data': {
+                        'status': 'error',
+                        'message': f'扫描超时（超过{DataCollectionConsumer._max_task_runtime}秒）',
+                        'url': args[2] if len(args) > 2 else 'unknown',
+                        'progress': 0
+                    }
+                }
+            )
+        except asyncio.CancelledError:
+            print("扫描任务被取消")
+            raise
+        except Exception as e:
+            print(f"扫描任务出错: {str(e)}")
+            traceback.print_exc()
+            # 发送错误通知
+            await self.channel_layer.group_send(
+                'data_collection_scanner',
+                {
+                    'type': 'scan_progress',
+                    'data': {
+                        'status': 'error',
+                        'message': f'扫描出错: {str(e)}',
+                        'url': args[2] if len(args) > 2 else 'unknown',
+                        'progress': 0
+                    }
+                }
+            )
 
     @database_sync_to_async
     def update_asset(self, url):
@@ -446,7 +563,6 @@ class DataCollectionConsumer(AsyncWebsocketConsumer):
             return asset
         except Exception as e:
             print(f"更新资产失败: {str(e)}")
-            import traceback
             traceback.print_exc()
             return None
 

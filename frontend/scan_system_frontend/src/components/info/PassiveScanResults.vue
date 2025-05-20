@@ -1,9 +1,9 @@
-<!-- components/info/PassiveScanResults.vue - 修改后 -->
+<!-- components/info/PassiveScanResults.vue -->
 <template>
   <div class="passive-scan-results">
     <el-table
       v-loading="loading"
-      :data="results"
+      :data="processedResults"
       border
       style="width: 100%"
       :default-sort="{ prop: 'scan_date', order: 'descending' }"
@@ -15,22 +15,17 @@
       ></el-table-column>
 
       <el-table-column
-        prop="scan_date"
+        prop="formatted_date"
         label="日期"
         width="180"
         sortable
-      >
-        <template #default="scope">
-          {{ formatDate(scope.row.scan_date) }}
-        </template>
-      </el-table-column>
+      ></el-table-column>
 
       <el-table-column
         label="资产"
         width="150"
       >
         <template #default="scope">
-          <!-- 修改：优先使用asset_host字段，如果没有则尝试使用asset字段 -->
           <span>{{ getAssetDisplay(scope.row) }}</span>
         </template>
       </el-table-column>
@@ -53,7 +48,6 @@
         width="120"
       >
         <template #default="scope">
-          <!-- 为auto_detect类型添加特殊显示 -->
           <el-tag v-if="scope.row.rule_type === 'auto_detect'" type="success" size="small">自动检测</el-tag>
           <span v-else>{{ scope.row.rule_type }}</span>
         </template>
@@ -64,7 +58,6 @@
         label="匹配值"
       >
         <template #default="scope">
-          <!-- 对端口扫描结果特殊处理，只显示端口号 -->
           <span v-if="scope.row.rule_type === 'port' || scope.row.is_port_scan">
             {{ formatPortNumbers(scope.row.match_value) }}
           </span>
@@ -135,12 +128,38 @@ export default {
       default: 0
     }
   },
+  computed: {
+    // 预处理结果数据，确保日期正确格式化
+    processedResults() {
+      return this.results.map(result => {
+        // 创建一个新对象，避免修改原始数据
+        const processed = { ...result };
+
+        // 添加格式化的日期字段
+        processed.formatted_date = this.formatDate(processed.scan_date);
+
+        return processed;
+      });
+    }
+  },
   emits: ['size-change', 'current-change', 'view-detail', 'delete-result'],
   methods: {
     formatDate(dateString) {
       if (!dateString) return '';
-      const date = new Date(dateString);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+      try {
+        const date = new Date(dateString);
+        // 检查是否是有效日期
+        if (isNaN(date.getTime())) {
+          console.warn('无效的日期:', dateString);
+          return '日期无效';
+        }
+
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      } catch (error) {
+        console.error('日期格式化错误:', error, dateString);
+        return '日期错误';
+      }
     },
 
     // 获取资产显示文本
@@ -167,7 +186,7 @@ export default {
 
       for (const line of lines) {
         if (line && line.includes(':')) {
-          const port = line.split(':', 1)[0].trim(); // 修改了这里，使用trim()而不是strip()
+          const port = line.split(':', 1)[0].trim();
           if (port && !isNaN(port)) {
             ports.push(port);
           }
