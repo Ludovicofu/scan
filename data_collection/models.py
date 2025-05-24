@@ -1,7 +1,3 @@
-"""
-models.py中ScanResult模型的修改
-修改了唯一约束，使其更适合去重
-"""
 from django.db import models
 from django.utils import timezone
 

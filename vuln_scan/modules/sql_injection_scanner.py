@@ -1,5 +1,3 @@
-# vuln_scan/modules/sql_injection_scanner.py
-
 import re
 import json
 import asyncio

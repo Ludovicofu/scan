@@ -1,4 +1,3 @@
-# vuln_scan/models.py
 from django.db import models
 from django.utils import timezone
 from data_collection.models import Asset

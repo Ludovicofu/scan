@@ -30,7 +30,7 @@
       </router-link>
     </div>
     <div class="sidebar-footer">
-      <p>版本: 1.0.0</p>
+      <p></p>
     </div>
   </div>
 </template>

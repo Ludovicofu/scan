@@ -1,8 +1,6 @@
 """
-信息收集主协调器：重构版
-
+信息收集主协调器
 负责协调各个扫描模块，管理缓存和配置，处理代理数据并分发扫描任务
-该结构模仿了 vuln_scan/scanner.py 的架构，使系统更加一致
 """
 import asyncio
 import contextlib

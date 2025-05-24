@@ -1,4 +1,3 @@
-# vuln_scan/scanner.py
 import asyncio
 from urllib.parse import urlparse
 from django.utils import timezone

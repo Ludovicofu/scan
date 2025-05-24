@@ -1,6 +1,5 @@
 """
 扫描辅助模块：提供各种扫描辅助方法
-重构版：统一辅助方法，简化跨模块功能
 """
 from asgiref.sync import sync_to_async
 from django.utils import timezone

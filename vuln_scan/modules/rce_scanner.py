@@ -1,4 +1,3 @@
-# vuln_scan/modules/rce_scanner.py
 import json
 import re
 import aiohttp

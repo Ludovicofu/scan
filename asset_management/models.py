@@ -1,6 +1,3 @@
-# 1. 修改 asset_management/models.py 文件
-# 移除 AssetTag 和 AssetGroup，只保留 AssetNote
-
 from django.db import models
 from django.utils import timezone
 from data_collection.models import Asset

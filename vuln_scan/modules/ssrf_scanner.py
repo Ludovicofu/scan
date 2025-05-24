@@ -1,4 +1,3 @@
-# vuln_scan/modules/ssrf_scanner.py
 import json
 import aiohttp
 import asyncio

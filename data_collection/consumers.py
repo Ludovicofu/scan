@@ -1,6 +1,5 @@
 """
 WebSocket消费者：处理数据收集模块的WebSocket连接
-重构版：支持新的扫描架构，增强缓存和去重功能，添加心跳机制
 """
 import json
 import asyncio

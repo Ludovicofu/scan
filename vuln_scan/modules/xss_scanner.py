@@ -1,5 +1,3 @@
-# vuln_scan/modules/xss_scanner.py
-
 import re
 import json
 import asyncio

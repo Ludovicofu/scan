@@ -11,10 +11,7 @@ from django.utils import timezone
 
 
 class VulnScanConsumer(AsyncWebsocketConsumer):
-    """
-    WebSocket消费者：处理漏洞扫描模块的WebSocket连接
-    改进版：添加心跳响应和WebSocket重连机制
-    """
+
 
     async def connect(self):
         """处理WebSocket连接"""

@@ -2,7 +2,7 @@
   <div class="home-page">
     <div class="home-header">
       <h1>半自动化漏洞扫描系统</h1>
-      <p>一个基于Python、Vue、Django的半自动化漏洞扫描系统</p>
+      <p></p>
     </div>
 
     <div class="dashboard">
@@ -152,37 +152,6 @@
                   {{ lastScanTime ? formatDate(lastScanTime) : '无' }}
                 </el-col>
               </el-row>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="20" class="dashboard-row">
-        <!-- 使用指南 -->
-        <el-col :span="24">
-          <el-card class="guide-card">
-            <template #header>
-              <div class="card-header">
-                <span>使用指南</span>
-              </div>
-            </template>
-            <div class="card-content">
-              <el-steps :active="5" finish-status="process" simple>
-                <el-step title="步骤1" description="配置代理设置"></el-step>
-                <el-step title="步骤2" description="配置规则"></el-step>
-                <el-step title="步骤3" description="设置浏览器代理为127.0.0.1:7891"></el-step>
-                <el-step title="步骤4" description="浏览网页，系统自动扫描"></el-step>
-                <el-step title="步骤5" description="查看扫描结果"></el-step>
-              </el-steps>
-
-              <div class="guide-notes">
-                <h3>使用说明</h3>
-                <p>1. 本系统通过代理方式捕获HTTP流量进行扫描</p>
-                <p>2. 您需要将浏览器代理设置为127.0.0.1:7891</p>
-                <p>3. 系统会自动分析流量并根据规则进行被动扫描</p>
-                <p>4. 扫描结果将在信息收集和漏洞检测页面显示</p>
-                <p>5. 您可以在规则管理页面添加、修改和删除规则</p>
-              </div>
             </div>
           </el-card>
         </el-col>
@@ -421,29 +390,5 @@ export default {
 .status-label {
   font-weight: bold;
   color: #606266;
-}
-
-.guide-card {
-  margin-bottom: 20px;
-}
-
-.guide-notes {
-  margin-top: 30px;
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 4px;
-}
-
-.guide-notes h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 16px;
-  color: #303133;
-}
-
-.guide-notes p {
-  margin: 8px 0;
-  color: #606266;
-  line-height: 1.6;
 }
 </style>
