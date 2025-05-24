@@ -200,7 +200,11 @@
                 type="index"
                 label="序号"
                 width="60"
-              ></el-table-column>
+              >
+                <template #default="scope">
+                  {{ (infoCurrentPage - 1) * infoPageSize + scope.$index + 1 }}
+                </template>
+              </el-table-column>
 
               <el-table-column
                 prop="scan_date"
@@ -238,6 +242,20 @@
               ></el-table-column>
             </el-table>
 
+            <!-- 信息收集结果分页 -->
+            <div class="detail-pagination" v-if="infoTotalCount > 0">
+              <el-pagination
+                @size-change="handleInfoSizeChange"
+                @current-change="handleInfoPageChange"
+                v-model:current-page="infoCurrentPage"
+                :page-sizes="[10, 20, 50]"
+                v-model:page-size="infoPageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="infoTotalCount"
+                small
+              ></el-pagination>
+            </div>
+
             <!-- 无数据提示 -->
             <div v-if="infoResults.length === 0" class="no-data-tip">
               暂无信息收集结果
@@ -255,7 +273,11 @@
                 type="index"
                 label="序号"
                 width="60"
-              ></el-table-column>
+              >
+                <template #default="scope">
+                  {{ (vulnCurrentPage - 1) * vulnPageSize + scope.$index + 1 }}
+                </template>
+              </el-table-column>
 
               <el-table-column
                 prop="scan_date"
@@ -301,6 +323,20 @@
                 show-overflow-tooltip
               ></el-table-column>
             </el-table>
+
+            <!-- 漏洞检测结果分页 -->
+            <div class="detail-pagination" v-if="vulnTotalCount > 0">
+              <el-pagination
+                @size-change="handleVulnSizeChange"
+                @current-change="handleVulnPageChange"
+                v-model:current-page="vulnCurrentPage"
+                :page-sizes="[10, 20, 50]"
+                v-model:page-size="vulnPageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="vulnTotalCount"
+                small
+              ></el-pagination>
+            </div>
 
             <!-- 无数据提示 -->
             <div v-if="vulnResults.length === 0" class="no-data-tip">
@@ -378,6 +414,17 @@ export default {
       detailLoading: false,
       infoResults: [],
       vulnResults: [],
+
+      // 详情对话框中的分页参数
+      // 信息收集结果分页
+      infoCurrentPage: 1,
+      infoPageSize: 10,
+      infoTotalCount: 0,
+
+      // 漏洞检测结果分页
+      vulnCurrentPage: 1,
+      vulnPageSize: 10,
+      vulnTotalCount: 0,
 
       // 资产备注相关
       assetNotes: [],
@@ -471,6 +518,12 @@ export default {
       this.detailDialogVisible = true;
       this.activeDetailTab = 'info';
 
+      // 重置分页参数
+      this.infoCurrentPage = 1;
+      this.infoPageSize = 10;
+      this.vulnCurrentPage = 1;
+      this.vulnPageSize = 10;
+
       // 加载详情数据
       await this.loadDetailData(asset.id);
 
@@ -486,19 +539,53 @@ export default {
         const assetDetail = await assetAPI.getAssetDetail(assetId);
         this.selectedAsset = assetDetail;
 
-        // 获取信息收集结果
-        const infoResponse = await assetAPI.getAssetInfoResults(assetId);
+        // 获取信息收集结果（带分页）
+        const infoParams = {
+          page: this.infoCurrentPage,
+          page_size: this.infoPageSize
+        };
+        const infoResponse = await assetAPI.getAssetInfoResults(assetId, infoParams);
         this.infoResults = infoResponse.results || [];
+        this.infoTotalCount = infoResponse.count || 0;
 
-        // 获取漏洞检测结果
-        const vulnResponse = await assetAPI.getAssetVulnResults(assetId);
+        // 获取漏洞检测结果（带分页）
+        const vulnParams = {
+          page: this.vulnCurrentPage,
+          page_size: this.vulnPageSize
+        };
+        const vulnResponse = await assetAPI.getAssetVulnResults(assetId, vulnParams);
         this.vulnResults = vulnResponse.results || [];
+        this.vulnTotalCount = vulnResponse.count || 0;
       } catch (error) {
         console.error('获取资产详情数据失败', error);
         ElMessage.error('获取资产详情数据失败');
       } finally {
         this.detailLoading = false;
       }
+    },
+
+    // 信息收集结果分页处理
+    handleInfoSizeChange(val) {
+      this.infoPageSize = val;
+      this.infoCurrentPage = 1;
+      this.loadDetailData(this.selectedAsset.id);
+    },
+
+    handleInfoPageChange(val) {
+      this.infoCurrentPage = val;
+      this.loadDetailData(this.selectedAsset.id);
+    },
+
+    // 漏洞检测结果分页处理
+    handleVulnSizeChange(val) {
+      this.vulnPageSize = val;
+      this.vulnCurrentPage = 1;
+      this.loadDetailData(this.selectedAsset.id);
+    },
+
+    handleVulnPageChange(val) {
+      this.vulnCurrentPage = val;
+      this.loadDetailData(this.selectedAsset.id);
     },
 
     // 加载资产备注（用于列表中显示）
@@ -737,5 +824,11 @@ h1 {
   color: #909399;
   padding: 30px 0;
   font-size: 14px;
+}
+
+.detail-pagination {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
