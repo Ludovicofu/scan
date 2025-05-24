@@ -2,11 +2,7 @@
   <div class="vuln-results-page">
     <h1>漏洞检测结果</h1>
 
-    <!-- 过滤器 -->
-    <ResultFilters
-      type="vuln"
-      @filter-change="handleFilterChange"
-    />
+    <!-- 过滤器 - 已移除 -->
 
     <!-- 漏洞类型选择 -->
     <div class="vuln-type-tabs">
@@ -17,7 +13,7 @@
         <el-tab-pane label="RCE" name="command_injection"></el-tab-pane>
         <el-tab-pane label="SSRF" name="ssrf"></el-tab-pane>
       </el-tabs>
-      
+
       <!-- 只保留WebSocket状态指示器，移除按钮 -->
       <div class="ws-status-indicator">
         <el-tag
@@ -117,7 +113,6 @@
 </template>
 
 <script>
-import ResultFilters from '@/components/common/ResultFilters.vue';
 import SqlInjectionResults from '@/components/vuln/SqlInjectionResults.vue';
 import XssResults from '@/components/vuln/XssResults.vue';
 import FileInclusionResults from '@/components/vuln/FileInclusionResults.vue';
@@ -131,7 +126,6 @@ import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
 export default {
   name: 'VulnResultsPage',
   components: {
-    ResultFilters,
     SqlInjectionResults,
     XssResults,
     FileInclusionResults,
@@ -148,8 +142,7 @@ export default {
       currentPage: 1,
       pageSize: 10,
 
-      // 过滤条件
-      filters: {},
+      // 当前漏洞类型
       currentVulnType: 'sql_injection', // 默认显示SQL注入
 
       // 详情对话框
@@ -159,17 +152,17 @@ export default {
       // WebSocket相关
       isWebSocketConnected: false,
       wsCheckInterval: null,
-      
+
       // 去重相关
       resultCache: new Map(), // 用于存储已经显示的结果，键为ID
       notifiedResults: new Set(), // 用于存储已经通知的结果ID
       processedNotifications: new Set(), // 用于去重通知消息
       completedNotifications: new Set(), // 用于存储已显示的完成通知
-      
+
       // 通知节流
       lastNotificationTime: 0,
       notificationThrottleTime: 3000, // 3秒内不重复显示同类型通知
-      
+
       // 进度通知记录
       lastProgressStatus: null,
       lastProgressMessageTime: 0,
@@ -179,29 +172,29 @@ export default {
   created() {
     // 添加页面可见性变化监听
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
-    
+
     // 从LocalStorage恢复缓存
     this.loadCacheFromStorage();
-    
+
     // 连接WebSocket
     this.initWebSocket();
-    
+
     // 开始WebSocket状态检查
     this.startWebSocketCheck();
-    
+
     // 获取初始数据
     this.fetchResults();
   },
   beforeUnmount() {
     // 移除页面可见性监听
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-    
+
     // 清除定时器
     this.stopWebSocketCheck();
-    
+
     // 断开WebSocket
     this.closeWebSocket();
-    
+
     // 保存缓存到LocalStorage
     this.saveCacheToStorage();
   },
@@ -215,21 +208,21 @@ export default {
           this.notifiedResults = new Set(JSON.parse(notifiedData));
           console.log(`已从存储恢复 ${this.notifiedResults.size} 个已通知结果记录`);
         }
-        
+
         // 恢复结果缓存
         const resultCacheData = localStorage.getItem('vulnResultCache');
         if (resultCacheData) {
           this.resultCache = new Map(JSON.parse(resultCacheData));
           console.log(`已从存储恢复 ${this.resultCache.size} 个结果缓存记录`);
         }
-        
+
         // 恢复已处理通知集合
         const processedNotifications = localStorage.getItem('processedNotifications');
         if (processedNotifications) {
           this.processedNotifications = new Set(JSON.parse(processedNotifications));
           console.log(`已从存储恢复 ${this.processedNotifications.size} 个已处理通知记录`);
         }
-        
+
         // 恢复已完成通知集合
         const completedNotifications = localStorage.getItem('completedNotifications');
         if (completedNotifications) {
@@ -239,27 +232,27 @@ export default {
         console.error('从LocalStorage恢复缓存失败', error);
       }
     },
-    
+
     saveCacheToStorage() {
       try {
         // 保存已通知结果集
         localStorage.setItem('vulnResultNotified', JSON.stringify(Array.from(this.notifiedResults)));
-        
+
         // 保存结果缓存
         localStorage.setItem('vulnResultCache', JSON.stringify(Array.from(this.resultCache)));
-        
+
         // 保存已处理通知集合
         localStorage.setItem('processedNotifications', JSON.stringify(Array.from(this.processedNotifications)));
-        
+
         // 保存已完成通知集合
         localStorage.setItem('completedNotifications', JSON.stringify(Array.from(this.completedNotifications)));
-        
+
         console.log('缓存数据已保存到LocalStorage');
       } catch (error) {
         console.error('保存缓存到LocalStorage失败', error);
       }
     },
-    
+
     // 页面可见性处理
     handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
@@ -269,17 +262,17 @@ export default {
         this.fetchResults();
       }
     },
-    
+
     // WebSocket相关方法
     initWebSocket() {
       // 连接WebSocket
       console.log("正在连接WebSocket...");
-      
+
       vulnScanWS.connect('ws://localhost:8000/ws/vuln_scan/')
         .then(() => {
           console.log("WebSocket连接成功!");
           this.isWebSocketConnected = true;
-          
+
           // 添加事件监听器
           vulnScanWS.addListener('scan_result', this.handleScanResult);
           vulnScanWS.addListener('scan_progress', this.handleScanProgress);
@@ -287,22 +280,22 @@ export default {
         .catch(error => {
           console.error('连接WebSocket失败', error);
           this.isWebSocketConnected = false;
-          
+
           // 自动尝试重连
           this.attemptReconnect();
         });
     },
-    
+
     closeWebSocket() {
       // 移除事件监听器
       vulnScanWS.removeListener('scan_result', this.handleScanResult);
       vulnScanWS.removeListener('scan_progress', this.handleScanProgress);
-      
+
       // 断开连接
       vulnScanWS.disconnect();
       this.isWebSocketConnected = false;
     },
-    
+
     attemptReconnect() {
       // 3秒后尝试重连
       setTimeout(() => {
@@ -310,69 +303,69 @@ export default {
         this.initWebSocket();
       }, 3000);
     },
-    
+
     startWebSocketCheck() {
       // 每30秒检查一次WebSocket状态
       this.wsCheckInterval = setInterval(() => {
         this.checkWebSocketStatus();
       }, 30000);
     },
-    
+
     stopWebSocketCheck() {
       if (this.wsCheckInterval) {
         clearInterval(this.wsCheckInterval);
         this.wsCheckInterval = null;
       }
     },
-    
+
     checkWebSocketStatus() {
       // 更新当前连接状态
       const wasConnected = this.isWebSocketConnected;
       this.isWebSocketConnected = vulnScanWS.isConnected;
-      
+
       // 如果状态从连接变为断开，尝试重连
       if (wasConnected && !this.isWebSocketConnected) {
         console.log('检测到WebSocket连接已断开，尝试重连');
         this.attemptReconnect();
       }
     },
-    
+
     // WebSocket消息处理
     handleScanResult(message) {
       // 忽略无效消息
       if (!message || !message.data) {
         return;
       }
-      
+
       const resultData = message.data;
-      
+
       // 生成结果的唯一标识符
       const resultKey = this.getResultKey(resultData);
-      
+
       // 检查是否已处理过此结果
       if (this.notifiedResults.has(resultKey)) {
         console.log('跳过已通知的结果:', resultKey);
         return;
       }
-      
+
       console.log('收到新的漏洞扫描结果:', resultKey);
-      
+
       // 标记为已通知
       this.notifiedResults.add(resultKey);
-      
+
       // 检查是否为当前显示的漏洞类型
       if (resultData.vuln_type === this.currentVulnType) {
         // 将新结果添加到顶部
         this.results.unshift(resultData);
-        
+
         // 如果当前页面结果超过页面大小，移除最后一条
         if (this.results.length > this.pageSize) {
           this.results.pop();
         }
-        
+
         // 更新总数
         this.totalResults++;
-        
+
         // 保存结果到缓存
         if (resultData.id) {
           this.resultCache.set(resultData.id, resultData);
@@ -383,54 +376,54 @@ export default {
           this.resultCache.set(resultData.id, resultData);
         }
       }
-      
+
       // 显示通知（应用节流控制）
       this.showNotificationForResult(resultData);
-      
+
       // 保存缓存
       this.saveCacheToStorage();
     },
-    
+
     handleScanProgress(message) {
       // 忽略无效消息
       if (!message || !message.data) {
         return;
       }
-      
+
       const progressData = message.data;
       const status = progressData.status;
       const messageText = progressData.message || '';
-      
+
       // 创建唯一的进度消息标识
       const progressKey = `${status}-${messageText}`;
-      
+
       // 检查是否是重复的相同状态消息
       const now = Date.now();
-      const isRecentMessage = (status === this.lastProgressStatus) && 
+      const isRecentMessage = (status === this.lastProgressStatus) &&
                              (now - this.lastProgressMessageTime < this.progressMessageThrottleTime);
-      
+
       // 如果是最近显示过的相同状态消息，跳过
       if (isRecentMessage) {
         console.log('跳过相同状态的进度通知:', progressKey);
         return;
       }
-      
+
       // 更新最后进度状态和时间
       this.lastProgressStatus = status;
       this.lastProgressMessageTime = now;
-      
+
       console.log('扫描进度更新:', progressData);
-      
+
       // 根据状态显示不同通知
       switch(status) {
         case 'started':
           // 扫描开始通知(通常不需要显示)
           break;
-          
+
         case 'completed': {
           // 在case块之前声明变量，避免ESLint错误
           let completedKey = `completed-${new Date().toDateString()}`;
-          
+
           // 检查是否已经显示过完成通知
           if (!this.completedNotifications.has(completedKey)) {
             ElNotification({
@@ -439,19 +432,19 @@ export default {
               type: 'success',
               duration: 3000
             });
-            
+
             // 标记此完成通知已显示
             this.completedNotifications.add(completedKey);
-            
+
             // 保存已处理通知记录
             this.saveCacheToStorage();
-            
+
             // 刷新结果
             this.fetchResults();
           }
           break;
         }
-          
+
         case 'error':
           // 错误通知一定要显示
           ElNotification({
@@ -461,13 +454,13 @@ export default {
             duration: 5000
           });
           break;
-          
+
         default:
           // 忽略其他状态
           break;
       }
     },
-    
+
     showNotificationForResult(result) {
       // 检查通知节流
       const now = Date.now();
@@ -475,27 +468,27 @@ export default {
         console.log('通知被节流，跳过');
         return;
       }
-      
+
       // 更新最后通知时间
       this.lastNotificationTime = now;
-      
+
       // 构造唯一的通知标识
       const notificationKey = this.getResultKey(result);
-      
+
       // 检查是否已经显示过此通知
       if (this.processedNotifications.has(notificationKey)) {
         console.log('跳过已显示的通知:', notificationKey);
         return;
       }
-      
+
       // 构造通知内容
       const title = `发现${this.getVulnTypeDisplay(result.vuln_type)}漏洞`;
       let message = `${result.name}`;
-      
+
       if (result.parameter) {
         message += ` (参数: ${result.parameter})`;
       }
-      
+
       // 显示通知
       ElNotification({
         title: title,
@@ -511,23 +504,23 @@ export default {
           this.showDetail(result);
         }
       });
-      
+
       // 标记此通知已显示
       this.processedNotifications.add(notificationKey);
-      
+
       // 保存已处理通知记录
       this.saveCacheToStorage();
     },
-    
+
     // 获取结果的唯一标识
     getResultKey(result) {
       // 如果有ID，使用ID作为键的一部分
       const idPart = result.id ? `-${result.id}` : '';
-      
+
       // 创建唯一标识
       return `${result.vuln_type}-${result.vuln_subtype || ''}-${result.parameter || ''}-${result.url}${idPart}`;
     },
-    
+
     // 获取漏洞类型显示名称
     getVulnTypeDisplay(vulnType) {
       const vulnTypeMap = {
@@ -539,7 +532,7 @@ export default {
       };
       return vulnTypeMap[vulnType] || vulnType;
     },
-    
+
     // 根据严重性获取通知类型
     getNotificationTypeFromSeverity(severity) {
       switch(severity) {
@@ -549,13 +542,12 @@ export default {
         default: return 'success';
       }
     },
-    
+
     // 数据操作方法
     async fetchResults() {
       this.loading = true;
       try {
         const params = {
-          ...this.filters,
           page: this.currentPage,
           page_size: this.pageSize
         };

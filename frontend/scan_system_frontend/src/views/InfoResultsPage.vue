@@ -2,11 +2,7 @@
   <div class="info-results-page">
     <h1>信息收集结果</h1>
 
-    <!-- 过滤器 -->
-    <ResultFilters
-      type="info"
-      @filter-change="handleFilterChange"
-    />
+    <!-- 移除了 ResultFilters 组件 -->
 
     <!-- 扫描类型切换 -->
     <div class="scan-type-tabs">
@@ -68,7 +64,7 @@
 </template>
 
 <script>
-import ResultFilters from '@/components/common/ResultFilters.vue';
+// 移除了 ResultFilters 的导入
 import PassiveScanResults from '@/components/info/PassiveScanResults.vue';
 import ActiveScanResults from '@/components/info/ActiveScanResults.vue';
 import InfoResultDetailDialog from '@/components/info/InfoResultDetailDialog.vue';
@@ -79,7 +75,7 @@ import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
 export default {
   name: 'InfoResultsPage',
   components: {
-    ResultFilters,
+    // 移除了 ResultFilters
     PassiveScanResults,
     ActiveScanResults,
     InfoResultDetailDialog
@@ -93,8 +89,7 @@ export default {
       currentPage: 1,
       pageSize: 10,
 
-      // 过滤条件
-      filters: {},
+      // 移除了 filters 对象，因为不再需要过滤功能
       currentScanType: 'passive',
 
       // 详情对话框
@@ -514,8 +509,8 @@ export default {
       this.loading = true;
       try {
         let response;
+        // 移除了 filters，直接使用基本参数
         const params = {
-          ...this.filters,
           page: this.currentPage,
           page_size: this.pageSize
         };
@@ -595,7 +590,7 @@ export default {
       }
     },
 
-    // 分页和过滤器方法
+    // 分页方法
     handleSizeChange(val) {
       this.pageSize = val;
       this.fetchResults();
@@ -606,11 +601,7 @@ export default {
       this.fetchResults();
     },
 
-    handleFilterChange(filters) {
-      this.filters = filters;
-      this.currentPage = 1; // 重置为第一页
-      this.fetchResults();
-    },
+    // 移除了 handleFilterChange 方法，因为不再需要过滤功能
 
     handleScanTypeChange() {
       this.currentPage = 1; // 重置为第一页
