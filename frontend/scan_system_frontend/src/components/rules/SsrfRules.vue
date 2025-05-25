@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/rules/SsrfRules.vue -->
 <template>
   <div class="ssrf-rules">
     <h3>SSRF服务器端请求伪造扫描设置</h3>

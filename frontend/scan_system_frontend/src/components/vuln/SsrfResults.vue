@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/SsrfResults.vue -->
 <template>
   <div class="ssrf-results">
     <el-table

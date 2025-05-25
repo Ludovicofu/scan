@@ -1,4 +1,3 @@
-# system/mitmproxy_script.py
 import json
 import time
 import base64
@@ -9,7 +8,6 @@ from mitmproxy import http, ctx
 class Proxy:
     """
     mitmproxy脚本，用于监听HTTP流量并发送到后端接口
-    改进版：添加内容大小限制和内容类型过滤
     """
 
     def __init__(self):

@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/FileInclusionResults.vue -->
 <template>
   <div class="fileinclusion-results">
     <el-table

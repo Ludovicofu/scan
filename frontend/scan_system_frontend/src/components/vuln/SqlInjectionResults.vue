@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/SqlInjectionResults.vue -->
 <template>
   <div class="sqlinjection-results">
     <el-table

@@ -1,5 +1,3 @@
-# report_management/report_generator.py
-# 修复查询错误的报告生成器
 
 import os
 import time

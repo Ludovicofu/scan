@@ -1,5 +1,3 @@
-// frontend/scan_system_frontend/src/views/RulesPage.vue
-
 <template>
   <div class="rules-page">
     <h1>规则管理</h1>

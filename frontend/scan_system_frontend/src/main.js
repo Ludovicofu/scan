@@ -1,4 +1,3 @@
-// src/main.js - 修改版（添加全局WebSocket服务初始化）
 
 import { createApp } from 'vue';
 import App from './App.vue';

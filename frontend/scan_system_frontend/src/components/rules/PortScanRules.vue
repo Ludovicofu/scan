@@ -1,4 +1,3 @@
-// frontend/scan_system_frontend/src/components/rules/PortScanRules.vue
 <template>
   <div class="port-scan-rules">
     <h3>端口扫描设置</h3>

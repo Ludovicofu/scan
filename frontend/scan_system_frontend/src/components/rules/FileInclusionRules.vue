@@ -1,4 +1,3 @@
-// frontend/scan_system_frontend/src/components/rules/FileInclusionRules.vue
 <template>
   <div class="fileinclusion-rules">
     <h3>文件包含扫描设置</h3>

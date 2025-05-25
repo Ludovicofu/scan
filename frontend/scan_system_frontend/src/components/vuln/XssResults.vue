@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/XssResults.vue -->
 <template>
   <div class="xss-results">
     <el-table

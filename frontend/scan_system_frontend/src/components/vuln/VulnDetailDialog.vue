@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/VulnDetailDialog.vue -->
 <template>
   <el-dialog
     title="漏洞详情"

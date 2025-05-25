@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/GeneralVulnResults.vue -->
 <template>
   <div class="general-vuln-results">
     <el-table

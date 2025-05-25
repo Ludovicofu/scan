@@ -1,4 +1,3 @@
-<!-- components/info/InfoResultDetailDialog.vue (修改后) -->
 <template>
   <el-dialog
     title="扫描结果详情"

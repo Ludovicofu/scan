@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/vuln/RceResults.vue -->
 <template>
   <div class="rce-results">
     <el-table

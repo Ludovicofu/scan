@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/rules/RceRules.vue -->
 <template>
   <div class="rce-rules">
     <h3>命令/代码执行扫描设置</h3>

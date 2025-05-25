@@ -1,4 +1,3 @@
-// src/services/vulnScanService.js - 新增服务文件
 import { vulnScanAPI } from '@/services/api';
 import { vulnScanWS } from '@/services/websocket';
 import { ElNotification } from 'element-plus';

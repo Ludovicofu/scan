@@ -1,4 +1,3 @@
-<!-- components/info/ActiveScanResults.vue -->
 <template>
   <div class="active-scan-results">
     <el-table

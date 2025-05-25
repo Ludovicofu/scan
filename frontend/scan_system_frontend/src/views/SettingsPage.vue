@@ -2,17 +2,7 @@
   <div class="settings-page">
     <h1>系统设置</h1>
 
-    <!-- 页面内通知区 -->
-    <div class="page-alert" v-if="showReportAlert">
-      <el-alert
-        title="安全检测报告导出功能已添加"
-        type="success"
-        :closable="true"
-        @close="closeReportAlert"
-        description="您现在可以生成系统的安全检测PDF报告，包含资产信息、漏洞详情和信息收集结果。生成的报告将保存到media/reports目录中。"
-        show-icon
-      ></el-alert>
-    </div>
+
 
     <el-card class="settings-card">
       <template #header>

@@ -1,4 +1,3 @@
-<!-- components/info/PassiveScanResults.vue -->
 <template>
   <div class="passive-scan-results">
     <el-table

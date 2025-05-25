@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/rules/XssRules.vue -->
 <template>
   <div class="xss-rules">
     <h3>XSS跨站脚本扫描设置</h3>

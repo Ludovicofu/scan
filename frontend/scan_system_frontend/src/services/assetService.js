@@ -1,4 +1,3 @@
-// src/services/assetService.js
 // 资产管理服务 - 处理资产相关的业务逻辑
 
 import { assetAPI } from '@/services/api';

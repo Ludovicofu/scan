@@ -1,4 +1,3 @@
-<!-- frontend/scan_system_frontend/src/components/rules/SqlinjectionRules.vue -->
 <template>
   <div class="sqlinjection-rules">
     <h3>SQL注入扫描设置</h3>
