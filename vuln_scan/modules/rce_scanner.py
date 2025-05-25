@@ -294,87 +294,124 @@ class RceScanner:
                         print(f"跳过已发现的漏洞: {vuln_key}")
                         continue
 
-                    # 创建测试URL
-                    test_params = query_params.copy()
-                    test_params[param] = [original_value + payload]
-                    test_query = urlencode(test_params, doseq=True)
-                    test_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
-                    if test_query:
-                        test_url += f"?{test_query}"
+                    # 1. 先尝试附加payload到原值后面
+                    test_params_append = query_params.copy()
+                    test_params_append[param] = [original_value + payload]
+                    test_query_append = urlencode(test_params_append, doseq=True)
+                    test_url_append = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+                    if test_query_append:
+                        test_url_append += f"?{test_query_append}"
 
-                    print(f"测试载荷: {payload}")
-                    print(f"测试URL: {test_url}")
+                    print(f"测试附加载荷: {payload} 到参数 {param}")
+                    print(f"测试URL (附加): {test_url_append}")
 
-                    # 发送请求
-                    try:
-                        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
-                            print(f"发送GET请求: {test_url}")
-                            start_time = asyncio.get_event_loop().time()
+                    # 发送请求测试附加方式
+                    result = await self._test_url_payload(
+                        test_url_append, parsed_url, param, payload, original_value,
+                        match_patterns, vuln_key, timeout, connector, "附加"
+                    )
 
-                            async with session.get(test_url) as response:
-                                response_time = asyncio.get_event_loop().time() - start_time
-                                status = response.status
-                                print(f"状态码: {status}, 响应时间: {response_time:.2f}秒")
+                    if result:
+                        results.append(result)
+                        # 标记已发现漏洞，防止替换测试时重复
+                        self.found_vulnerabilities.add(vuln_key)
+                        break  # 找到漏洞后不再测试该参数的其他载荷
 
-                                # 获取头信息
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-                                print(f"响应头:\n{headers_text[:500]}")
+                    # 2. 如果附加方式没有找到漏洞，尝试替换方式
+                    test_params_replace = query_params.copy()
+                    test_params_replace[param] = [payload]  # 直接替换为payload
+                    test_query_replace = urlencode(test_params_replace, doseq=True)
+                    test_url_replace = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+                    if test_query_replace:
+                        test_url_replace += f"?{test_query_replace}"
 
-                                response_text = await response.text(errors='replace')
-                                print(f"响应长度: {len(response_text)}字节")
+                    print(f"测试替换载荷: {payload} 到参数 {param}")
+                    print(f"测试URL (替换): {test_url_replace}")
 
-                                # 记录响应内容片段
-                                content_preview = response_text[:500] + ("..." if len(response_text) > 500 else "")
-                                print(f"响应内容预览:\n{content_preview}")
+                    # 发送请求测试替换方式
+                    result = await self._test_url_payload(
+                        test_url_replace, parsed_url, param, payload, original_value,
+                        match_patterns, vuln_key, timeout, connector, "替换"
+                    )
 
-                                # 检查是否存在RCE特征
-                                rce_match = self.check_rce_match(response_text, match_patterns)
-                                if rce_match:
-                                    print(f"发现匹配项: {rce_match}")
+                    if result:
+                        results.append(result)
+                        break  # 找到漏洞后不再测试该参数的其他载荷
 
-                                    # 构造请求数据
-                                    request_data = f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}"
-
-                                    # 构造响应数据
-                                    response_data = f"HTTP/1.1 {status}\n\n{response_text[:300]}..."
-
-                                    # 构造证明数据
-                                    proof = f"在URL参数 {param} 中注入 {payload} 后，响应中包含匹配特征: {rce_match}"
-
-                                    # 标记为已发现的漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 添加结果
-                                    results.append({
-                                        'vuln_type': 'command_injection',
-                                        'vuln_subtype': 'os_command',  # 默认子类型
-                                        'name': f'URL参数 {param} 中的命令执行漏洞',
-                                        'description': f'在URL参数 {param} 中发现命令执行漏洞，可以执行任意系统命令',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'request': request_data,
-                                        'response': response_data,
-                                        'proof': f"{proof}，执行结果: {rce_match}",
-                                        'parameter': param,
-                                        'payload': payload
-                                    })
-
-                                    print(f"在URL参数 {param} 中发现RCE漏洞")
-                                    # 每个参数只添加一个结果
-                                    break
-                                else:
-                                    print(f"未找到匹配项，已尝试 {len(match_patterns)} 个匹配模式")
-                    except Exception as e:
-                        print(f"测试URL参数 {param} 的RCE漏洞时出错: {str(e)}")
-                        import traceback
-                        traceback.print_exc()
-                        continue
         except Exception as e:
             print(f"扫描URL参数RCE时出错: {str(e)}")
             import traceback
             traceback.print_exc()
 
         return results
+
+    async def _test_url_payload(self, test_url, parsed_url, param, payload, original_value,
+                                match_patterns, vuln_key, timeout, connector, inject_method):
+        """测试单个URL参数的RCE payload"""
+        try:
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                print(f"发送GET请求: {test_url}")
+                start_time = asyncio.get_event_loop().time()
+
+                async with session.get(test_url) as response:
+                    response_time = asyncio.get_event_loop().time() - start_time
+                    status = response.status
+                    print(f"状态码: {status}, 响应时间: {response_time:.2f}秒")
+
+                    # 获取头信息
+                    headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+                    print(f"响应头:\n{headers_text[:500]}")
+
+                    response_text = await response.text(errors='replace')
+                    print(f"响应长度: {len(response_text)}字节")
+
+                    # 记录响应内容片段
+                    content_preview = response_text[:500] + ("..." if len(response_text) > 500 else "")
+                    print(f"响应内容预览:\n{content_preview}")
+
+                    # 检查是否存在RCE特征
+                    rce_match = self.check_rce_match(response_text, match_patterns)
+                    if rce_match:
+                        print(f"发现匹配项: {rce_match}")
+
+                        # 构造请求数据
+                        request_data = f"GET {test_url} HTTP/1.1\nHost: {parsed_url.netloc}"
+
+                        # 构造响应数据
+                        response_data = f"HTTP/1.1 {status}\n\n{response_text[:300]}..."
+
+                        # 构造证明数据
+                        if inject_method == "附加":
+                            proof = f"在URL参数 {param} 中附加 {payload} 到原值 '{original_value}' 后，响应中包含匹配特征: {rce_match}"
+                        else:
+                            proof = f"在URL参数 {param} 中替换原值 '{original_value}' 为 {payload} 后，响应中包含匹配特征: {rce_match}"
+
+                        # 不要在这里标记漏洞，让主循环来控制
+                        # self.found_vulnerabilities.add(vuln_key)
+
+                        # 添加结果
+                        return {
+                            'vuln_type': 'command_injection',
+                            'vuln_subtype': 'os_command',  # 默认子类型
+                            'name': f'URL参数 {param} 中的命令执行漏洞',
+                            'description': f'在URL参数 {param} 中发现命令执行漏洞（{inject_method}方式），可以执行任意系统命令',
+                            'severity': 'high',
+                            'url': test_url,  # 使用实际测试的URL
+                            'request': request_data,
+                            'response': response_data,
+                            'proof': f"{proof}，执行结果: {rce_match}",
+                            'parameter': param,
+                            'payload': payload,
+                            'inject_method': inject_method  # 记录注入方式
+                        }
+                    else:
+                        print(f"未找到匹配项，已尝试 {len(match_patterns)} 个匹配模式")
+        except Exception as e:
+            print(f"测试URL参数 {param} 的RCE漏洞时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+        return None
 
     async def scan_post_parameters(self, context, url, req_content, rce_payloads, match_patterns):
         """扫描POST请求参数中的RCE漏洞"""
@@ -474,108 +511,136 @@ class RceScanner:
                         print(f"跳过已发现的漏洞: {vuln_key}")
                         continue
 
-                    # 创建测试参数
-                    test_params = post_params.copy()
-                    test_params[param] = [original_value + payload]
-                    print(f"测试载荷: {payload}")
+                    # 1. 先尝试附加payload到原值后面
+                    test_params_append = post_params.copy()
+                    test_params_append[param] = [original_value + payload]
+                    print(f"测试附加载荷: {payload}")
 
-                    # 根据content_type准备请求内容
-                    if content_type and 'application/json' in content_type:
-                        # 将扁平的参数还原为JSON
-                        test_json = {}
-                        for k, v in test_params.items():
-                            # 简单处理，仅支持顶级键
-                            test_json[k] = v[0]
-                        test_content = json.dumps(test_json)
-                        headers = {'Content-Type': 'application/json'}
-                        print(f"生成JSON请求体: {test_content}")
-                    else:
-                        # 默认使用表单格式
-                        test_content = urlencode(test_params, doseq=True)
-                        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                        print(f"生成表单请求体: {test_content}")
+                    result = await self._test_post_payload(
+                        url, parsed_url, param, payload, original_value, test_params_append,
+                        content_type, vuln_key, match_patterns, timeout, connector, "附加"
+                    )
 
-                    # 发送请求
-                    try:
-                        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
-                            print(f"发送POST请求: {url}")
-                            print(f"请求头: {headers}")
-                            print(f"请求体: {test_content}")
+                    if result:
+                        results.append(result)
+                        break  # 找到漏洞后不再测试该参数
 
-                            start_time = asyncio.get_event_loop().time()
-                            async with session.post(url, data=test_content, headers=headers) as response:
-                                response_time = asyncio.get_event_loop().time() - start_time
-                                status = response.status
-                                print(f"状态码: {status}, 响应时间: {response_time:.2f}秒")
+                    # 2. 如果附加方式没有找到漏洞，尝试替换方式
+                    test_params_replace = post_params.copy()
+                    test_params_replace[param] = [payload]  # 直接替换为payload
+                    print(f"测试替换载荷: {payload}")
 
-                                # 获取头信息
-                                headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-                                print(f"响应头:\n{headers_text[:500]}")
+                    result = await self._test_post_payload(
+                        url, parsed_url, param, payload, original_value, test_params_replace,
+                        content_type, vuln_key, match_patterns, timeout, connector, "替换"
+                    )
 
-                                response_text = await response.text(errors='replace')
-                                print(f"响应长度: {len(response_text)}字节")
+                    if result:
+                        results.append(result)
+                        break  # 找到漏洞后不再测试该参数
 
-                                # 记录响应内容片段
-                                content_preview = response_text[:500] + ("..." if len(response_text) > 500 else "")
-                                print(f"响应内容预览:\n{content_preview}")
-
-                                # 检查是否存在RCE特征
-                                rce_match = self.check_rce_match(response_text, match_patterns)
-                                if rce_match:
-                                    print(f"发现匹配项: {rce_match}")
-
-                                    # 构造请求数据
-                                    request_data = f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}"
-
-                                    # 构造响应数据
-                                    response_data = f"HTTP/1.1 {status}\n\n{response_text[:300]}..."
-
-                                    # 构造证明数据
-                                    proof = f"在POST参数 {param} 中注入 {payload} 后，响应中包含匹配特征: {rce_match}"
-
-                                    # 标记为已发现的漏洞
-                                    self.found_vulnerabilities.add(vuln_key)
-
-                                    # 确定漏洞子类型
-                                    vuln_subtype = 'os_command'  # 默认为系统命令注入
-                                    if '${' in payload or '{' in payload or 'eval' in payload or 'exec' in payload:
-                                        vuln_subtype = 'php_code'  # PHP代码注入
-                                    elif '__import__' in payload or 'print(' in payload:
-                                        vuln_subtype = 'python_code'  # Python代码注入
-                                    elif 'System.out' in payload or 'Runtime.getRuntime' in payload:
-                                        vuln_subtype = 'java_code'  # Java代码注入
-
-                                    # 添加结果
-                                    results.append({
-                                        'vuln_type': 'command_injection',
-                                        'vuln_subtype': vuln_subtype,
-                                        'name': f'POST参数 {param} 中的命令/代码执行漏洞',
-                                        'description': f'在POST参数 {param} 中发现命令/代码执行漏洞，可以执行任意命令或代码',
-                                        'severity': 'high',
-                                        'url': url,
-                                        'request': request_data,
-                                        'response': response_data,
-                                        'proof': f"{proof}，执行结果: {rce_match}",
-                                        'parameter': param,
-                                        'payload': payload
-                                    })
-
-                                    print(f"在POST参数 {param} 中发现RCE漏洞")
-                                    # 每个参数只添加一个结果
-                                    break
-                                else:
-                                    print(f"未找到匹配项，已尝试 {len(match_patterns)} 个匹配模式")
-                    except Exception as e:
-                        print(f"测试POST参数 {param} 时出错: {str(e)}")
-                        import traceback
-                        traceback.print_exc()
-                        continue
         except Exception as e:
             print(f"扫描POST参数RCE时出错: {str(e)}")
             import traceback
             traceback.print_exc()
 
         return results
+
+    async def _test_post_payload(self, url, parsed_url, param, payload, original_value, test_params,
+                                 content_type, vuln_key, match_patterns, timeout, connector, inject_method):
+        """测试单个POST参数的RCE payload"""
+        try:
+            # 根据content_type准备请求内容
+            if content_type and 'application/json' in content_type:
+                # 将扁平的参数还原为JSON
+                test_json = {}
+                for k, v in test_params.items():
+                    # 简单处理，仅支持顶级键
+                    test_json[k] = v[0]
+                test_content = json.dumps(test_json)
+                headers = {'Content-Type': 'application/json'}
+                print(f"生成JSON请求体: {test_content}")
+            else:
+                # 默认使用表单格式
+                test_content = urlencode(test_params, doseq=True)
+                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                print(f"生成表单请求体: {test_content}")
+
+            # 发送请求
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                print(f"发送POST请求: {url}")
+                print(f"请求头: {headers}")
+                print(f"请求体: {test_content}")
+
+                start_time = asyncio.get_event_loop().time()
+                async with session.post(url, data=test_content, headers=headers) as response:
+                    response_time = asyncio.get_event_loop().time() - start_time
+                    status = response.status
+                    print(f"状态码: {status}, 响应时间: {response_time:.2f}秒")
+
+                    # 获取头信息
+                    headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+                    print(f"响应头:\n{headers_text[:500]}")
+
+                    response_text = await response.text(errors='replace')
+                    print(f"响应长度: {len(response_text)}字节")
+
+                    # 记录响应内容片段
+                    content_preview = response_text[:500] + ("..." if len(response_text) > 500 else "")
+                    print(f"响应内容预览:\n{content_preview}")
+
+                    # 检查是否存在RCE特征
+                    rce_match = self.check_rce_match(response_text, match_patterns)
+                    if rce_match:
+                        print(f"发现匹配项: {rce_match}")
+
+                        # 构造请求数据
+                        request_data = f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}"
+
+                        # 构造响应数据
+                        response_data = f"HTTP/1.1 {status}\n\n{response_text[:300]}..."
+
+                        # 构造证明数据
+                        if inject_method == "附加":
+                            proof = f"在POST参数 {param} 中附加 {payload} 到原值 '{original_value}' 后，响应中包含匹配特征: {rce_match}"
+                        else:
+                            proof = f"在POST参数 {param} 中替换原值 '{original_value}' 为 {payload} 后，响应中包含匹配特征: {rce_match}"
+
+                        # 不要在这里标记漏洞，让主循环来控制
+                        # self.found_vulnerabilities.add(vuln_key)
+
+                        # 确定漏洞子类型
+                        vuln_subtype = 'os_command'  # 默认为系统命令注入
+                        if '${' in payload or '{' in payload or 'eval' in payload or 'exec' in payload:
+                            vuln_subtype = 'php_code'  # PHP代码注入
+                        elif '__import__' in payload or 'print(' in payload:
+                            vuln_subtype = 'python_code'  # Python代码注入
+                        elif 'System.out' in payload or 'Runtime.getRuntime' in payload:
+                            vuln_subtype = 'java_code'  # Java代码注入
+
+                        # 添加结果
+                        return {
+                            'vuln_type': 'command_injection',
+                            'vuln_subtype': vuln_subtype,
+                            'name': f'POST参数 {param} 中的命令/代码执行漏洞',
+                            'description': f'在POST参数 {param} 中发现命令/代码执行漏洞（{inject_method}方式），可以执行任意命令或代码',
+                            'severity': 'high',
+                            'url': url,
+                            'request': request_data,
+                            'response': response_data,
+                            'proof': f"{proof}，执行结果: {rce_match}",
+                            'parameter': param,
+                            'payload': payload,
+                            'inject_method': inject_method  # 记录注入方式
+                        }
+                    else:
+                        print(f"未找到匹配项，已尝试 {len(match_patterns)} 个匹配模式")
+        except Exception as e:
+            print(f"测试POST参数 {param} 时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+        return None
 
     def check_rce_match(self, response_text, match_patterns):
         """检查响应中是否包含RCE执行结果的特征"""
