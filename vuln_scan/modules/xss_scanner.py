@@ -162,12 +162,7 @@ class XssScanner:
 
         # 如果没有找到规则，使用默认载荷
         default_payloads = [
-            "<script>alert(1)</script>",
-            "\"><script>alert(1)</script>",
-            "<img src=x onerror=alert(1)>",
-            "javascript:alert(1)",
-            "<svg onload=alert(1)>",
-            "<body onload=alert(1)>"
+
         ]
         print(f"未找到XSS规则，使用 {len(default_payloads)} 个默认载荷")
         return default_payloads

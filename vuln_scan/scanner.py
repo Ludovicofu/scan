@@ -38,7 +38,7 @@ class VulnScanner:
         self.rce_scanner = self._init_rce_scanner()
         self.ssrf_scanner = self._init_ssrf_scanner()  # 使用特殊的初始化方法
 
-        # 已扫描的URL记录
+        # 已扫描的URL记录 - 保留这个属性定义，以免其他地方引用出错
         self.scanned_urls = set()
 
     def _init_rce_scanner(self):
@@ -218,13 +218,14 @@ class VulnScanner:
             print(f"跳过目标: {host} (在跳过列表中)")
             return
 
-        # 检查URL是否已扫描
-        if url in self.scanned_urls:
-            print(f"跳过已扫描URL: {url}")
-            return
-
-        # 标记URL为已扫描
-        self.scanned_urls.add(url)
+        # 【已修改】注释掉URL去重检查，不再跳过已扫描的URL
+        # # 检查URL是否已扫描
+        # if url in self.scanned_urls:
+        #     print(f"跳过已扫描URL: {url}")
+        #     return
+        #
+        # # 标记URL为已扫描
+        # self.scanned_urls.add(url)
 
         # 获取资产
         asset = await self.get_asset(asset_id)

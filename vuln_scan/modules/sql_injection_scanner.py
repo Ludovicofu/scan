@@ -784,7 +784,7 @@ class SqlInjectionScanner:
 
     def check_sql_error(self, response_text, error_patterns=None):
         """
-        检查响应中是否包含SQL错误信息 (兼容旧版本)
+        检查响应中是否包含SQL错误信息
 
         参数:
             response_text: 响应文本
