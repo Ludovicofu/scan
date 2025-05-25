@@ -31,21 +31,19 @@ class SqlInjectionScanner:
             return ""
 
         if isinstance(value, bytes):
-            try:
-                return value.decode('utf-8', errors='replace')
-            except Exception:
-                # 尝试其他编码格式
-                for encoding in ['latin1', 'cp1252', 'iso-8859-1', 'gbk']:
-                    try:
-                        return value.decode(encoding, errors='replace')
-                    except:
-                        continue
-
-                # 如果所有解码尝试都失败，返回十六进制表示
+            # 尝试多种编码格式
+            encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1', 'gbk', 'gb2312', 'big5']
+            for encoding in encodings:
                 try:
-                    return f"[二进制数据: {value[:20].hex()}...]"
-                except:
-                    return "[二进制数据]"
+                    return value.decode(encoding)
+                except Exception:
+                    continue
+
+            # 如果所有解码尝试都失败，返回十六进制表示
+            try:
+                return f"[二进制数据: {value[:20].hex()}...]"
+            except:
+                return "[二进制数据]"
 
         if isinstance(value, str):
             # 如果已经是字符串，确保它是有效的UTF-8
@@ -262,7 +260,7 @@ class SqlInjectionScanner:
                                     timeout=self.timeout,
                                     ssl=False
                             ) as response:
-                                # a获取完整的响应文本
+                                # 获取完整的响应文本
                                 response_text = await response.text(errors='replace')
 
                                 # 获取所有响应头
@@ -307,7 +305,7 @@ class SqlInjectionScanner:
         return results
 
     async def scan_post_parameters(self, context, url, req_content, error_payloads, error_patterns):
-        """扫描POST请求参数中的SQL注入漏洞"""
+        """扫描POST请求参数中的SQL注入漏洞 - 合并版（不再调用额外的方法）"""
         results = []
 
         # 如果没有载荷，直接返回
@@ -330,72 +328,128 @@ class SqlInjectionScanner:
                     break
 
             post_params = {}
-            decoded_req_content = self.safe_decode(req_content)
+
+            # 改进的内容解码
+            if isinstance(req_content, bytes):
+                decoded_req_content = self.safe_decode(req_content)
+            else:
+                decoded_req_content = str(req_content)
 
             # 打印原始请求内容，帮助调试
-            print(f"原始POST请求内容: {decoded_req_content[:100]}...")
+            print(f"原始POST请求内容: {decoded_req_content[:200]}...")
+            print(f"Content-Type: {content_type}")
 
             # 处理不同的内容类型
             if content_type and 'application/x-www-form-urlencoded' in content_type:
                 # 处理表单数据
                 try:
-                    # 确保正确解析URL编码的表单数据
+                    # 先尝试直接解析
                     post_params = parse_qs(decoded_req_content, keep_blank_values=True)
+
+                    # 如果没有解析出参数，尝试手动解析
+                    if not post_params and '=' in decoded_req_content:
+                        # 手动解析表单数据
+                        pairs = decoded_req_content.split('&')
+                        for pair in pairs:
+                            if '=' in pair:
+                                key, value = pair.split('=', 1)
+                                # URL解码
+                                key = urllib.parse.unquote_plus(key)
+                                value = urllib.parse.unquote_plus(value)
+                                if key not in post_params:
+                                    post_params[key] = []
+                                post_params[key].append(value)
+
                     print(f"解析的表单参数: {post_params}")
                 except Exception as e:
                     print(f"解析表单数据时出错: {str(e)}")
+
             elif content_type and 'application/json' in content_type:
                 # 处理JSON数据
                 try:
                     json_data = json.loads(decoded_req_content)
                     print(f"解析的JSON数据: {json_data}")
 
-                    # 将JSON扁平化为键值对
+                    # 改进的JSON扁平化函数
                     def flatten_json(json_obj, prefix=''):
                         result = {}
-                        for key, value in json_obj.items():
-                            if isinstance(value, dict):
-                                result.update(flatten_json(value, f"{prefix}{key}."))
-                            elif isinstance(value, list):
-                                for i, item in enumerate(value):
-                                    if isinstance(item, dict):
-                                        result.update(flatten_json(item, f"{prefix}{key}[{i}]."))
-                                    else:
-                                        result[f"{prefix}{key}[{i}]"] = str(item)
-                            else:
-                                result[f"{prefix}{key}"] = str(value)
+
+                        if isinstance(json_obj, dict):
+                            for key, value in json_obj.items():
+                                new_key = f"{prefix}{key}" if prefix else key
+
+                                if isinstance(value, dict):
+                                    result.update(flatten_json(value, f"{new_key}."))
+                                elif isinstance(value, list):
+                                    for i, item in enumerate(value):
+                                        if isinstance(item, (dict, list)):
+                                            result.update(flatten_json(item, f"{new_key}[{i}]."))
+                                        else:
+                                            result[f"{new_key}[{i}]"] = str(item)
+                                else:
+                                    # 处理None值
+                                    result[new_key] = str(value) if value is not None else ""
+                        elif isinstance(json_obj, list):
+                            for i, item in enumerate(json_obj):
+                                if isinstance(item, (dict, list)):
+                                    result.update(flatten_json(item, f"{prefix}[{i}]."))
+                                else:
+                                    result[f"{prefix}[{i}]"] = str(item)
+                        else:
+                            result[prefix.rstrip('.')] = str(json_obj)
+
                         return result
 
-                    post_params = flatten_json(json_data)
+                    flattened = flatten_json(json_data)
                     # 转换为与parse_qs相同的格式 {param: [value]}
-                    post_params = {k: [v] for k, v in post_params.items()}
+                    post_params = {k: [v] for k, v in flattened.items()}
+                    print(f"扁平化后的JSON参数: {post_params}")
+
                 except Exception as e:
                     print(f"解析JSON数据时出错: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
             else:
-                # 尝试直接解析为表单数据
+                # 尝试多种解析方式
                 try:
-                    # 无论content-type如何，先尝试解析为表单数据
-                    post_params = parse_qs(decoded_req_content, keep_blank_values=True)
-                    print(f"尝试解析为表单数据 (无明确content-type): {post_params}")
+                    # 1. 先尝试作为表单数据解析
+                    if '=' in decoded_req_content and '&' in decoded_req_content:
+                        post_params = parse_qs(decoded_req_content, keep_blank_values=True)
 
-                    # 如果解析结果为空，但有内容，尝试其他解析方法
-                    if not post_params and decoded_req_content.strip():
+                    # 2. 如果失败，尝试JSON解析
+                    if not post_params and (
+                            decoded_req_content.strip().startswith('{') or decoded_req_content.strip().startswith('[')):
                         try:
-                            # 尝试JSON解析
                             json_data = json.loads(decoded_req_content)
                             # 简单地转换JSON对象的顶级键值对
-                            post_params = {k: [str(v)] for k, v in json_data.items() if not isinstance(v, (dict, list))}
-                            print(f"尝试解析为JSON数据 (无明确content-type): {post_params}")
+                            if isinstance(json_data, dict):
+                                post_params = {k: [str(v)] for k, v in json_data.items()}
+                            print(f"尝试解析为JSON数据: {post_params}")
                         except json.JSONDecodeError:
-                            # 如果不是JSON，可能是自定义格式，尝试简单的解析
-                            if '=' in decoded_req_content:
-                                # 可能是原始表单格式但格式不标准
-                                parts = decoded_req_content.split('&')
-                                for part in parts:
-                                    if '=' in part:
-                                        key, value = part.split('=', 1)
-                                        post_params[key] = [urllib.parse.unquote_plus(value)]
-                                print(f"使用自定义解析方法: {post_params}")
+                            pass
+
+                    # 3. 如果还是没有参数，尝试简单的键值对解析
+                    if not post_params and '=' in decoded_req_content:
+                        # 可能是单个参数或者特殊格式
+                        if '&' not in decoded_req_content:
+                            # 单个参数
+                            key, value = decoded_req_content.split('=', 1)
+                            post_params[urllib.parse.unquote_plus(key)] = [urllib.parse.unquote_plus(value)]
+                        else:
+                            # 手动解析
+                            pairs = decoded_req_content.split('&')
+                            for pair in pairs:
+                                if '=' in pair:
+                                    key, value = pair.split('=', 1)
+                                    key = urllib.parse.unquote_plus(key)
+                                    value = urllib.parse.unquote_plus(value)
+                                    if key not in post_params:
+                                        post_params[key] = []
+                                    post_params[key].append(value)
+
+                    if post_params:
+                        print(f"使用备选方法解析的参数: {post_params}")
+
                 except Exception as e:
                     print(f"解析未知类型的请求内容时出错: {str(e)}")
 
@@ -404,49 +458,156 @@ class SqlInjectionScanner:
                 print("未能解析出任何POST参数，跳过SQL注入检测")
                 return results
 
+            print(f"最终解析出的参数数量: {len(post_params)}")
+
             # 测试每个参数
             for param, values in post_params.items():
                 if not values:
-                    continue
+                    values = [""]  # 确保空值也被测试
 
                 original_value = values[0]
                 print(f"测试参数: {param}={original_value}")
 
-                # 1. 直接替换原值为 payload
+                # 测试每个载荷
                 for payload in error_payloads:
                     # 检测是否已存在相同漏洞
                     vuln_key = f"error_based_post_{param}_{url}"
                     if vuln_key in self.found_vulnerabilities:
                         continue
 
-                    # 创建测试参数 - 直接替换原值
-                    test_params_replace = post_params.copy()
-                    test_params_replace[param] = [payload]
+                    # 测试两种注入方式
+                    test_methods = [
+                        ('替换', payload),  # 直接替换原值
+                        ('附加', original_value + payload)  # 附加到原值
+                    ]
 
-                    # 测试直接替换的payload
-                    result = await self._test_post_payload(
-                        url, parsed_url, param, payload, test_params_replace,
-                        content_type, vuln_key, error_patterns, "替换"
-                    )
-                    if result:
-                        results.append(result)
-                        break  # 找到漏洞，不再测试该参数
+                    for method_name, test_value in test_methods:
+                        # 创建测试参数
+                        test_params = post_params.copy()
+                        test_params[param] = [test_value]
 
-                # 如果没有找到漏洞，尝试附加payload
-                if f"error_based_post_{param}_{url}" not in self.found_vulnerabilities:
-                    for payload in error_payloads:
-                        # 创建测试参数 - 附加payload到原值
-                        test_params_append = post_params.copy()
-                        test_params_append[param] = [original_value + payload]
+                        # ============ 原本调用 _test_post_payload 的逻辑，现在直接写在这里 ============
+                        try:
+                            # 根据content_type准备请求内容
+                            if content_type and 'application/json' in content_type:
+                                # 还原为JSON格式
+                                test_json = {}
+                                for k, v in test_params.items():
+                                    # 处理嵌套的键
+                                    if '.' in k:
+                                        # 处理形如 "user.name" 的键
+                                        keys = k.split('.')
+                                        current = test_json
+                                        for key in keys[:-1]:
+                                            if key not in current:
+                                                current[key] = {}
+                                            current = current[key]
+                                        current[keys[-1]] = v[0]
+                                    elif '[' in k and ']' in k:
+                                        # 处理数组形式的键，如 "items[0]"
+                                        # 这里简化处理，直接作为普通键
+                                        test_json[k] = v[0]
+                                    else:
+                                        test_json[k] = v[0]
 
-                        # 测试附加payload
-                        result = await self._test_post_payload(
-                            url, parsed_url, param, payload, test_params_append,
-                            content_type, vuln_key, error_patterns, "附加"
-                        )
-                        if result:
-                            results.append(result)
-                            break  # 找到漏洞，不再测试该参数
+                                test_content = json.dumps(test_json, ensure_ascii=False)
+                                headers = {'Content-Type': 'application/json'}
+                            else:
+                                # 默认使用表单格式
+                                # 确保正确编码
+                                encoded_params = {}
+                                for k, v in test_params.items():
+                                    encoded_params[k] = v[0] if v else ''
+
+                                test_content = urlencode(encoded_params)
+                                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+                            print(f"测试 {method_name} payload: {param}={test_value[:50]}...")
+                            print(f"请求内容预览: {test_content[:200]}...")
+
+                            # 发送请求
+                            async with aiohttp.ClientSession() as session:
+                                try:
+                                    async with session.post(
+                                            url,
+                                            data=test_content,
+                                            headers=headers,
+                                            timeout=self.timeout,
+                                            ssl=False
+                                    ) as response:
+                                        # 获取完整的响应文本
+                                        response_text = await response.text(errors='replace')
+                                        status = response.status
+
+                                        # 状态码检查
+                                        print(f"响应状态码: {status}")
+
+                                        # 打印响应长度，帮助调试
+                                        print(f"响应长度: {len(response_text)} 字节")
+
+                                        # 获取所有响应头
+                                        headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
+
+                                        # 构建完整的HTTP响应内容
+                                        full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text[:1000]}..."
+
+                                        # 检查是否有SQL错误信息
+                                        error_match, matched_pattern = self.check_sql_error_with_match(response_text,
+                                                                                                       error_patterns)
+
+                                        # 增强的错误检测：检查状态码500
+                                        if not error_match and status >= 500:
+                                            # 服务器错误可能也表示SQL注入
+                                            print(f"检测到服务器错误状态码 {status}，可能存在SQL注入")
+                                            error_match = True
+                                            matched_pattern = f"HTTP {status} 服务器错误"
+
+                                        if error_match:
+                                            print(f"发现SQL错误匹配: {matched_pattern}")
+                                            # 记录漏洞
+                                            self.found_vulnerabilities.add(vuln_key)
+
+                                            # 创建漏洞结果
+                                            result = {
+                                                'vuln_type': 'sql_injection',
+                                                'vuln_subtype': 'error_based',
+                                                'name': f'POST参数 {param} 中的SQL注入漏洞',
+                                                'description': f'在POST参数 {param} 中发现回显型SQL注入漏洞',
+                                                'severity': 'high',
+                                                'url': url,
+                                                'parameter': param,
+                                                'payload': payload,
+                                                'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}",
+                                                'response': full_response,
+                                                'proof': f"在参数 {param} 中{method_name}注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
+                                            }
+
+                                            results.append(result)
+                                            break  # 找到漏洞，跳出方法循环
+                                        else:
+                                            # 即使没有明显的错误，也检查响应是否异常
+                                            if len(response_text) == 0 and status != 204:
+                                                print(f"警告：响应为空，可能存在SQL注入导致的异常")
+
+                                except aiohttp.ClientError as e:
+                                    print(f"HTTP请求错误: {str(e)}")
+                                    # 连接错误也可能是SQL注入导致的
+                                    if "timeout" in str(e).lower():
+                                        print("请求超时，可能是基于时间的盲注")
+                                except Exception as e:
+                                    print(f"测试POST参数 {param} 时出错: {str(e)}")
+
+                        except Exception as e:
+                            print(f"准备测试POST参数 {param} 时出错: {str(e)}")
+                        # ============ 原本 _test_post_payload 的逻辑结束 ============
+
+                        # 如果找到漏洞，跳出方法循环
+                        if vuln_key in self.found_vulnerabilities:
+                            break
+
+                    # 如果已经找到漏洞，跳出载荷循环
+                    if vuln_key in self.found_vulnerabilities:
+                        break
 
         except Exception as e:
             print(f"扫描POST参数时出错: {str(e)}")
@@ -454,80 +615,6 @@ class SqlInjectionScanner:
             traceback.print_exc()
 
         return results
-
-    async def _test_post_payload(self, url, parsed_url, param, payload, test_params,
-                                 content_type, vuln_key, error_patterns, method_description):
-        """测试单个POST参数的SQL注入payload"""
-        try:
-            # 根据content_type准备请求内容
-            if content_type and 'application/json' in content_type:
-                # 将扁平的参数还原为JSON
-                test_json = {}
-                for k, v in test_params.items():
-                    # 简单处理，仅支持顶级键
-                    test_json[k] = v[0]
-                test_content = json.dumps(test_json)
-                headers = {'Content-Type': 'application/json'}
-            else:
-                # 默认使用表单格式
-                test_content = urlencode(test_params, doseq=True)
-                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-            print(f"测试 {method_description} payload: {param}={payload}")
-            print(f"请求内容: {test_content[:100]}...")
-
-            # 发送请求
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.post(
-                            url,
-                            data=test_content,
-                            headers=headers,
-                            timeout=self.timeout,
-                            ssl=False
-                    ) as response:
-                        # 获取完整的响应文本
-                        response_text = await response.text(errors='replace')
-                        status = response.status
-
-                        # 状态码检查
-                        print(f"响应状态码: {status}")
-                        if status >= 500:
-                            print("可能的服务器错误，可能表明SQL注入")
-
-                        # 获取所有响应头
-                        headers_text = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-
-                        # 构建完整的HTTP响应内容
-                        full_response = f"HTTP/1.1 {response.status} {response.reason}\n{headers_text}\n\n{response_text[:500]}..."
-
-                        # 检查是否有SQL错误信息
-                        error_match, matched_pattern = self.check_sql_error_with_match(response_text, error_patterns)
-                        if error_match:
-                            print(f"发现SQL错误匹配: {matched_pattern}")
-                            # 记录漏洞
-                            self.found_vulnerabilities.add(vuln_key)
-
-                            # 创建漏洞结果
-                            return {
-                                'vuln_type': 'sql_injection',
-                                'vuln_subtype': 'error_based',
-                                'name': f'POST参数 {param} 中的SQL注入漏洞',
-                                'description': f'在POST参数 {param} 中发现回显型SQL注入漏洞',
-                                'severity': 'high',
-                                'url': url,
-                                'parameter': param,
-                                'payload': payload,
-                                'request': f"POST {url} HTTP/1.1\nHost: {parsed_url.netloc}\nContent-Type: {headers['Content-Type']}\n\n{test_content}",
-                                'response': full_response,
-                                'proof': f"在参数 {param} 中{method_description}注入 {payload} 后，响应中包含SQL错误信息: {matched_pattern}"
-                            }
-                except Exception as e:
-                    print(f"测试POST参数 {param} 时出错: {str(e)}")
-        except Exception as e:
-            print(f"准备测试POST参数 {param} 时出错: {str(e)}")
-
-        return None
 
     async def scan_http_headers(self, context, url, req_headers, http_headers_to_test, error_payloads, error_patterns):
         """
@@ -666,9 +753,11 @@ class SqlInjectionScanner:
         if not response_text:
             return False, None
 
-        # 如果没有提供错误模式，返回False
+        # 如果没有提供错误模式，使用默认模式
         if not error_patterns:
-            return False, None
+            error_patterns = [
+
+            ]
 
         # 编译正则表达式以提高性能
         compiled_patterns = []
